@@ -17,3 +17,11 @@ mlruns/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Pytest
+.coverage
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+
