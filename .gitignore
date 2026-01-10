@@ -1,0 +1,27 @@
+# Data
+data/
+outputs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# MLflow
+mlruns/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Pytest
+.coverage
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+

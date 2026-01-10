@@ -1,0 +1,4 @@
+# Kaggle infrastructure
+competition: your-competition-name
+data_path: /kaggle/input
+output_path: /kaggle/working
