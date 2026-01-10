@@ -1,0 +1,19 @@
+# Data
+data/
+outputs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# MLflow
+mlruns/
+
+# Jupyter
+.ipynb_checkpoints/

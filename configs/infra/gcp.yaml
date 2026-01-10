@@ -1,0 +1,4 @@
+# GCP infrastructure
+project_id: your-project-id
+bucket: your-bucket-name
+region: asia-northeast1

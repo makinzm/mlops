@@ -1,0 +1,7 @@
+defaults:
+  - model: default
+  - data: default
+  - infra: local
+
+seed: 42
+debug: false
