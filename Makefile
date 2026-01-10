@@ -1,13 +1,14 @@
-.PHONY: help install install-dev test cov lint format typecheck clean
+.PHONY: help install test cov lint format typecheck clean
 .PHONY: dataset train check serve inference submit
+
+DEVBOX := devbox run --
 
 # ==============================================================================
 # Development
 # ==============================================================================
 help:
 	@echo "Development:"
-	@echo "  make install      - Install dependencies"
-	@echo "  make install-dev  - Install dev dependencies"
+	@echo "  make install      - Install dependencies (devbox shell)"
 	@echo "  make test         - Run tests"
 	@echo "  make cov          - Run tests with coverage"
 	@echo "  make lint         - Run linter"
@@ -23,29 +24,26 @@ help:
 	@echo "  make submit       - Submit predictions"
 
 install:
-	uv sync
-
-install-dev:
-	uv sync --extra dev
+	devbox shell
 
 test:
-	uv run pytest
+	$(DEVBOX) uv run pytest
 
 cov:
-	uv run pytest --cov=src --cov-report=term-missing
+	$(DEVBOX) uv run pytest --cov=src --cov-report=term-missing
 
 cov-html:
-	uv run pytest --cov=src --cov-report=html
+	$(DEVBOX) uv run pytest --cov=src --cov-report=html
 	@echo "Open htmlcov/index.html"
 
 lint:
-	uv run ruff check src tests
+	$(DEVBOX) uv run ruff check src tests
 
 format:
-	uv run ruff format src tests
+	$(DEVBOX) uv run ruff format src tests
 
 typecheck:
-	uv run mypy src
+	$(DEVBOX) uv run mypy src
 
 clean:
 	rm -rf .pytest_cache .coverage htmlcov .mypy_cache
@@ -65,24 +63,24 @@ clean:
 
 # I/F: CreateDatasetInput(raw_name, output_name) -> CreateDatasetOutput(path, num_samples, num_features)
 dataset:
-	uv run python -m src.cli dataset --raw=$(RAW) --output=$(OUT)
+	$(DEVBOX) uv run python -m src.cli dataset --raw=$(RAW) --output=$(OUT)
 
 # I/F: TrainInput(features_name, model_name, params) -> TrainOutput(model_path, metrics, run_id)
 train:
-	uv run python -m src.cli train --features=$(FEATURES) --model=$(MODEL) $(if $(PARAMS),--params="$(PARAMS)",)
+	$(DEVBOX) uv run python -m src.cli train --features=$(FEATURES) --model=$(MODEL) $(if $(PARAMS),--params="$(PARAMS)",)
 
 # I/F: EvaluateInput(model_name, features_name) -> EvaluateOutput(metrics, details)
 check:
-	uv run python -m src.cli check --model=$(MODEL) --features=$(FEATURES)
+	$(DEVBOX) uv run python -m src.cli check --model=$(MODEL) --features=$(FEATURES)
 
 # I/F: ServeInput(model_name) -> ServeOutput(artifact_path, serving_info)
 serve:
-	uv run python -m src.cli serve --model=$(MODEL)
+	$(DEVBOX) uv run python -m src.cli serve --model=$(MODEL)
 
 # I/F: InferenceInput(model_name, features_name, output_name) -> InferenceOutput(predictions_path, num_predictions)
 inference:
-	uv run python -m src.cli inference --model=$(MODEL) --features=$(FEATURES) --output=$(OUT)
+	$(DEVBOX) uv run python -m src.cli inference --model=$(MODEL) --features=$(FEATURES) --output=$(OUT)
 
 # I/F: SubmitInput(predictions_path, submission_name) -> SubmitOutput(submission_id, status)
 submit:
-	uv run python -m src.cli submit --predictions=$(PRED) --name=$(NAME)
+	$(DEVBOX) uv run python -m src.cli submit --predictions=$(PRED) --name=$(NAME)
