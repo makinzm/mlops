@@ -1,0 +1,3 @@
+project_id        = "your-project-id"
+region            = "asia-northeast1"
+github_repository = "your-username/mlops"

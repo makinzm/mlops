@@ -1,0 +1,70 @@
+name: Manual Kaggle Submit
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: 'Model name to use for inference'
+        required: true
+        default: 'latest'
+      message:
+        description: 'Submission message'
+        required: false
+        default: 'Manual submission'
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  KAGGLE_COMPETITION: ${{ vars.KAGGLE_COMPETITION }}
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --extra kaggle --extra gcp
+
+      - name: Configure Kaggle
+        run: |
+          mkdir -p ~/.kaggle
+          echo '${{ secrets.KAGGLE_JSON }}' > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Download Model from GCS
+        run: |
+          mkdir -p outputs/models
+          MODEL_URI="gs://${{ env.GCP_PROJECT_ID }}-mlops-dev/models/${{ inputs.model_name }}/model.pkl"
+          gsutil cp $MODEL_URI outputs/models/${{ inputs.model_name }}.pkl
+
+      - name: Run Inference and Submit
+        run: |
+          uv run python -c "
+          import pandas as pd
+          from src.adapters.kaggle import KaggleConfig, KaggleServingGateway
+
+          # TODO: Implement actual inference logic
+          predictions = pd.DataFrame({'id': [1, 2, 3], 'prediction': [0, 1, 0]})
+
+          config = KaggleConfig(
+              competition='${{ env.KAGGLE_COMPETITION }}',
+              username='${{ vars.KAGGLE_USERNAME }}',
+          )
+          gateway = KaggleServingGateway(config)
+          gateway.submit(predictions, '${{ inputs.message }}')
+          print('Submitted successfully!')
+          "

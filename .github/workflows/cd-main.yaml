@@ -1,0 +1,164 @@
+name: CD - Deploy and Train
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_training:
+        description: 'Skip Vertex AI training'
+        type: boolean
+        default: false
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  KAGGLE_COMPETITION: ${{ vars.KAGGLE_COMPETITION }}
+
+jobs:
+  # ==========================================================================
+  # Job 1: Push to Kaggle (Dataset + Models) - runs in parallel
+  # ==========================================================================
+  kaggle-push:
+    name: Push to Kaggle
+    runs-on: ubuntu-latest
+    outputs:
+      dataset_version: ${{ steps.push-dataset.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --extra kaggle
+
+      - name: Configure Kaggle
+        run: |
+          mkdir -p ~/.kaggle
+          echo '${{ secrets.KAGGLE_JSON }}' > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      - name: Push Dataset to Kaggle
+        id: push-dataset
+        run: |
+          uv run python -c "
+          from pathlib import Path
+          from src.adapters.kaggle import KaggleConfig, KaggleDatasetPusher
+
+          config = KaggleConfig(
+              competition='${{ env.KAGGLE_COMPETITION }}',
+              username='${{ vars.KAGGLE_USERNAME }}',
+          )
+          pusher = KaggleDatasetPusher(config)
+          pusher.package_and_push(
+              source_dirs=[Path('src'), Path('configs')],
+              version_notes='Commit: ${{ github.sha }}',
+          )
+          "
+          echo "version=$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
+  # ==========================================================================
+  # Job 2: Train on Vertex AI - runs in parallel
+  # ==========================================================================
+  vertex-train:
+    name: Train on Vertex AI
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_training }}
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      model_uri: ${{ steps.train.outputs.model_uri }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and Push Training Image
+        run: |
+          gcloud builds submit \
+            --tag ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mlops-training/train:${{ github.sha }} \
+            --file docker/Dockerfile.train \
+            .
+
+      - name: Submit Vertex AI Training Job
+        id: train
+        run: |
+          # Submit training job and wait for completion
+          JOB_NAME="train-${{ github.sha }}"
+
+          gcloud ai custom-jobs create \
+            --region=${{ env.GCP_REGION }} \
+            --display-name=$JOB_NAME \
+            --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mlops-training/train:${{ github.sha }}
+
+          # Wait for job completion (simplified - production should poll status)
+          sleep 60
+
+          # Get model URI from GCS
+          MODEL_URI="gs://${{ env.GCP_PROJECT_ID }}-mlops-dev/models/latest/model.pkl"
+          echo "model_uri=$MODEL_URI" >> $GITHUB_OUTPUT
+
+  # ==========================================================================
+  # Job 3: Auto Submit to Kaggle (after both jobs complete)
+  # ==========================================================================
+  kaggle-submit:
+    name: Submit to Kaggle
+    needs: [kaggle-push, vertex-train]
+    if: ${{ !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --extra kaggle --extra gcp
+
+      - name: Configure Kaggle
+        run: |
+          mkdir -p ~/.kaggle
+          echo '${{ secrets.KAGGLE_JSON }}' > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Download Model from GCS
+        run: |
+          mkdir -p outputs/models
+          gsutil cp ${{ needs.vertex-train.outputs.model_uri }} outputs/models/trained.pkl
+
+      - name: Run Inference and Submit
+        run: |
+          uv run python -c "
+          import pandas as pd
+          from src.adapters.kaggle import KaggleConfig, KaggleServingGateway
+
+          # TODO: Implement actual inference logic
+          # For now, create dummy submission
+          predictions = pd.DataFrame({'id': [1, 2, 3], 'prediction': [0, 1, 0]})
+
+          config = KaggleConfig(
+              competition='${{ env.KAGGLE_COMPETITION }}',
+              username='${{ vars.KAGGLE_USERNAME }}',
+          )
+          gateway = KaggleServingGateway(config)
+          gateway.submit(predictions, 'auto-${{ github.sha }}')
+          "
