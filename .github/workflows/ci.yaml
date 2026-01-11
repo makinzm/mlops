@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+env:
+  CI: true
+
 jobs:
   lint-test:
     runs-on: ubuntu-latest
@@ -16,16 +19,16 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: make sync EXTRA=dev
 
       - name: Lint
-        run: uv run ruff check src tests
+        run: make lint
 
       - name: Type check
-        run: uv run mypy src
+        run: make typecheck
 
-      - name: Test
-        run: uv run pytest --cov=src --cov-report=xml
+      - name: Test with coverage
+        run: make cov-xml
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4

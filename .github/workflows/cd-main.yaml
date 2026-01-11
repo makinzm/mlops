@@ -11,9 +11,11 @@ on:
         default: false
 
 env:
+  CI: true
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   GCP_REGION: ${{ vars.GCP_REGION }}
   KAGGLE_COMPETITION: ${{ vars.KAGGLE_COMPETITION }}
+  KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
 
 jobs:
   # ==========================================================================
@@ -32,31 +34,17 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync --extra kaggle
+        run: make sync EXTRA=kaggle
 
       - name: Configure Kaggle
-        run: |
-          mkdir -p ~/.kaggle
-          echo '${{ secrets.KAGGLE_JSON }}' > ~/.kaggle/kaggle.json
-          chmod 600 ~/.kaggle/kaggle.json
+        run: make kaggle-setup
+        env:
+          KAGGLE_JSON: ${{ secrets.KAGGLE_JSON }}
 
       - name: Push Dataset to Kaggle
         id: push-dataset
         run: |
-          uv run python -c "
-          from pathlib import Path
-          from src.adapters.kaggle import KaggleConfig, KaggleDatasetPusher
-
-          config = KaggleConfig(
-              competition='${{ env.KAGGLE_COMPETITION }}',
-              username='${{ vars.KAGGLE_USERNAME }}',
-          )
-          pusher = KaggleDatasetPusher(config)
-          pusher.package_and_push(
-              source_dirs=[Path('src'), Path('configs')],
-              version_notes='Commit: ${{ github.sha }}',
-          )
-          "
+          make kaggle-push-dataset MSG="Commit: ${{ github.sha }}"
           echo "version=$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
 
   # ==========================================================================
@@ -86,26 +74,14 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Build and Push Training Image
-        run: |
-          gcloud builds submit \
-            --tag ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mlops-training/train:${{ github.sha }} \
-            --file docker/Dockerfile.train \
-            .
+        run: make gcloud-build TAG=${{ github.sha }}
 
       - name: Submit Vertex AI Training Job
         id: train
         run: |
-          # Submit training job and wait for completion
-          JOB_NAME="train-${{ github.sha }}"
-
-          gcloud ai custom-jobs create \
-            --region=${{ env.GCP_REGION }} \
-            --display-name=$JOB_NAME \
-            --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mlops-training/train:${{ github.sha }}
-
+          make gcp-train TAG=${{ github.sha }}
           # Wait for job completion (simplified - production should poll status)
           sleep 60
-
           # Get model URI from GCS
           MODEL_URI="gs://${{ env.GCP_PROJECT_ID }}-mlops-dev/models/latest/model.pkl"
           echo "model_uri=$MODEL_URI" >> $GITHUB_OUTPUT
@@ -126,13 +102,12 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync --extra kaggle --extra gcp
+        run: make sync EXTRA=kaggle
 
       - name: Configure Kaggle
-        run: |
-          mkdir -p ~/.kaggle
-          echo '${{ secrets.KAGGLE_JSON }}' > ~/.kaggle/kaggle.json
-          chmod 600 ~/.kaggle/kaggle.json
+        run: make kaggle-setup
+        env:
+          KAGGLE_JSON: ${{ secrets.KAGGLE_JSON }}
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
@@ -140,25 +115,11 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
       - name: Download Model from GCS
-        run: |
-          mkdir -p outputs/models
-          gsutil cp ${{ needs.vertex-train.outputs.model_uri }} outputs/models/trained.pkl
+        run: make gcp-download-model MODEL=latest
 
       - name: Run Inference and Submit
-        run: |
-          uv run python -c "
-          import pandas as pd
-          from src.adapters.kaggle import KaggleConfig, KaggleServingGateway
-
-          # TODO: Implement actual inference logic
-          # For now, create dummy submission
-          predictions = pd.DataFrame({'id': [1, 2, 3], 'prediction': [0, 1, 0]})
-
-          config = KaggleConfig(
-              competition='${{ env.KAGGLE_COMPETITION }}',
-              username='${{ vars.KAGGLE_USERNAME }}',
-          )
-          gateway = KaggleServingGateway(config)
-          gateway.submit(predictions, 'auto-${{ github.sha }}')
-          "
+        run: make kaggle-inference-submit MSG="auto-${{ github.sha }}"
