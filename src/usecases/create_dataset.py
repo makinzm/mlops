@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-import pandas as pd
-
 from src.ports import DataStore
 
 
