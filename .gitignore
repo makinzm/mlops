@@ -10,7 +10,6 @@ __pycache__/
 
 # IDE
 .idea/
-.vscode/
 
 # MLflow
 mlruns/

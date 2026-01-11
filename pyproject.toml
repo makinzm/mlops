@@ -17,6 +17,9 @@ dependencies = [
     "ty>=0.0.11",
 ]
 
+[tool.uv]
+default-groups = "all"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
@@ -48,6 +51,9 @@ select = ["E", "F", "I", "UP"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"
+
+[tool.ty.environment]
+python = "./.venv/bin/python"
 
 [tool.ty]
 
