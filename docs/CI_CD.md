@@ -2,6 +2,11 @@
 
 本プロジェクトのGitHub Actionsワークフローの説明です。
 
+## 関連ドキュメント
+
+- [ローカル環境でのCD実行](./CD_LOCAL.md) - GCPセットアップ、ローカルでのパイプライン実行手順
+- [GitHub ActionsでのCD設定](./CD_GITHUB_ACTIONS.md) - Workload Identity Federation、Secrets/Variables設定
+
 ## ワークフロー一覧
 
 | ワークフロー | トリガー | 概要 |
