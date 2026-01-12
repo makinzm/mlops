@@ -1,6 +1,7 @@
 from typing import Any
 
 import mlflow
+from mlflow.entities import Run
 
 from src.adapters.gcp.config import GCPConfig
 
@@ -22,23 +23,23 @@ class VertexMLflowTracker:
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(experiment_name)
 
-        self._run: mlflow.ActiveRun | None = None
+        self._run: Run | None = None
 
     def start_run(self, run_name: str | None = None) -> None:
-        self._run = mlflow.start_run(run_name=run_name)
+        self._run = mlflow.start_run(run_name=run_name)  # type: ignore[attr-defined]
 
     def log_params(self, params: dict[str, Any]) -> None:
-        mlflow.log_params(params)
+        mlflow.log_params(params) # type: ignore[attr-defined]
 
     def log_metrics(self, metrics: dict[str, float], step: int | None = None) -> None:
-        mlflow.log_metrics(metrics, step=step)
+        mlflow.log_metrics(metrics, step=step) # type: ignore[attr-defined]
 
     def log_artifact(self, path: str) -> None:
-        mlflow.log_artifact(path)
+        mlflow.log_artifact(path) # type: ignore[attr-defined]
 
     def end_run(self) -> None:
         if self._run:
-            mlflow.end_run()
+            mlflow.end_run()  # type: ignore[attr-defined]
             self._run = None
 
     @property
