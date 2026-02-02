@@ -11,13 +11,35 @@ GitHub Actionsを使わずに、ローカル環境でCDパイプラインを実�
 - [gcloud CLI](https://cloud.google.com/sdk/docs/install) - GCP操作
 - Docker - イメージビルド
 
+### 必須アカウント
+- [Google Cloud Platform](https://cloud.google.com/)アカウント
+- 課金が有効なGCPプロジェクト（またはこれから作成）
+- [Kaggle](https://www.kaggle.com/)アカウント
+
 ### 認証情報
+- GCPユーザー認証（`gcloud auth login`）
 - Kaggle API認証情報（`~/.kaggle/kaggle.json`）
-- GCPサービスアカウント認証
 
 ---
 
 ## 1. GCP初期セットアップ
+
+### 1.0 gcloud CLIの初期認証
+
+GCPの操作を行う前に、まずgcloud CLIにログインします。
+
+```bash
+# ブラウザが開き、Googleアカウントでログイン
+gcloud auth login
+
+# 認証状態の確認
+gcloud auth list
+```
+
+**GCP Console確認:**
+- ログイン成功後、[GCP Console](https://console.cloud.google.com/) にアクセスできることを確認
+
+---
 
 ### 1.1 GCPプロジェクトIDの決定
 
@@ -51,10 +73,27 @@ gcloud projects create $PROJECT_ID --name="MLOps Project"
 
 # プロジェクト選択
 gcloud config set project $PROJECT_ID
+```
 
-# 課金アカウントの紐付け（コンソールで実施するか以下コマンド）
+**課金アカウントの紐付け:**
+
+```bash
+# 課金アカウント一覧を表示
 gcloud billing accounts list
-gcloud billing projects link $PROJECT_ID --billing-account=BILLING_ACCOUNT_ID
+# 出力例:
+# ACCOUNT_ID            NAME                OPEN  MASTER_ACCOUNT_ID
+# 01AB23-CD45EF-67890A  My Billing Account  True
+
+# 課金アカウントIDを環境変数に設定（上記の ACCOUNT_ID をコピー）
+export BILLING_ACCOUNT_ID="01AB23-CD45EF-67890A"
+
+# プロジェクトに課金アカウントを紐付け
+gcloud billing projects link $PROJECT_ID --billing-account=$BILLING_ACCOUNT_ID
+```
+
+**GCP Console確認:**
+- [プロジェクト一覧](https://console.cloud.google.com/projectselector2)
+- 作成したプロジェクトが表示され、「課金」列に課金アカウント名が表示されていることを確認
 ```
 
 ### 1.3 必要なAPIの有効化
@@ -67,6 +106,10 @@ gcloud services enable \
   storage.googleapis.com
 ```
 
+**GCP Console確認:**
+- [APIとサービス](https://console.cloud.google.com/apis/dashboard) → 「有効なAPIとサービス」
+- 上記4つのAPIが有効化されていることを確認
+
 ### 1.4 Artifact Registryリポジトリ作成
 
 ```bash
@@ -76,11 +119,19 @@ gcloud artifacts repositories create mlops-training \
   --description="MLOps training images"
 ```
 
+**GCP Console確認:**
+- [Artifact Registry](https://console.cloud.google.com/artifacts)
+- `mlops-training` リポジトリが `asia-northeast1` に作成されていることを確認
+
 ### 1.5 GCSバケット作成
 
 ```bash
 gsutil mb -l asia-northeast1 gs://$PROJECT_ID-mlops-dev
 ```
+
+**GCP Console確認:**
+- [Cloud Storage](https://console.cloud.google.com/storage/browser)
+- `{プロジェクトID}-mlops-dev` バケットが作成されていることを確認
 
 ### 1.6 サービスアカウント作成（CI/CD用）
 
@@ -108,6 +159,11 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:$SA_EMAIL" \
   --role="roles/storage.admin"
 ```
+
+**GCP Console確認:**
+- [IAMと管理](https://console.cloud.google.com/iam-admin/serviceaccounts) → 「サービスアカウント」
+- `mlops-cicd` サービスアカウントが作成されていることを確認
+- [IAM](https://console.cloud.google.com/iam-admin/iam) → 上記4つのロールが付与されていることを確認
 
 ### 1.7 ローカル認証設定
 
