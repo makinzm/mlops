@@ -19,21 +19,45 @@ GitHub Actionsを使わずに、ローカル環境でCDパイプラインを実�
 
 ## 1. GCP初期セットアップ
 
-### 1.1 GCPプロジェクト作成
+### 1.1 GCPプロジェクトIDの決定
+
+プロジェクトIDはGCP全体でユニークである必要があります。以下のルールに従って決定してください。
+
+**命名規則:**
+- 6～30文字
+- 小文字、数字、ハイフンのみ使用可能
+- 先頭は小文字、末尾はハイフンは不可
+- 例: `my-mlops-project-20260202`, `mlops-dev-123456`
+
+**既存プロジェクトがある場合の確認方法:**
+```bash
+# 既存プロジェクト一覧を表示
+gcloud projects list
+
+# 現在選択されているプロジェクトIDを確認
+gcloud config get-value project
+```
+
+### 1.2 GCPプロジェクト作成
+
+```bash
+# プロジェクトIDを環境変数に設定（以降のコマンドで使用）
+export PROJECT_ID="your-unique-project-id"
+```
 
 ```bash
 # プロジェクト作成（初回のみ）
-gcloud projects create YOUR_PROJECT_ID --name="MLOps Project"
+gcloud projects create $PROJECT_ID --name="MLOps Project"
 
 # プロジェクト選択
-gcloud config set project YOUR_PROJECT_ID
+gcloud config set project $PROJECT_ID
 
 # 課金アカウントの紐付け（コンソールで実施するか以下コマンド）
 gcloud billing accounts list
-gcloud billing projects link YOUR_PROJECT_ID --billing-account=BILLING_ACCOUNT_ID
+gcloud billing projects link $PROJECT_ID --billing-account=BILLING_ACCOUNT_ID
 ```
 
-### 1.2 必要なAPIの有効化
+### 1.3 必要なAPIの有効化
 
 ```bash
 gcloud services enable \
@@ -43,7 +67,7 @@ gcloud services enable \
   storage.googleapis.com
 ```
 
-### 1.3 Artifact Registryリポジトリ作成
+### 1.4 Artifact Registryリポジトリ作成
 
 ```bash
 gcloud artifacts repositories create mlops-training \
@@ -52,13 +76,13 @@ gcloud artifacts repositories create mlops-training \
   --description="MLOps training images"
 ```
 
-### 1.4 GCSバケット作成
+### 1.5 GCSバケット作成
 
 ```bash
-gsutil mb -l asia-northeast1 gs://YOUR_PROJECT_ID-mlops-dev
+gsutil mb -l asia-northeast1 gs://$PROJECT_ID-mlops-dev
 ```
 
-### 1.5 サービスアカウント作成（CI/CD用）
+### 1.6 サービスアカウント作成（CI/CD用）
 
 ```bash
 # サービスアカウント作成
@@ -66,7 +90,6 @@ gcloud iam service-accounts create mlops-cicd \
   --display-name="MLOps CI/CD Service Account"
 
 # 必要な権限を付与
-PROJECT_ID=$(gcloud config get-value project)
 SA_EMAIL="mlops-cicd@${PROJECT_ID}.iam.gserviceaccount.com"
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
@@ -86,7 +109,7 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
   --role="roles/storage.admin"
 ```
 
-### 1.6 ローカル認証設定
+### 1.7 ローカル認証設定
 
 **方法A: Application Default Credentials（開発用・推奨）**
 ```bash
