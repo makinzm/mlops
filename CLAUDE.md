@@ -21,7 +21,7 @@
 
 ## 1st Phase: Kaggle
 
-- [ ] devenv.nixを利用して 1st phaseの開発環境を構築するためのドキュメントの作成。
+- [ ] devenv.nix, lefthook を利用して 1st phaseの開発環境を構築するためのドキュメントの作成。
 - [ ] Kaggle APIを使用して、ローカル環境からKaggleのデータセットをダウンロードするコードの実装。
 - [ ] ダウンロードしたデータセットをローカル環境で前処理するためのコードの実装。
 - [ ] ローカル環境で開発したPythonコードをKaggle Notebookに移行するためのガイドラインの作成。
