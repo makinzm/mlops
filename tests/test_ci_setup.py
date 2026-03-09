@@ -13,7 +13,6 @@ from pathlib import Path
 
 import yaml
 
-
 REPO_ROOT = Path(__file__).parent.parent
 LEFTHOOK_YML = REPO_ROOT / "lefthook.yml"
 CI_YML = REPO_ROOT / ".github" / "workflows" / "ci.yml"
@@ -70,9 +69,14 @@ class TestCIWorkflow:
         assert not missing, f"ci.yml に以下のジョブが不足しています: {missing}"
 
     def test_ci_triggers_on_main_push_and_pr(self) -> None:
-        """CI は main への push と PR をトリガーとして設定されている。"""
+        """CI は main への push と PR をトリガーとして設定されている。
+
+        PyYAML は `on:` キーをブール値 True として解析するため、
+        `"on"` と `True` の両方のキーを検索する。
+        """
         parsed = yaml.safe_load(CI_YML.read_text())
-        on = parsed.get("on", {})
+        # PyYAML parses bare `on` as boolean True
+        on = parsed.get("on", parsed.get(True, {}))
         assert "push" in on, "push トリガーが ci.yml に設定されていません"
         assert "pull_request" in on, "pull_request トリガーが ci.yml に設定されていません"
         push_branches = on["push"].get("branches", [])
