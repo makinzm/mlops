@@ -5,7 +5,12 @@
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.git ];
+  packages = [ 
+    pkgs.git
+    pkgs.uv
+    pkgs.actionlint
+    pkgs.lefthook
+  ];
 
   # https://devenv.sh/languages/
   # languages.rust.enable = true;
@@ -25,6 +30,9 @@
   enterShell = ''
     hello         # Run scripts directly
     git --version # Use packages
+    uv --version
+    actionlint --version
+    lefthook --version
   '';
 
   # https://devenv.sh/tasks/
