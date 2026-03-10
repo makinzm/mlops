@@ -5,56 +5,39 @@ on:
   pull_request:
     branches: [main]
 
+# NOTE: devenv (Nix) は CI では使用しない。
+# ローカル開発では devenv shell 経由でツールを統一管理するが、
+# GitHub Actions 上で `nix profile install nixpkgs#devenv` + `devenv shell --` を実行すると
+# Nix ストアのビルド/フェッチ (107 パッケージ, 832 MB) が 6 時間を超えてタイムアウトする。
+# 参照: https://github.com/makinzm/mlops/actions/runs/22853337380/job/66287132804?pr=11
+# CI では各ツールの公式 Action または uv を直接使用する。
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v26
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: cachix/cachix-action@v15
-        with:
-          name: devenv
-      - run: nix profile install --accept-flake-config nixpkgs#devenv
-      - run: devenv shell -- uv run --extra dev ruff check .
-      - run: devenv shell -- uv run --extra dev ruff format --check .
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run --extra dev ruff check .
+      - run: uv run --extra dev ruff format --check .
 
   type-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v26
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: cachix/cachix-action@v15
-        with:
-          name: devenv
-      - run: nix profile install --accept-flake-config nixpkgs#devenv
-      - run: devenv shell -- uv run --extra dev mypy src/
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run --extra dev mypy src/
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v26
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: cachix/cachix-action@v15
-        with:
-          name: devenv
-      - run: nix profile install --accept-flake-config nixpkgs#devenv
-      - run: devenv shell -- uv run --extra dev pytest --cov=src --cov-report=xml
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run --extra dev pytest --cov=src --cov-report=xml
 
   actionlint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v26
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: cachix/cachix-action@v15
-        with:
-          name: devenv
-      - run: nix profile install --accept-flake-config nixpkgs#devenv
-      - run: devenv shell -- actionlint .github/workflows/ci.yml
+      # rhysd/actionlint@v1 は単一バイナリで動作するため Nix 不要
+      - uses: rhysd/actionlint@v1
