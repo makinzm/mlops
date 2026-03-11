@@ -7,12 +7,16 @@ Kaggle API を使ったデータダウンロード実装。
   3. ~/.kaggle/kaggle.json（Legacy）
 """
 
+from datetime import datetime
 from pathlib import Path
 
-from omegaconf import DictConfig
+import yaml
+from omegaconf import DictConfig, OmegaConf
 
 from src.domain.data.downloader import DownloadResult
 from src.domain.repository.git import GitRepository
+
+_METADATA_EXCLUDE = {".gitkeep", ".gitignore", "metadata.yaml"}
 
 
 class KaggleDownloader:
@@ -61,12 +65,7 @@ class KaggleDownloader:
             unzip=self.cfg.unzip,
             force=self.cfg.force,
         )
-        files = [f for f in output_dir.rglob("*") if f.is_file() and f.name != ".gitkeep"]
-        return DownloadResult(
-            output_dir=output_dir,
-            files=files,
-            commit_hash=self.git_repo.get_commit_hash(),
-        )
+        return self._build_result(output_dir)
 
     def _download_competition(self) -> DownloadResult:
         if not self.cfg.downloader.competition:
@@ -80,9 +79,23 @@ class KaggleDownloader:
             path=output_dir,
             force=self.cfg.force,
         )
-        files = [f for f in output_dir.rglob("*") if f.is_file() and f.name != ".gitkeep"]
-        return DownloadResult(
-            output_dir=output_dir,
-            files=files,
-            commit_hash=self.git_repo.get_commit_hash(),
+        return self._build_result(output_dir)
+
+    def _build_result(self, output_dir: Path) -> DownloadResult:
+        files = [
+            f for f in output_dir.rglob("*") if f.is_file() and f.name not in _METADATA_EXCLUDE
+        ]
+        commit_hash = self.git_repo.get_commit_hash()
+        self._save_metadata(output_dir, files, commit_hash)
+        return DownloadResult(output_dir=output_dir, files=files, commit_hash=commit_hash)
+
+    def _save_metadata(self, output_dir: Path, files: list[Path], commit_hash: str) -> None:
+        metadata = {
+            "downloaded_at": datetime.now().isoformat(timespec="seconds"),
+            "commit_hash": commit_hash,
+            "config": OmegaConf.to_container(self.cfg, resolve=True),
+            "files": [f.name for f in files],
+        }
+        (output_dir / "metadata.yaml").write_text(
+            yaml.dump(metadata, default_flow_style=False, allow_unicode=True, sort_keys=False)
         )

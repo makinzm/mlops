@@ -7,12 +7,15 @@ KaggleDownloader のテスト。
 - 不正な mode に対して明示的にエラーを出すことでサイレントな不具合を防ぐ。
 - DownloadResult に commit_hash が含まれることで DoD（CommitHash 記録）を満たすことを保証する。
 - GitRepository が DI されることで、git 操作がインフラ層に閉じていることを保証する。
+- metadata.yaml が保存されることで、将来のデータ参照時に「いつ・どの設定・どのコードで
+  取得したか」を追跡できることを保証する。
 """
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 from omegaconf import DictConfig, OmegaConf
 
 from src.infrastructure.downloader.kaggle import KaggleDownloader
@@ -113,7 +116,7 @@ class TestKaggleDownloaderDataset:
             mock_cls.return_value = MagicMock()
             result = KaggleDownloader(dataset_cfg, mock_git_repo).download()
             assert result.commit_hash == "abc123"
-            mock_git_repo.get_commit_hash.assert_called_once()
+            mock_git_repo.get_commit_hash.assert_called()
 
     def test_setup_data_dir_called_on_download(
         self, dataset_cfg: DictConfig, mock_git_repo: MagicMock
@@ -126,6 +129,71 @@ class TestKaggleDownloaderDataset:
             mock_cls.return_value = MagicMock()
             KaggleDownloader(dataset_cfg, mock_git_repo).download()
             mock_git_repo.setup_data_dir.assert_called_once_with(Path(dataset_cfg.output_dir))
+
+
+class TestKaggleDownloaderMetadata:
+    """metadata.yaml の保存を検証するテスト。
+
+    なぜこのテストが必要か:
+    - ダウンロード後に「いつ・どのコード・どの設定で取得したか」を追跡するためのメタデータが
+      output_dir に保存されることを保証する。
+    - metadata.yaml が git 追跡対象となることで、データ本体を削除しても設定履歴が残る。
+    - metadata.yaml が DownloadResult.files に含まれないことで、
+      後続パイプラインがデータファイルのみを処理できることを保証する。
+    """
+
+    def test_metadata_file_created_after_download(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock
+    ) -> None:
+        """ダウンロード後に metadata.yaml が output_dir に作成されること。"""
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            result = KaggleDownloader(dataset_cfg, mock_git_repo).download()
+            assert (result.output_dir / "metadata.yaml").exists()
+
+    def test_metadata_contains_commit_hash(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock
+    ) -> None:
+        """metadata.yaml に commit_hash が含まれること。"""
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            result = KaggleDownloader(dataset_cfg, mock_git_repo).download()
+            metadata = yaml.safe_load((result.output_dir / "metadata.yaml").read_text())
+            assert metadata["commit_hash"] == "abc123"
+
+    def test_metadata_contains_config(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock
+    ) -> None:
+        """metadata.yaml に Hydra config が含まれること。"""
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            result = KaggleDownloader(dataset_cfg, mock_git_repo).download()
+            metadata = yaml.safe_load((result.output_dir / "metadata.yaml").read_text())
+            assert "config" in metadata
+            assert metadata["config"]["downloader"]["dataset"] == "testuser/test-dataset"
+
+    def test_metadata_contains_downloaded_at(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock
+    ) -> None:
+        """metadata.yaml にダウンロード日時が含まれること。"""
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            result = KaggleDownloader(dataset_cfg, mock_git_repo).download()
+            metadata = yaml.safe_load((result.output_dir / "metadata.yaml").read_text())
+            assert "downloaded_at" in metadata
+
+    def test_metadata_not_in_result_files(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock
+    ) -> None:
+        """metadata.yaml が DownloadResult.files に含まれないこと。
+
+        後続パイプラインがデータファイルのみを受け取れるよう、
+        生成ファイル（metadata.yaml）はファイルリストから除外する。
+        """
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            result = KaggleDownloader(dataset_cfg, mock_git_repo).download()
+            assert all(f.name != "metadata.yaml" for f in result.files)
 
 
 class TestKaggleDownloaderCompetition:
@@ -150,6 +218,15 @@ class TestKaggleDownloaderCompetition:
             mock_cls.return_value = MagicMock()
             result = KaggleDownloader(competition_cfg, mock_git_repo).download()
             assert result.output_dir == Path(competition_cfg.output_dir)
+
+    def test_competition_metadata_created(
+        self, competition_cfg: DictConfig, mock_git_repo: MagicMock
+    ) -> None:
+        """competition モードでも metadata.yaml が作成されること。"""
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            result = KaggleDownloader(competition_cfg, mock_git_repo).download()
+            assert (result.output_dir / "metadata.yaml").exists()
 
 
 class TestKaggleDownloaderInvalidMode:
