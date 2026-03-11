@@ -6,6 +6,16 @@
 
 ## メタルール
 
+### 詰まったら2回で報告し、必ずログに残す
+
+- 同じ問題に2回対処してもブロックされたら、すぐにユーザーへ状況を報告する
+- 報告の前に `docs/tasks/YYYY/Q/MMDD_<title>/STUCK_LOG_YYYYMMDD_HHMMSS.md` を作成する
+- ログには以下を含める:
+  - 何をしようとしていたか
+  - 試みた内容（1回目・2回目）と得られたエラー
+  - 自分の仮説と次に必要なこと
+- ログを作らずに口頭だけで報告するのはNG。記録が残らない。
+
 ### 指摘を受けたら必ず caution.md を更新する
 
 - ユーザーから設計・実装・ドキュメント・コマンド等に関する指摘を受けた場合、**言われなくても** このファイルに追記する
@@ -59,6 +69,13 @@
 ---
 
 ## コマンドの書き方
+
+### extras を使わない。uv add --dev または uv add --group を使う
+
+- **NG**: `uv run --extra dev pytest` / `uv run --extra kaggle python -m src.main`
+- **OK**: `uv add pytest --dev` / `uv add kaggle --group kaggle` でインストール後、`uv run pytest` のみ
+- `pyproject.toml` の `[project.optional-dependencies]` は使わず、`[dependency-groups]` で管理する
+- CI でも `--extra` フラグなしで `uv run pytest` / `uv run mypy` を実行する
 
 ### python を直接実行しない。常に uv run python を使う
 

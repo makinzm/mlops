@@ -8,7 +8,6 @@ Kaggle API を使ったデータダウンロード実装。
 import subprocess
 from pathlib import Path
 
-from kaggle.api.kaggle_api_extended import KaggleApi as KaggleApiExtended  # type: ignore[import-untyped]
 from omegaconf import DictConfig
 
 from src.domain.data.downloader import DownloadResult
@@ -16,6 +15,10 @@ from src.domain.data.downloader import DownloadResult
 
 class KaggleDownloader:
     def __init__(self, cfg: DictConfig) -> None:
+        from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
+            KaggleApi as KaggleApiExtended,
+        )
+
         self.cfg = cfg
         self.api = KaggleApiExtended()
         self.api.authenticate()

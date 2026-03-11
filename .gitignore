@@ -1,6 +1,8 @@
-# Data
+# Data (raw/processed datasets - excluded from version control)
 data/
 outputs/
+# Source code directories named "data" should be tracked
+!src/**/data/
 
 # Python
 __pycache__/

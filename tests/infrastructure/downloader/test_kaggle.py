@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from omegaconf import DictConfig, OmegaConf
+
 from src.infrastructure.downloader.kaggle import KaggleDownloader
 
 
@@ -57,7 +58,7 @@ class TestKaggleDownloaderInit:
         認証を初期化タイミングで実行することで、実行前に認証エラーを早期発見できる。
         外部 API 依存のためモックで代替する。
         """
-        with patch("src.infrastructure.downloader.kaggle.KaggleApiExtended") as mock_cls:
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_api = MagicMock()
             mock_cls.return_value = mock_api
             KaggleDownloader(dataset_cfg)
@@ -71,7 +72,7 @@ class TestKaggleDownloaderDataset:
         API への引数マッピングが正しいことを保証する。
         特に dataset 名と output_dir の対応を検証する。
         """
-        with patch("src.infrastructure.downloader.kaggle.KaggleApiExtended") as mock_cls:
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_api = MagicMock()
             mock_cls.return_value = mock_api
             KaggleDownloader(dataset_cfg).download()
@@ -84,7 +85,7 @@ class TestKaggleDownloaderDataset:
 
         呼び出し元がダウンロード先を把握できるようにするための検証。
         """
-        with patch("src.infrastructure.downloader.kaggle.KaggleApiExtended") as mock_cls:
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_cls.return_value = MagicMock()
             result = KaggleDownloader(dataset_cfg).download()
             assert result.output_dir == Path(dataset_cfg.output_dir)
@@ -95,7 +96,7 @@ class TestKaggleDownloaderDataset:
         DoD 要件: 全てのコードは Git の CommitHash が記録されること。
         どのコードでダウンロードしたかを追跡可能にし、再現性を担保する。
         """
-        with patch("src.infrastructure.downloader.kaggle.KaggleApiExtended") as mock_cls:
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_cls.return_value = MagicMock()
             result = KaggleDownloader(dataset_cfg).download()
             assert isinstance(result.commit_hash, str)
@@ -108,7 +109,7 @@ class TestKaggleDownloaderCompetition:
 
         dataset / competition の両モードで正しい API メソッドが選択されることを保証する。
         """
-        with patch("src.infrastructure.downloader.kaggle.KaggleApiExtended") as mock_cls:
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_api = MagicMock()
             mock_cls.return_value = mock_api
             KaggleDownloader(competition_cfg).download()
@@ -116,7 +117,7 @@ class TestKaggleDownloaderCompetition:
 
     def test_download_competition_result_has_output_dir(self, competition_cfg: DictConfig) -> None:
         """competition モードでも DownloadResult の output_dir が設定値と一致すること。"""
-        with patch("src.infrastructure.downloader.kaggle.KaggleApiExtended") as mock_cls:
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_cls.return_value = MagicMock()
             result = KaggleDownloader(competition_cfg).download()
             assert result.output_dir == Path(competition_cfg.output_dir)
@@ -129,8 +130,12 @@ class TestKaggleDownloaderInvalidMode:
         予期しない設定値に対して明示的にエラーを発生させることで、
         サイレントな不具合（無音でスキップ等）を防ぐ。
         """
-        cfg = OmegaConf.merge(dataset_cfg, {"kaggle": {"mode": "unknown_mode"}})
-        with patch("src.infrastructure.downloader.kaggle.KaggleApiExtended") as mock_cls:
+        from omegaconf import DictConfig
+
+        merged = OmegaConf.merge(dataset_cfg, {"kaggle": {"mode": "unknown_mode"}})
+        assert isinstance(merged, DictConfig)
+        cfg = merged
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_cls.return_value = MagicMock()
             downloader = KaggleDownloader(cfg)
             with pytest.raises(ValueError, match="Unknown mode"):
