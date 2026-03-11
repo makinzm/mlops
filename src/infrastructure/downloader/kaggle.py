@@ -24,7 +24,12 @@ class KaggleDownloader:
         self.cfg = cfg
         self.git_repo = git_repo
         self.api = KaggleApiExtended()
-        self.api.authenticate()
+        try:
+            self.api.authenticate()
+        except SystemExit as e:
+            raise RuntimeError(
+                "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+            ) from e
 
     def download(self) -> DownloadResult:
         mode = self.cfg.downloader.mode

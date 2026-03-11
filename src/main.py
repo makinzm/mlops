@@ -22,7 +22,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="[%(levelname)s] %(filename)s:%(lineno)d - %(message)s",
 )
-logger = logging.getLogger(__name__)
 
 _CONF_DIR = str(Path(__file__).parent.parent / "conf")
 
@@ -42,18 +41,15 @@ def _resolve_downloader(cfg: DictConfig) -> object:
 
 @hydra.main(config_path=_CONF_DIR, config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
+    from src.infrastructure.logger.python_logger import PythonAppLogger
     from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
 
+    logger = PythonAppLogger(__name__)
     try:
         downloader = _resolve_downloader(cfg)
-        result = DownloadDatasetUseCase(downloader).execute()  # type: ignore[arg-type]
+        DownloadDatasetUseCase(downloader, logger).execute()  # type: ignore[arg-type]
     except Exception:
-        logger.exception("ダウンロードが失敗しました")
         raise
-
-    logger.info("Downloaded to: %s", result.output_dir)
-    logger.info("Files: %d", len(result.files))
-    logger.info("Commit: %s", result.commit_hash)
 
 
 if __name__ == "__main__":
