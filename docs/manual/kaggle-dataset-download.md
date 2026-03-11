@@ -9,29 +9,22 @@
 
 ## 1. 初回セットアップ
 
-### 1-1. Kaggle API トークンの取得
+### 1-1. Kaggle API トークンの取得と保存
 
 1. https://www.kaggle.com/settings を開く
 2. "API" セクションの **"Create New Token"** をクリック
 3. 表示されたトークン文字列をコピーする
-
-### 1-2. 認証情報の設定
-
-`.env.example` をコピーしてトークンを設定する:
+4. 以下のコマンドでトークンを保存する:
 
 ```bash
-cp .env.example .env
+mkdir -p ~/.kaggle
+echo "your-token-here" > ~/.kaggle/access_token
+chmod 600 ~/.kaggle/access_token
 ```
 
-`.env` を編集:
+> `~/.kaggle/access_token` はホームディレクトリに置くため、プロジェクトに関係なく使い回せる。
 
-```
-KAGGLE_API_TOKEN=your-token-here
-```
-
-> `.env` は `.gitignore` 済みのため、誤ってコミットされることはない。
-
-### 1-3. 依存パッケージのインストール
+### 1-2. 依存パッケージのインストール
 
 ```bash
 uv sync
@@ -117,7 +110,19 @@ Commit: a1b2c3d...
 
 ### `Could not find kaggle.json` / 認証エラー
 
-`.env` に `KAGGLE_API_TOKEN` が設定されているか確認する。
+`~/.kaggle/access_token` にトークンが正しく保存されているか確認する。
+
+```bash
+cat ~/.kaggle/access_token   # トークン文字列が表示されること
+ls -la ~/.kaggle/access_token  # パーミッションが 600 であること
+```
+
+設定し直す場合:
+
+```bash
+echo "your-token-here" > ~/.kaggle/access_token
+chmod 600 ~/.kaggle/access_token
+```
 
 ### `404 Not Found`
 

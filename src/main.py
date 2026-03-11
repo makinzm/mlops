@@ -2,20 +2,27 @@
 MLOps CLI エントリーポイント。
 
 Hydra で設定を読み込み、downloader.type に応じてインフラを DI して UseCase を実行する。
-python-dotenv で .env を自動ロードするため、KAGGLE_API_TOKEN 等の手動 export は不要。
+Kaggle 認証は ~/.kaggle/access_token に保存したトークンを使用する。
 
 実行例:
     uv run python -m src usecase=download_dataset downloader=kaggle
     uv run python -m src downloader.dataset=owner/name
 """
 
+import logging
 from pathlib import Path
 
 import hydra
 from dotenv import load_dotenv
 from omegaconf import DictConfig
 
-load_dotenv()
+load_dotenv(Path(__file__).parent.parent / ".env")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(filename)s:%(lineno)d - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 _CONF_DIR = str(Path(__file__).parent.parent / "conf")
 
@@ -37,11 +44,16 @@ def _resolve_downloader(cfg: DictConfig) -> object:
 def main(cfg: DictConfig) -> None:
     from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
 
-    downloader = _resolve_downloader(cfg)
-    result = DownloadDatasetUseCase(downloader).execute()  # type: ignore[arg-type]
-    print(f"Downloaded to: {result.output_dir}")
-    print(f"Files: {len(result.files)}")
-    print(f"Commit: {result.commit_hash}")
+    try:
+        downloader = _resolve_downloader(cfg)
+        result = DownloadDatasetUseCase(downloader).execute()  # type: ignore[arg-type]
+    except Exception:
+        logger.exception("ダウンロードが失敗しました")
+        raise
+
+    logger.info("Downloaded to: %s", result.output_dir)
+    logger.info("Files: %d", len(result.files))
+    logger.info("Commit: %s", result.commit_hash)
 
 
 if __name__ == "__main__":

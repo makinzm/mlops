@@ -1,8 +1,10 @@
 """
 Kaggle API を使ったデータダウンロード実装。
 
-新認証方式（KAGGLE_API_TOKEN 環境変数 / ~/.kaggle/access_token）を優先し、
-旧方式（~/.kaggle/kaggle.json）にもフォールバックする。
+認証方式（優先順）:
+  1. ~/.kaggle/access_token（推奨: トークン文字列のみ記載）
+  2. KAGGLE_API_TOKEN 環境変数
+  3. ~/.kaggle/kaggle.json（Legacy）
 """
 
 from pathlib import Path

@@ -151,15 +151,21 @@ uv run python -m src usecase=preprocess   # 将来
 uv run python -m src usecase=train        # 将来
 ```
 
+## DoD（追加）
+
+- [ ] エラーログにファイル名と行番号が表示されること（`[LEVEL] filename.py:LINE - message` 形式）
+- [ ] 認証エラー時に詳細なスタックトレースがログに出力されること
+
 ## 作業ステップ（implementation.md準拠）
 
 1. [x] ブランチ作成: `feature/kaggle-download`
 2. [x] `docs/tasks/2026/Q1/0311_kaggle-download/README.md` 作成
-3. [ ] CI自動化確認（type-check の src/ 対応）
-4. [ ] テスト実装のみ（RED確認）→ TEST_LOG 保存
-5. [ ] 実装（GREEN）
-6. [ ] `docs/manual/kaggle-dataset-download.md` 作成
-7. [ ] PR作成
+3. [x] CI自動化確認（type-check の src/ 対応）
+4. [x] テスト実装のみ（RED確認）→ TEST_LOG 保存
+5. [x] 実装（GREEN）
+6. [x] `docs/manual/kaggle-dataset-download.md` 作成
+7. [x] ロギング整備（ファイル名・行番号表示）
+8. [ ] PR作成
 
 ## .env による認証管理
 

@@ -34,6 +34,13 @@
 
 ## メタルール
 
+### ファイルを修正する前に必ず公式ドキュメントを確認する
+
+- **NG**: Webサーチ結果を読む前にファイルを書き換える。間違った情報を元に実装する。
+- **OK**: `gh` コマンド（例: `gh repo view Kaggle/kaggle-api --json ...`）や WebFetch/WebSearch で公式ドキュメントを確認してから実装する。
+- ライブラリの認証・APIの仕様変更は特に確認が必要。思い込みで実装しない。
+- URL付きのインラインコメントを残す場合は、必ず実在するURLを確認してから書く。嘘のURLは厳禁。
+
 ### 詰まったら2回で報告し、必ずログに残す
 
 - 同じ問題に2回対処してもブロックされたら、すぐにユーザーへ状況を報告する
@@ -114,6 +121,16 @@
 - **OK**: `.env.example` を用意し、`python-dotenv` で自動ロードする
 - `devenv.nix` に `dotenv.enable = true` を追加して devenv shell 入場時も自動ロードする
 - `.env` は `.gitignore` 済みであることを前提とする
+
+### ライブラリの認証 env var は思い込みで書かない
+
+- **NG**: `kaggle` ライブラリ用に `KAGGLE_API_TOKEN` を使うよう案内する（これは `kagglehub` 用）。あるいは `KAGGLE_USERNAME`+`KAGGLE_KEY` を案内する（これは Legacy 方式）
+- **OK**: `gh repo view Kaggle/kaggle-api` 等で公式 README を確認し、正確な方法をドキュメント化する
+- 公式ドキュメント（https://github.com/Kaggle/kaggle-api/blob/main/docs/README.md）では以下の優先順:
+  1. `export KAGGLE_API_TOKEN=xxx`（新方式・`~/.kaggle/settings.yaml` の `username:` と `key:` から生成）
+  2. `~/.kaggle/access_token`（ファイル保存方式）
+  3. `~/.kaggle/kaggle.json`（Legacy）
+- ユーザーに一番シンプルな方法（`~/.kaggle/access_token`）をドキュメント化する
 
 ---
 
