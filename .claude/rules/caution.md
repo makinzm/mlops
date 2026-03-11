@@ -47,6 +47,17 @@
 
 ---
 
+## TDD サイクル
+
+### RED フェーズのコミットは --no-verify をつける
+
+- **NG**: `git commit -m "test(RED): ..."` （pre-commit フックが mypy / ruff で失敗する）
+- **OK**: `git commit --no-verify -m "test(RED): ..."` （意図的に失敗している状態をコミットする）
+- RED フェーズは `src/` が存在しないため import エラーが必然。フックをスキップして問題ない。
+- GREEN フェーズ以降は通常通り `--no-verify` をつけない。
+
+---
+
 ## コマンドの書き方
 
 ### `uv run` に毎回 `--extra` をつけない
