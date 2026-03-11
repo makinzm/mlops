@@ -292,7 +292,8 @@ class TestKaggleDownloaderUnzip:
         """unzip=True のとき competition モードで ZIP が展開されること。
 
         competition_download_files は unzip パラメータを持たないため、
-        ダウンロード後に手動で展開しなければ後続の前処理パイプラインが ZIP を直接処理することになる。
+        ダウンロード後に手動で展開しなければ後続の前処理パイプラインが
+        ZIP を直接処理することになる。
         """
         with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_api = MagicMock()
@@ -367,7 +368,9 @@ class TestKaggleDownloaderForceCheck:
     def test_download_dataset_fails_when_files_exist_and_force_false(
         self, dataset_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
     ) -> None:
-        """dataset モードで force=False のとき既存データファイルがあれば FileExistsError になること。"""
+        """dataset モードで force=False のとき既存データファイルがあれば
+        FileExistsError になること。
+        """
         (tmp_path / "train.csv").write_text("existing data")
         with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_cls.return_value = MagicMock()
@@ -377,7 +380,9 @@ class TestKaggleDownloaderForceCheck:
     def test_download_competition_fails_when_files_exist_and_force_false(
         self, competition_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
     ) -> None:
-        """competition モードで force=False のとき既存データファイルがあれば FileExistsError になること。"""
+        """competition モードで force=False のとき既存データファイルがあれば
+        FileExistsError になること。
+        """
         (tmp_path / "train.csv").write_text("existing data")
         with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_cls.return_value = MagicMock()
@@ -390,6 +395,7 @@ class TestKaggleDownloaderForceCheck:
         """force=True のとき既存データファイルがあってもダウンロードが成功すること。"""
         (tmp_path / "train.csv").write_text("existing data")
         cfg = OmegaConf.merge(dataset_cfg, {"force": True})
+        assert isinstance(cfg, DictConfig)
         with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
             mock_cls.return_value = MagicMock()
             result = KaggleDownloader(cfg, mock_git_repo).download()
@@ -398,7 +404,8 @@ class TestKaggleDownloaderForceCheck:
     def test_download_succeeds_when_only_management_files_exist(
         self, dataset_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
     ) -> None:
-        """.gitkeep / .gitignore / metadata.yaml のみ存在する場合は force=False でもダウンロード成功すること。
+        """.gitkeep / .gitignore / metadata.yaml のみ存在する場合は
+        force=False でもダウンロード成功すること。
 
         これらは git 管理用・メタデータファイルでありデータファイルではない。
         空ディレクトリと同等に扱う。

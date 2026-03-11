@@ -2,14 +2,11 @@ pre-commit:
   parallel: true
   commands:
     ruff-check:
-      glob: "*.py"
-      run: uv run ruff check {staged_files}
+      run: uv run ruff check .
     ruff-format:
-      glob: "*.py"
-      run: uv run ruff format --check {staged_files}
+      run: uv run ruff format --check .
     mypy:
-      glob: "*.py"
-      run: uv run mypy {staged_files}
+      run: uv run mypy tests/ src/
     actionlint:
       glob: ".github/workflows/*.yml"
       run: devenv shell -- actionlint {staged_files}
