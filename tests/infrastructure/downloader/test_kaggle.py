@@ -62,6 +62,40 @@ def competition_cfg(tmp_path: Path) -> DictConfig:
     )
 
 
+@pytest.fixture
+def dataset_cfg_no_unzip(tmp_path: Path) -> DictConfig:
+    return OmegaConf.create(
+        {
+            "output_dir": str(tmp_path),
+            "unzip": False,
+            "force": False,
+            "downloader": {
+                "type": "kaggle",
+                "mode": "dataset",
+                "dataset": "testuser/test-dataset",
+                "competition": None,
+            },
+        }
+    )
+
+
+@pytest.fixture
+def competition_cfg_no_unzip(tmp_path: Path) -> DictConfig:
+    return OmegaConf.create(
+        {
+            "output_dir": str(tmp_path),
+            "unzip": False,
+            "force": False,
+            "downloader": {
+                "type": "kaggle",
+                "mode": "competition",
+                "dataset": None,
+                "competition": "test-competition",
+            },
+        }
+    )
+
+
 class TestKaggleDownloaderInit:
     def test_authenticate_called_on_init(
         self, dataset_cfg: DictConfig, mock_git_repo: MagicMock
@@ -227,6 +261,161 @@ class TestKaggleDownloaderCompetition:
             mock_cls.return_value = MagicMock()
             result = KaggleDownloader(competition_cfg, mock_git_repo).download()
             assert (result.output_dir / "metadata.yaml").exists()
+
+
+class TestKaggleDownloaderUnzip:
+    """unzip オプションの動作を検証するテスト。
+
+    なぜこのテストが必要か:
+    - competition_download_files は unzip パラメータを持たないため、
+      API に依存せず手動で ZIP 展開する必要がある。
+    - dataset_download_files の unzip=True は「ダウンロードが発生した場合のみ」展開するため、
+      既存 ZIP があるケースで展開が起きない。これを手動展開で解消する。
+    - テストでは Kaggle API のダウンロード副作用として ZIP ファイルを生成し、
+      展開後の CSV が存在すること・ZIP が削除されることを確認する。
+    """
+
+    def _make_zip_side_effect(self, tmp_path: Path) -> object:
+        """Kaggle API 呼び出し時に ZIP ファイルを生成するサイドエフェクト関数を返す。"""
+        import zipfile
+
+        def _side_effect(*args: object, **kwargs: object) -> None:
+            zip_path = tmp_path / "data.zip"
+            with zipfile.ZipFile(zip_path, "w") as zf:
+                zf.writestr("train.csv", "col1,col2\n1,2\n")
+
+        return _side_effect
+
+    def test_competition_unzips_when_unzip_true(
+        self, competition_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
+    ) -> None:
+        """unzip=True のとき competition モードで ZIP が展開されること。
+
+        competition_download_files は unzip パラメータを持たないため、
+        ダウンロード後に手動で展開しなければ後続の前処理パイプラインが
+        ZIP を直接処理することになる。
+        """
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_api = MagicMock()
+            mock_api.competition_download_files.side_effect = self._make_zip_side_effect(tmp_path)
+            mock_cls.return_value = mock_api
+            KaggleDownloader(competition_cfg, mock_git_repo).download()
+        assert (tmp_path / "train.csv").exists()
+        assert not (tmp_path / "data.zip").exists()
+
+    def test_competition_does_not_unzip_when_unzip_false(
+        self,
+        competition_cfg_no_unzip: DictConfig,
+        mock_git_repo: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """unzip=False のとき competition モードで ZIP が展開されないこと。
+
+        展開するかどうかはユーザーが config で制御できる必要がある。
+        unzip=False のときは ZIP をそのまま残す。
+        """
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_api = MagicMock()
+            mock_api.competition_download_files.side_effect = self._make_zip_side_effect(tmp_path)
+            mock_cls.return_value = mock_api
+            KaggleDownloader(competition_cfg_no_unzip, mock_git_repo).download()
+        assert (tmp_path / "data.zip").exists()
+        assert not (tmp_path / "train.csv").exists()
+
+    def test_dataset_unzips_when_unzip_true(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
+    ) -> None:
+        """unzip=True のとき dataset モードで ZIP が展開されること。
+
+        dataset_download_files の unzip=True は既存ファイルがある場合に展開をスキップする。
+        手動展開により、再実行時も確実に ZIP が展開されることを保証する。
+        """
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_api = MagicMock()
+            mock_api.dataset_download_files.side_effect = self._make_zip_side_effect(tmp_path)
+            mock_cls.return_value = mock_api
+            KaggleDownloader(dataset_cfg, mock_git_repo).download()
+        assert (tmp_path / "train.csv").exists()
+        assert not (tmp_path / "data.zip").exists()
+
+    def test_dataset_does_not_unzip_when_unzip_false(
+        self,
+        dataset_cfg_no_unzip: DictConfig,
+        mock_git_repo: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """unzip=False のとき dataset モードで ZIP が展開されないこと。"""
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_api = MagicMock()
+            mock_api.dataset_download_files.side_effect = self._make_zip_side_effect(tmp_path)
+            mock_cls.return_value = mock_api
+            KaggleDownloader(dataset_cfg_no_unzip, mock_git_repo).download()
+        assert (tmp_path / "data.zip").exists()
+        assert not (tmp_path / "train.csv").exists()
+
+
+class TestKaggleDownloaderForceCheck:
+    """force=False のとき既存ファイルがある場合の挙動を検証するテスト。
+
+    なぜこのテストが必要か:
+    - Kaggle API は force=False のとき既存ファイルがあると静かにスキップする。
+      ユーザーは「ダウンロードされた」と思い込んで古いデータを使い続けるリスクがある。
+    - 明示的に FileExistsError を送出することで、ユーザーが意図的に force=true を
+      指定しない限り既存データを上書きしないことを保証する。
+    - .gitkeep 等の管理ファイルはデータファイルではないため除外する。
+    """
+
+    def test_download_dataset_fails_when_files_exist_and_force_false(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
+    ) -> None:
+        """dataset モードで force=False のとき既存データファイルがあれば
+        FileExistsError になること。
+        """
+        (tmp_path / "train.csv").write_text("existing data")
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            with pytest.raises(FileExistsError, match="force=true"):
+                KaggleDownloader(dataset_cfg, mock_git_repo).download()
+
+    def test_download_competition_fails_when_files_exist_and_force_false(
+        self, competition_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
+    ) -> None:
+        """competition モードで force=False のとき既存データファイルがあれば
+        FileExistsError になること。
+        """
+        (tmp_path / "train.csv").write_text("existing data")
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            with pytest.raises(FileExistsError, match="force=true"):
+                KaggleDownloader(competition_cfg, mock_git_repo).download()
+
+    def test_download_succeeds_when_files_exist_and_force_true(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
+    ) -> None:
+        """force=True のとき既存データファイルがあってもダウンロードが成功すること。"""
+        (tmp_path / "train.csv").write_text("existing data")
+        cfg = OmegaConf.merge(dataset_cfg, {"force": True})
+        assert isinstance(cfg, DictConfig)
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            result = KaggleDownloader(cfg, mock_git_repo).download()
+        assert result is not None
+
+    def test_download_succeeds_when_only_management_files_exist(
+        self, dataset_cfg: DictConfig, mock_git_repo: MagicMock, tmp_path: Path
+    ) -> None:
+        """.gitkeep / .gitignore / metadata.yaml のみ存在する場合は
+        force=False でもダウンロード成功すること。
+
+        これらは git 管理用・メタデータファイルでありデータファイルではない。
+        空ディレクトリと同等に扱う。
+        """
+        (tmp_path / ".gitkeep").write_text("")
+        (tmp_path / ".gitignore").write_text("*\n!.gitkeep\n")
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            result = KaggleDownloader(dataset_cfg, mock_git_repo).download()
+        assert result is not None
 
 
 class TestKaggleDownloaderInvalidMode:
