@@ -7,6 +7,7 @@ Kaggle API を使ったデータダウンロード実装。
   3. ~/.kaggle/kaggle.json（Legacy）
 """
 
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
@@ -59,12 +60,15 @@ class KaggleDownloader:
             )
         output_dir = Path(self.cfg.output_dir)
         self.git_repo.setup_data_dir(output_dir)
+        self._check_force(output_dir)
         self.api.dataset_download_files(
             dataset=self.cfg.downloader.dataset,
             path=output_dir,
-            unzip=self.cfg.unzip,
+            unzip=False,
             force=self.cfg.force,
         )
+        if self.cfg.unzip:
+            self._unzip_zips(output_dir)
         return self._build_result(output_dir)
 
     def _download_competition(self) -> DownloadResult:
@@ -74,12 +78,34 @@ class KaggleDownloader:
             )
         output_dir = Path(self.cfg.output_dir)
         self.git_repo.setup_data_dir(output_dir)
+        self._check_force(output_dir)
         self.api.competition_download_files(
             competition=self.cfg.downloader.competition,
             path=output_dir,
             force=self.cfg.force,
         )
+        if self.cfg.unzip:
+            self._unzip_zips(output_dir)
         return self._build_result(output_dir)
+
+    def _check_force(self, output_dir: Path) -> None:
+        """force=False かつデータファイルが存在する場合は FileExistsError を送出する。"""
+        if not self.cfg.force:
+            existing = [
+                f for f in output_dir.rglob("*") if f.is_file() and f.name not in _METADATA_EXCLUDE
+            ]
+            if existing:
+                raise FileExistsError(
+                    f"'{output_dir}' にデータファイルが存在します。"
+                    " 再ダウンロードするには force=true を指定してください。"
+                )
+
+    def _unzip_zips(self, output_dir: Path) -> None:
+        """output_dir 内の ZIP ファイルをすべて展開し、ZIP を削除する。"""
+        for zip_path in list(output_dir.rglob("*.zip")):
+            with zipfile.ZipFile(zip_path) as zf:
+                zf.extractall(output_dir)
+            zip_path.unlink()
 
     def _build_result(self, output_dir: Path) -> DownloadResult:
         files = [
