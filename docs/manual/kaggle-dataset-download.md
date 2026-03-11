@@ -86,17 +86,17 @@ force: false
 ### 3-2. 実行
 
 ```bash
-uv run python -m src
+uv run python -m src usecase=download_dataset
 ```
 
 設定をコマンドラインで上書きすることも可能:
 
 ```bash
 # データセットを直接指定
-uv run python -m src downloader.dataset=titanic/titanic
+uv run python -m src usecase=download_dataset downloader.dataset=titanic/titanic
 
 # コンペデータをダウンロード
-uv run python -m src downloader=kaggle downloader.mode=competition downloader.competition=titanic
+uv run python -m src usecase=download_dataset downloader.mode=competition downloader.competition=titanic
 ```
 
 ### 3-3. 実行結果の確認
