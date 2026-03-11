@@ -1,0 +1,14 @@
+downloaded_at: '2026-03-11T22:26:08'
+commit_hash: d1d850ed133aeda7a7c776d1b28fe4087fec2d74
+config:
+  seed: 42
+  output_dir: data/2026/Q1/raw
+  unzip: true
+  force: false
+  downloader:
+    type: kaggle
+    mode: competition
+    dataset: null
+    competition: titanic
+files:
+- titanic.zip
