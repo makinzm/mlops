@@ -26,8 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      # src/ はまだ存在しないため tests/ を対象にする
-      - run: uv run --extra dev mypy tests/
+      - run: uv run --extra dev --extra kaggle mypy tests/ src/
 
   test:
     runs-on: ubuntu-latest
