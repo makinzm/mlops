@@ -17,9 +17,16 @@ from src.domain.repository.git import GitRepository
 
 class KaggleDownloader:
     def __init__(self, cfg: DictConfig, git_repo: GitRepository) -> None:
-        from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
-            KaggleApi as KaggleApiExtended,
-        )
+        # kaggle/__init__.py が import 時に api.authenticate() を実行するため、
+        # SystemExit はここで捕捉する必要がある。
+        try:
+            from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
+                KaggleApi as KaggleApiExtended,
+            )
+        except SystemExit as e:
+            raise RuntimeError(
+                "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+            ) from e
 
         self.cfg = cfg
         self.git_repo = git_repo

@@ -134,6 +134,20 @@
 
 ---
 
+## ライブラリの import 時副作用
+
+### try/except は副作用が発生する場所を正確に包む
+
+- **NG**: `self.api.authenticate()` を `try/except SystemExit` で包む
+  （`kaggle/__init__.py` は import 時に `api.authenticate()` を実行するため、
+  `self.api.authenticate()` に到達する前に sys.exit() が呼ばれる）
+- **OK**: `from kaggle.api.kaggle_api_extended import KaggleApi` の import 文自体を
+  `try/except SystemExit` で包む
+- ライブラリの副作用（import 時初期化・認証）は **import 文の行** で発生する。
+  `__init__.py` 等を確認して副作用の発生場所を特定してから try/except を置く。
+
+---
+
 ## TDD サイクル
 
 ### RED フェーズのコミットは --no-verify をつける

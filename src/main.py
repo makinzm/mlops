@@ -47,9 +47,10 @@ def main(cfg: DictConfig) -> None:
     logger = PythonAppLogger(__name__)
     try:
         downloader = _resolve_downloader(cfg)
-        DownloadDatasetUseCase(downloader, logger).execute()  # type: ignore[arg-type]
     except Exception:
+        logger.error("ダウンローダーの初期化に失敗しました", exc_info=True)
         raise
+    DownloadDatasetUseCase(downloader, logger).execute()  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":
