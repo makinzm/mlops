@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# NOTE: devenv (Nix) は CI では使用しない。
+# ローカル開発では devenv shell 経由でツールを統一管理するが、
+# GitHub Actions 上で `nix profile install nixpkgs#devenv` + `devenv shell --` を実行すると
+# Nix ストアのビルド/フェッチ (107 パッケージ, 832 MB) が 6 時間を超えてタイムアウトする。
+# 参照: https://github.com/makinzm/mlops/actions/runs/22853337380/job/66287132804?pr=11
+# CI では各ツールの公式 Action または uv を直接使用する。
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run --extra dev ruff check .
+      - run: uv run --extra dev ruff format --check .
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # src/ はまだ存在しないため tests/ を対象にする
+      - run: uv run --extra dev mypy tests/
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run --extra dev pytest --cov=src --cov-report=xml
+
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # rhysd/actionlint は floating v1 タグ非対応のため固定バージョンを指定
+      - uses: rhysd/actionlint@v1.7.11
