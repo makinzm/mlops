@@ -5,21 +5,22 @@ Kaggle API を使ったデータダウンロード実装。
 旧方式（~/.kaggle/kaggle.json）にもフォールバックする。
 """
 
-import subprocess
 from pathlib import Path
 
 from omegaconf import DictConfig
 
 from src.domain.data.downloader import DownloadResult
+from src.domain.repository.git import GitRepository
 
 
 class KaggleDownloader:
-    def __init__(self, cfg: DictConfig) -> None:
+    def __init__(self, cfg: DictConfig, git_repo: GitRepository) -> None:
         from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
             KaggleApi as KaggleApiExtended,
         )
 
         self.cfg = cfg
+        self.git_repo = git_repo
         self.api = KaggleApiExtended()
         self.api.authenticate()
 
@@ -34,40 +35,31 @@ class KaggleDownloader:
 
     def _download_dataset(self) -> DownloadResult:
         output_dir = Path(self.cfg.output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        self.git_repo.setup_data_dir(output_dir)
         self.api.dataset_download_files(
             dataset=self.cfg.downloader.dataset,
             path=output_dir,
             unzip=self.cfg.unzip,
             force=self.cfg.force,
         )
-        files = list(output_dir.rglob("*")) if output_dir.exists() else []
+        files = [f for f in output_dir.rglob("*") if f.is_file() and f.name != ".gitkeep"]
         return DownloadResult(
             output_dir=output_dir,
-            files=[f for f in files if f.is_file()],
-            commit_hash=self._get_commit_hash(),
+            files=files,
+            commit_hash=self.git_repo.get_commit_hash(),
         )
 
     def _download_competition(self) -> DownloadResult:
         output_dir = Path(self.cfg.output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        self.git_repo.setup_data_dir(output_dir)
         self.api.competition_download_files(
             competition=self.cfg.downloader.competition,
             path=output_dir,
             force=self.cfg.force,
         )
-        files = list(output_dir.rglob("*")) if output_dir.exists() else []
+        files = [f for f in output_dir.rglob("*") if f.is_file() and f.name != ".gitkeep"]
         return DownloadResult(
             output_dir=output_dir,
-            files=[f for f in files if f.is_file()],
-            commit_hash=self._get_commit_hash(),
+            files=files,
+            commit_hash=self.git_repo.get_commit_hash(),
         )
-
-    def _get_commit_hash(self) -> str:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return result.stdout.strip() if result.returncode == 0 else "unknown"

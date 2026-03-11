@@ -9,24 +9,31 @@ python-dotenv で .env を自動ロードするため、KAGGLE_API_TOKEN 等の�
     uv run python -m src downloader.dataset=owner/name
 """
 
+from pathlib import Path
+
 import hydra
 from dotenv import load_dotenv
 from omegaconf import DictConfig
 
 load_dotenv()
 
+_CONF_DIR = str(Path(__file__).parent.parent / "conf")
+
 
 def _resolve_downloader(cfg: DictConfig) -> object:
+    from src.infrastructure.repository.git import GitRepositoryImpl
+
+    git_repo = GitRepositoryImpl()
     downloader_type = cfg.downloader.type
     if downloader_type == "kaggle":
         from src.infrastructure.downloader.kaggle import KaggleDownloader
 
-        return KaggleDownloader(cfg)
+        return KaggleDownloader(cfg, git_repo)
     else:
         raise ValueError(f"Unknown downloader type: {downloader_type!r}. Supported: 'kaggle'")
 
 
-@hydra.main(config_path="../conf", config_name="config", version_base=None)
+@hydra.main(config_path=_CONF_DIR, config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
     from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
 
