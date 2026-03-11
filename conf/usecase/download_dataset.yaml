@@ -2,4 +2,4 @@
 seed: 42
 output_dir: "data/2026/Q1/raw"
 unzip: true
-force: false
+force: true
