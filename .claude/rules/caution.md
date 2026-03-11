@@ -134,6 +134,18 @@
 
 ---
 
+## Hydra 設定
+
+### config group のキーはグループ名以下に配置される
+
+- **NG**: `conf/usecase/download_dataset.yaml` に `output_dir` を書いて `cfg.output_dir` でアクセスする
+  （Hydra はデフォルトで `cfg.usecase.output_dir` に配置する）
+- **OK**: ルートレベルで参照したいキーを持つ config ファイルには `# @package _global_` を先頭に追加する
+- グループ名以下に置きたい設定（`cfg.downloader.*` など）は `@package _global_` 不要
+- マージ結果は `OmegaConf.to_yaml(cfg)` で確認する
+
+---
+
 ## ライブラリの import 時副作用
 
 ### try/except は副作用が発生する場所を正確に包む
