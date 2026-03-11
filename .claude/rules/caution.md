@@ -24,6 +24,32 @@
 
 ---
 
+## ドキュメント
+
+### マニュアルには「識別子の調べ方」など操作に必要な情報を書く
+
+- **NG**: `dataset: "owner/dataset-name"` とだけ書いて識別子の取得方法を省略する
+- **OK**: URL から識別子を取得する具体的な手順をマニュアルに記載する
+- ユーザーが迷わないよう、URL 例と識別子の対応を示す
+
+### マニュアルには「出力先」を明記する
+
+- **NG**: "ダウンロードされます" と書いてどこに保存されるか省略する
+- **OK**: `output_dir`（デフォルト: `data/2026/Q1/raw/`）に保存される、と具体的に記載する
+- `.gitignore` 対象であることも合わせて明記する
+
+---
+
+## 依存管理
+
+### kaggle 等の中核ライブラリは main deps に入れる
+
+- **NG**: `[dependency-groups]` の `kaggle` グループに入れて `uv sync --group kaggle` が必要にする
+- **OK**: `[project.dependencies]` に入れて `uv sync` だけで動くようにする
+- `uv sync` 単体で動くことが理想。覚えることを最小にする。
+
+---
+
 ## アーキテクチャ
 
 ### インフラ層を直接呼ばない
@@ -31,6 +57,12 @@
 - **NG**: CLI → `KaggleDownloader` を直接呼ぶ
 - **OK**: CLI（presentation） → UseCase → Infrastructure という Clean Architecture のレイヤーを守る
 - DI は CLI 層で行い、UseCase は抽象（Protocol）に依存させる
+
+### usecase の config に インフラ固有の設定を混在させない
+
+- **NG**: `conf/usecase/download_dataset.yaml` に `kaggle: {mode: dataset, ...}` を書く
+- **OK**: `conf/downloader/kaggle.yaml` に kaggle 固有設定を分離し、usecase config は `output_dir / unzip / force` のみ持つ
+- Clean Architecture: UseCase 層は Infrastructure の存在を知らない。設定も同様。
 
 ### インフラ選択は設定で抽象化する
 

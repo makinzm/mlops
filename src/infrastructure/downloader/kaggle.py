@@ -24,7 +24,7 @@ class KaggleDownloader:
         self.api.authenticate()
 
     def download(self) -> DownloadResult:
-        mode = self.cfg.kaggle.mode
+        mode = self.cfg.downloader.mode
         if mode == "dataset":
             return self._download_dataset()
         elif mode == "competition":
@@ -36,7 +36,7 @@ class KaggleDownloader:
         output_dir = Path(self.cfg.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         self.api.dataset_download_files(
-            dataset=self.cfg.kaggle.dataset,
+            dataset=self.cfg.downloader.dataset,
             path=output_dir,
             unzip=self.cfg.unzip,
             force=self.cfg.force,
@@ -52,7 +52,7 @@ class KaggleDownloader:
         output_dir = Path(self.cfg.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         self.api.competition_download_files(
-            competition=self.cfg.kaggle.competition,
+            competition=self.cfg.downloader.competition,
             path=output_dir,
             force=self.cfg.force,
         )

@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group dev
+      - run: uv sync
       - run: uv run ruff check .
       - run: uv run ruff format --check .
 
@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group dev --group kaggle
+      - run: uv sync
       - run: uv run mypy tests/ src/
 
   test:
@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group dev --group kaggle
+      - run: uv sync
       - run: uv run pytest --cov=src --cov-report=xml
 
   actionlint:

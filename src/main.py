@@ -1,12 +1,12 @@
 """
 MLOps CLI エントリーポイント。
 
-Hydra で設定を読み込み、data_from に応じてインフラを DI して UseCase を実行する。
+Hydra で設定を読み込み、downloader.type に応じてインフラを DI して UseCase を実行する。
 python-dotenv で .env を自動ロードするため、KAGGLE_API_TOKEN 等の手動 export は不要。
 
 実行例:
-    uv run python -m src usecase=download_dataset
-    uv run python -m src usecase=download_dataset kaggle.dataset=owner/name
+    uv run python -m src usecase=download_dataset downloader=kaggle
+    uv run python -m src downloader.dataset=owner/name
 """
 
 import hydra
@@ -17,13 +17,13 @@ load_dotenv()
 
 
 def _resolve_downloader(cfg: DictConfig) -> object:
-    data_from = cfg.data_from
-    if data_from == "kaggle":
+    downloader_type = cfg.downloader.type
+    if downloader_type == "kaggle":
         from src.infrastructure.downloader.kaggle import KaggleDownloader
 
         return KaggleDownloader(cfg)
     else:
-        raise ValueError(f"Unknown data_from: {data_from!r}. Supported: 'kaggle'")
+        raise ValueError(f"Unknown downloader type: {downloader_type!r}. Supported: 'kaggle'")
 
 
 @hydra.main(config_path="../conf", config_name="config", version_base=None)

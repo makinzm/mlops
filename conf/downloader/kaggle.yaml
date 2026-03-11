@@ -1,0 +1,4 @@
+type: "kaggle"
+mode: "dataset"           # "dataset" or "competition"
+dataset: "username/dataset-name"
+competition: null

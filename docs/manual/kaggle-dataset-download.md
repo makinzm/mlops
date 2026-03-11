@@ -34,47 +34,72 @@ KAGGLE_API_TOKEN=your-token-here
 ### 1-3. 依存パッケージのインストール
 
 ```bash
-uv sync --group dev --group kaggle
+uv sync
 ```
 
 ---
 
-## 2. データセットのダウンロード
+## 2. データセット識別子の調べ方
 
-### 2-1. 設定ファイルの確認・編集
+Kaggle のデータセット識別子は `owner/dataset-name` の形式。
 
-`conf/usecase/download_dataset.yaml` を用途に合わせて編集する:
+### データセットの場合
+
+1. ダウンロードしたいデータセットのページを Kaggle で開く
+2. URL が `https://www.kaggle.com/datasets/owner/dataset-name` の形式
+3. `owner/dataset-name` の部分が識別子
+
+例: `https://www.kaggle.com/datasets/titanic/titanic` → 識別子は `titanic/titanic`
+
+### コンペティションの場合
+
+1. コンペのページを開く
+2. URL が `https://www.kaggle.com/competitions/competition-name` の形式
+3. `competition-name` の部分が識別子
+
+例: `https://www.kaggle.com/competitions/titanic` → 識別子は `titanic`
+
+---
+
+## 3. データセットのダウンロード
+
+### 3-1. 設定ファイルの確認・編集
+
+`conf/downloader/kaggle.yaml` でダウンロード対象を指定する:
+
+```yaml
+type: "kaggle"
+mode: "dataset"                 # "dataset" or "competition"
+dataset: "owner/dataset-name"   # ← 手順 2 で調べた識別子
+competition: null
+```
+
+`conf/usecase/download_dataset.yaml` で出力先などを指定する:
 
 ```yaml
 seed: 42
-data_from: "kaggle"
-output_dir: "data/2026/Q1/raw"   # ← ダウンロード先
+output_dir: "data/2026/Q1/raw"  # ← ダウンロード先（プロジェクトルートからの相対パス）
 unzip: true
 force: false
-
-kaggle:
-  mode: "dataset"                 # "dataset" or "competition"
-  dataset: "owner/dataset-name"   # ← Kaggle のデータセット識別子
-  competition: null
 ```
 
-### 2-2. 実行
+### 3-2. 実行
 
 ```bash
-uv run python -m src usecase=download_dataset
+uv run python -m src
 ```
 
 設定をコマンドラインで上書きすることも可能:
 
 ```bash
 # データセットを直接指定
-uv run python -m src usecase=download_dataset kaggle.dataset=titanic/titanic
+uv run python -m src downloader.dataset=titanic/titanic
 
 # コンペデータをダウンロード
-uv run python -m src usecase=download_dataset kaggle.mode=competition kaggle.competition=titanic
+uv run python -m src downloader=kaggle downloader.mode=competition downloader.competition=titanic
 ```
 
-### 2-3. 実行結果の確認
+### 3-3. 実行結果の確認
 
 ```
 Downloaded to: data/2026/Q1/raw
@@ -82,19 +107,21 @@ Files: 3
 Commit: a1b2c3d...
 ```
 
-ダウンロードされたファイルは `output_dir` に保存される。`commit_hash` により、どのバージョンのコードでダウンロードしたかが記録される。
+- ダウンロードされたファイルは **`output_dir`（デフォルト: `data/2026/Q1/raw/`）** に保存される
+- `data/` は `.gitignore` 済みのため、大容量ファイルが誤ってコミットされることはない
+- `commit_hash` により、どのバージョンのコードでダウンロードしたかが記録される（再現性の担保）
 
 ---
 
-## 3. よくあるエラー
+## 4. よくあるエラー
 
-### `Could not find kaggle.json` / `SystemExit: 1`
+### `Could not find kaggle.json` / 認証エラー
 
-認証情報が設定されていない。`.env` に `KAGGLE_API_TOKEN` が設定されているか確認する。
+`.env` に `KAGGLE_API_TOKEN` が設定されているか確認する。
 
 ### `404 Not Found`
 
-データセット識別子が間違っている。Kaggle のデータセットページ URL（`kaggle.com/datasets/owner/name`）から `owner/name` を確認する。
+データセット識別子が間違っている。手順 2 で URL から正確にコピーする。
 
 ### `403 Forbidden`
 

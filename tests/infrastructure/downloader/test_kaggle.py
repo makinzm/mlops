@@ -21,11 +21,11 @@ from src.infrastructure.downloader.kaggle import KaggleDownloader
 def dataset_cfg(tmp_path: Path) -> DictConfig:
     return OmegaConf.create(
         {
-            "data_from": "kaggle",
             "output_dir": str(tmp_path),
             "unzip": True,
             "force": False,
-            "kaggle": {
+            "downloader": {
+                "type": "kaggle",
                 "mode": "dataset",
                 "dataset": "testuser/test-dataset",
                 "competition": None,
@@ -38,11 +38,11 @@ def dataset_cfg(tmp_path: Path) -> DictConfig:
 def competition_cfg(tmp_path: Path) -> DictConfig:
     return OmegaConf.create(
         {
-            "data_from": "kaggle",
             "output_dir": str(tmp_path),
             "unzip": True,
             "force": False,
-            "kaggle": {
+            "downloader": {
+                "type": "kaggle",
                 "mode": "competition",
                 "dataset": None,
                 "competition": "test-competition",
@@ -132,7 +132,7 @@ class TestKaggleDownloaderInvalidMode:
         """
         from omegaconf import DictConfig
 
-        merged = OmegaConf.merge(dataset_cfg, {"kaggle": {"mode": "unknown_mode"}})
+        merged = OmegaConf.merge(dataset_cfg, {"downloader": {"mode": "unknown_mode"}})
         assert isinstance(merged, DictConfig)
         cfg = merged
         with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:

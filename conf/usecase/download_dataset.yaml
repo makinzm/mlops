@@ -1,10 +1,4 @@
 seed: 42
-data_from: "kaggle"
 output_dir: "data/2026/Q1/raw"
 unzip: true
 force: false
-
-kaggle:
-  mode: "dataset"
-  dataset: "username/dataset-name"
-  competition: null
