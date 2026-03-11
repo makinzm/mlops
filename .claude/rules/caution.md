@@ -4,6 +4,28 @@
 
 ---
 
+## ファイル管理
+
+### `-m package` で実行できるよう __main__.py を作る
+
+- **NG**: `src/main.py` だけ作って `uv run python -m src` が動かない状態にする
+- **OK**: `src/__main__.py` を作り `main()` を呼ぶ。README に書いたコマンドは必ず動作確認する
+- task README に書いたコマンド例は必ず手元で実行して確認する
+
+### データディレクトリは .gitignore + .gitkeep で管理する
+
+- **NG**: `data/` を `.gitignore` するだけでディレクトリ自体が git に入らない。また `data/2026/Q1/raw/` のように出力先をハードコードした `.gitkeep` を repo に入れる
+- **OK**: `output_dir` は conf で自由に変わるため、**ダウンロード実行時に動的に** `.gitkeep` と `.gitignore` を生成するロジックを実装に組み込む
+- その責務は `GitRepository.setup_data_dir()` に持たせ、downloader から DI で使う
+
+### git 操作は GitRepository Protocol に集約する
+
+- **NG**: `KaggleDownloader` が `subprocess.run(["git", ...])` を直接呼ぶ
+- **OK**: `src/domain/repository/git.py` に `GitRepository` Protocol を定義し、`GitRepositoryImpl` に実装を閉じる
+- commit hash 取得・データディレクトリ初期化など git に関わる操作はすべて `GitRepository` 経由にする
+
+---
+
 ## メタルール
 
 ### 詰まったら2回で報告し、必ずログに残す
