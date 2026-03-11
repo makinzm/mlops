@@ -3,13 +3,13 @@ pre-commit:
   commands:
     ruff-check:
       glob: "*.py"
-      run: devenv shell -- uv run --extra dev ruff check {staged_files}
+      run: uv run ruff check {staged_files}
     ruff-format:
       glob: "*.py"
-      run: devenv shell -- uv run --extra dev ruff format --check {staged_files}
+      run: uv run ruff format --check {staged_files}
     mypy:
       glob: "*.py"
-      run: devenv shell -- uv run --extra dev mypy {staged_files}
+      run: uv run mypy {staged_files}
     actionlint:
       glob: ".github/workflows/*.yml"
       run: devenv shell -- actionlint {staged_files}

@@ -18,23 +18,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv run --extra dev ruff check .
-      - run: uv run --extra dev ruff format --check .
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
 
   type-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      # src/ はまだ存在しないため tests/ を対象にする
-      - run: uv run --extra dev mypy tests/
+      - run: uv sync
+      - run: uv run mypy tests/ src/
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv run --extra dev pytest --cov=src --cov-report=xml
+      - run: uv sync
+      - run: uv run pytest --cov=src --cov-report=xml
 
   actionlint:
     runs-on: ubuntu-latest

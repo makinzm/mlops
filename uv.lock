@@ -1914,17 +1914,19 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "hydra-core" },
+    { name = "kaggle" },
     { name = "mlflow" },
     { name = "numpy" },
     { name = "omegaconf" },
     { name = "pandas" },
     { name = "pydantic" },
+    { name = "python-dotenv" },
     { name = "pytorch-lightning" },
     { name = "scikit-learn" },
     { name = "torch" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "mypy" },
     { name = "pytest" },
@@ -1936,31 +1938,34 @@ gcp = [
     { name = "google-cloud-aiplatform" },
     { name = "google-cloud-storage" },
 ]
-kaggle = [
-    { name = "kaggle" },
-]
 
 [package.metadata]
 requires-dist = [
-    { name = "google-cloud-aiplatform", marker = "extra == 'gcp'", specifier = ">=1.0" },
-    { name = "google-cloud-storage", marker = "extra == 'gcp'", specifier = ">=2.0" },
     { name = "hydra-core", specifier = ">=1.3" },
-    { name = "kaggle", marker = "extra == 'kaggle'", specifier = ">=1.5" },
+    { name = "kaggle", specifier = ">=1.5" },
     { name = "mlflow", specifier = ">=2.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "omegaconf", specifier = ">=2.3" },
     { name = "pandas", specifier = ">=2.0" },
     { name = "pydantic", specifier = ">=2.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
+    { name = "python-dotenv", specifier = ">=1.0" },
     { name = "pytorch-lightning", specifier = ">=2.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1" },
     { name = "scikit-learn", specifier = ">=1.3" },
     { name = "torch", specifier = ">=2.0" },
-    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
 ]
-provides-extras = ["dev", "kaggle", "gcp"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.0" },
+    { name = "pytest", specifier = ">=7.0" },
+    { name = "pytest-cov", specifier = ">=4.0" },
+    { name = "ruff", specifier = ">=0.1" },
+    { name = "types-pyyaml", specifier = ">=6.0" },
+]
+gcp = [
+    { name = "google-cloud-aiplatform", specifier = ">=1.0" },
+    { name = "google-cloud-storage", specifier = ">=2.0" },
+]
 
 [[package]]
 name = "mpmath"

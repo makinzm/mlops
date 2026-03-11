@@ -1,0 +1,4 @@
+defaults:
+  - usecase: download_dataset
+  - downloader: kaggle
+  - _self_
