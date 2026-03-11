@@ -60,6 +60,12 @@
 
 ## コマンドの書き方
 
+### python を直接実行しない。常に uv run python を使う
+
+- **NG**: `python -c "..."` / `python script.py`
+- **OK**: `uv run python -c "..."` / `uv run python script.py`
+- プロジェクトの仮想環境を確実に使うために uv 経由で実行する。
+
 ### `uv run` に毎回 `--extra` をつけない
 
 - **NG**: `uv run --extra kaggle --extra dev pytest tests/`
