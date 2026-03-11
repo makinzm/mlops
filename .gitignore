@@ -1,8 +1,10 @@
 # Data (raw/processed datasets - excluded from version control)
-data/
+# data/ だと親ごと除外され子の !.gitkeep が効かないため data/** を使う
+data/**
+!data/**/
+!data/**/.gitkeep
+!data/**/.gitignore
 outputs/
-# Source code directories named "data" should be tracked
-!src/**/data/
 
 # Python
 __pycache__/
