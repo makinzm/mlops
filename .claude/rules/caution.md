@@ -1,0 +1,56 @@
+# 注意事項（過去の指摘事項）
+
+このファイルはユーザーからの指摘をもとに、繰り返さないべき設計ミスや注意点をまとめたものです。
+
+---
+
+## メタルール
+
+### 指摘を受けたら必ず caution.md を更新する
+
+- ユーザーから設計・実装・ドキュメント・コマンド等に関する指摘を受けた場合、**言われなくても** このファイルに追記する
+- 指摘内容を「NG → OK」形式で記録し、次回以降同じミスを繰り返さない
+- `caution.md` の更新は実装コミットとは別に、指摘を受けた直後に行う
+
+---
+
+## アーキテクチャ
+
+### インフラ層を直接呼ばない
+
+- **NG**: CLI → `KaggleDownloader` を直接呼ぶ
+- **OK**: CLI（presentation） → UseCase → Infrastructure という Clean Architecture のレイヤーを守る
+- DI は CLI 層で行い、UseCase は抽象（Protocol）に依存させる
+
+### インフラ選択は設定で抽象化する
+
+- **NG**: `KaggleDownloader` を直接インスタンス化してハードコード
+- **OK**: `data_from: "kaggle"` のような設定キーで実装を選択し、将来 GCS / HuggingFace 等への差し替えを容易にする
+- 拡張性を意識し、特定ベンダーに密結合したクラス名をエントリーポイントに露出させない
+
+### ユースケースはコマンドに対応させる
+
+- **NG**: `main.py` がすべての処理を持ち、コマンドが増えるにつれて肥大化する
+- **OK**: Hydra の config group（`usecase=download_dataset`）でユースケースを切り替え
+- 将来 `usecase=preprocess`, `usecase=train`, `usecase=analyze` を追加しやすい構造にする
+
+---
+
+## 設定・環境変数
+
+### `.env` で認証情報を管理する
+
+- **NG**: ドキュメントに `export KAGGLE_API_TOKEN=xxxxx` と毎回手動実行を案内する
+- **OK**: `.env.example` を用意し、`python-dotenv` で自動ロードする
+- `devenv.nix` に `dotenv.enable = true` を追加して devenv shell 入場時も自動ロードする
+- `.env` は `.gitignore` 済みであることを前提とする
+
+---
+
+## コマンドの書き方
+
+### `uv run` に毎回 `--extra` をつけない
+
+- **NG**: `uv run --extra kaggle --extra dev pytest tests/`
+- **OK**: 初回に `uv sync --extra kaggle --extra dev` を一度だけ実行し、その後は `uv run pytest tests/` で十分
+- ドキュメントでは「セットアップ」と「日常コマンド」を分けて記載する
