@@ -48,6 +48,11 @@ class KaggleDownloader:
             raise ValueError(f"Unknown mode: {mode!r}. Choose 'dataset' or 'competition'.")
 
     def _download_dataset(self) -> DownloadResult:
+        if not self.cfg.downloader.dataset:
+            raise ValueError(
+                "dataset が未指定です。"
+                " 例: uv run python -m src downloader.dataset=owner/dataset-name"
+            )
         output_dir = Path(self.cfg.output_dir)
         self.git_repo.setup_data_dir(output_dir)
         self.api.dataset_download_files(
@@ -64,6 +69,10 @@ class KaggleDownloader:
         )
 
     def _download_competition(self) -> DownloadResult:
+        if not self.cfg.downloader.competition:
+            raise ValueError(
+                "competition が未指定です。 例: uv run python -m src downloader.competition=titanic"
+            )
         output_dir = Path(self.cfg.output_dir)
         self.git_repo.setup_data_dir(output_dir)
         self.api.competition_download_files(

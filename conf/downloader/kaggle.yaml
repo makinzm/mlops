@@ -1,4 +1,4 @@
 type: "kaggle"
-mode: "dataset"           # "dataset" or "competition"
-dataset: "username/dataset-name"
-competition: null
+mode: "competition"       # "dataset" or "competition"
+dataset: null             # mode=dataset のとき必須: owner/dataset-name
+competition: "titanic"    # mode=competition のとき必須: competition-name
