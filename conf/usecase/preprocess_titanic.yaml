@@ -1,0 +1,135 @@
+# @package _global_
+# Titanic 前処理パイプライン
+# train.csv と test.csv を別ブランチで処理し、それぞれ出力する
+#
+# 注意: fill_na の統計量（median）は train/test それぞれで独立して計算される。
+#       将来的には train fit → test transform に対応予定。
+
+usecase: preprocess
+job_id: titanic_preprocess
+
+inputs:
+  - id: raw_train
+    path: data/2026/Q1/raw/train.csv
+    format: csv
+  - id: raw_test
+    path: data/2026/Q1/raw/test.csv
+    format: csv
+
+output_dir: data/processed
+
+executor:
+  type: local
+
+cv:
+  strategy: kfold
+  n_splits: 5
+  time_col: null
+  target_col: Survived
+
+# ------------------------------------------------------------
+# DAG ステップ
+#
+# 全体像:
+#
+#   raw_train --> train_selected --> train_filled_age
+#                                       --> train_filled_embarked
+#                                           --> train_family --> train_out (CV=true)
+#
+#   raw_test  --> test_selected  --> test_filled_age
+#                                       --> test_filled_embarked
+#                                           --> test_family  --> test_out (CV=false)
+# ------------------------------------------------------------
+
+steps:
+  # ----------------------------------------------------------------
+  # Train ブランチ
+  # ----------------------------------------------------------------
+
+  # 不要カラムを落とす（Name, Ticket, Cabin は欠損多 or 高カーディナリティ）
+  - id: train_selected
+    from: raw_train
+    polars:
+      method: select_columns
+      columns: [PassengerId, Survived, Pclass, Sex, Age, SibSp, Parch, Fare, Embarked]
+
+  # Age / Fare の欠損を中央値で補完
+  - id: train_filled_age
+    sklearn:
+      method: fill_na
+      strategy: median
+      columns: [Age, Fare]
+
+  # Embarked の欠損を最頻値 'S' で補完（train で 2 件のみ欠損）
+  - id: train_filled_embarked
+    sklearn:
+      method: fill_na
+      strategy: constant
+      columns: [Embarked]
+      fill_value: "S"
+
+  # 同乗家族数（SibSp + Parch）を特徴量として追加
+  - id: train_family
+    polars:
+      method: arithmetic
+      operation: add
+      col_a: SibSp
+      col_b: Parch
+      output_col: FamilySize
+
+  # ----------------------------------------------------------------
+  # Test ブランチ
+  # ----------------------------------------------------------------
+
+  - id: test_selected
+    from: raw_test
+    polars:
+      method: select_columns
+      columns: [PassengerId, Pclass, Sex, Age, SibSp, Parch, Fare, Embarked]
+
+  - id: test_filled_age
+    sklearn:
+      method: fill_na
+      strategy: median
+      columns: [Age, Fare]
+
+  - id: test_filled_embarked
+    sklearn:
+      method: fill_na
+      strategy: constant
+      columns: [Embarked]
+      fill_value: "S"
+
+  - id: test_family
+    polars:
+      method: arithmetic
+      operation: add
+      col_a: SibSp
+      col_b: Parch
+      output_col: FamilySize
+
+  # ----------------------------------------------------------------
+  # 出力
+  # ----------------------------------------------------------------
+
+  # train: KFold CV で fold_N/train.parquet, fold_N/test.parquet に分割して保存
+  - id: train_out
+    from: train_family
+    output:
+      columns: [PassengerId, Survived, Pclass, Sex, Age, SibSp, Parch, Fare, Embarked, FamilySize]
+      format: parquet
+      cv: true
+
+  # test: CV なし（Kaggle 提出用）
+  - id: test_out
+    from: test_family
+    output:
+      columns: [PassengerId, Pclass, Sex, Age, SibSp, Parch, Fare, Embarked, FamilySize]
+      format: parquet
+      cv: false
+
+targets:
+  - train_out
+  - test_out
+
+seed: 42
