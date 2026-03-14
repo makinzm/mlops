@@ -1,27 +1,27 @@
 # TODO: 前処理パイプライン実装
 
-## ステータス: 実装中
+## ステータス: PR 作成待ち
 
 ## 実装サイクル（RED -> GREEN の順序）
 
 - [x] README.md 設計計画作成・承認
-- [ ] **Cycle 1**: domain データクラス (PreprocessResult, StepResult, ColumnMeta, Node, DAG)
-  - [ ] RED: テスト実装
-  - [ ] GREEN: 実装
-- [ ] **Cycle 2**: PolarsResolver (select_columns, arithmetic, exp_weight, join)
-  - [ ] RED: テスト実装
-  - [ ] GREEN: 実装
-- [ ] **Cycle 3**: SklearnResolver (fill_na + データリーク防止)
-  - [ ] RED: テスト実装
-  - [ ] GREEN: 実装
-- [ ] **Cycle 4**: OutputResolver + Registry + DAG Runner
-  - [ ] RED: テスト実装
-  - [ ] GREEN: 実装
-- [ ] **Cycle 5**: Executor (LocalExecutor + Factory) + PreprocessUseCase + main.py + conf
-  - [ ] RED: テスト実装
-  - [ ] GREEN: 実装
-- [ ] **Cycle 6**: Refactor
-- [ ] **Cycle 7**: docs/manual/preprocess.md 作成
+- [x] **Cycle 1**: domain データクラス (PreprocessResult, StepResult, ColumnMeta, Node, DAG)
+  - [x] RED: テスト実装
+  - [x] GREEN: 実装
+- [x] **Cycle 2**: PolarsResolver (select_columns, arithmetic, exp_weight, join)
+  - [x] RED: テスト実装
+  - [x] GREEN: 実装
+- [x] **Cycle 3**: SklearnResolver (fill_na + データリーク防止)
+  - [x] RED: テスト実装
+  - [x] GREEN: 実装
+- [x] **Cycle 4**: OutputResolver + Registry + DAG Runner
+  - [x] RED: テスト実装
+  - [x] GREEN: 実装
+- [x] **Cycle 5**: Executor (LocalExecutor + Factory) + PreprocessUseCase + main.py + conf
+  - [x] RED: テスト実装
+  - [x] GREEN: 実装
+- [x] **Cycle 6**: Refactor（GitRepositoryImpl 委譲・dag_runner バグ修正）
+- [x] **Cycle 7**: docs/manual/preprocess.md 作成
 - [ ] PR 作成
 
 ## ファイル一覧（新規作成）
