@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 from omegaconf import OmegaConf
 
+from src.domain.data.eda import AnalysisStep
 from src.infrastructure.analyzer.polars_analyzer import PolarsAnalyzer
 
 # ---------------------------------------------------------------------------
@@ -21,7 +22,6 @@ from src.infrastructure.analyzer.polars_analyzer import PolarsAnalyzer
 def _make_cfg(
     tmp_path: Path,
     csv_path: Path,
-    analyses: list[dict],  # type: ignore[type-arg]
     max_plot_cols: int = 20,
 ) -> object:
     return OmegaConf.create(
@@ -33,9 +33,18 @@ def _make_cfg(
                 "name": "titanic",
                 "input_paths": [str(csv_path)],
             },
-            "analyses": analyses,
         }
     )
+
+
+def _make_steps(raw: list[dict]) -> list[AnalysisStep]:  # type: ignore[type-arg]
+    return [
+        AnalysisStep(
+            type=d["type"],
+            params={k: v for k, v in d.items() if k != "type"},
+        )
+        for d in raw
+    ]
 
 
 def _write_titanic_csv(path: Path) -> Path:
@@ -59,8 +68,17 @@ def titanic_csv(tmp_path: Path) -> Path:
     return _write_titanic_csv(tmp_path)
 
 
-def _make_analyzer(cfg: object) -> PolarsAnalyzer:
-    return PolarsAnalyzer(cfg, commit_hash="deadbeef")  # type: ignore[arg-type]
+def _make_analyzer(
+    cfg: object,
+    steps_raw: list[dict] | None = None,  # type: ignore[type-arg]
+) -> PolarsAnalyzer:
+    if steps_raw is None:
+        steps_raw = [{"type": "basic_stats"}]
+    return PolarsAnalyzer(
+        cfg,  # type: ignore[arg-type]
+        commit_hash="deadbeef",
+        analyses=_make_steps(steps_raw),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -71,13 +89,19 @@ def _make_analyzer(cfg: object) -> PolarsAnalyzer:
 class TestReportDirectoryCreation:
     def test_report_dir_created(self, titanic_csv: Path, tmp_path: Path) -> None:
         """analyze() でレポートディレクトリが作成される。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
+        cfg = _make_cfg(tmp_path, titanic_csv)
         result = _make_analyzer(cfg).analyze()
         assert result.report_dir.exists()
 
+    def test_report_dir_is_under_polars_subdir(self, titanic_csv: Path, tmp_path: Path) -> None:
+        """report_dir が .../polars/ サブディレクトリになること。"""
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg).analyze()
+        assert result.report_dir.name == "polars"
+
     def test_gitignore_contains_star(self, titanic_csv: Path, tmp_path: Path) -> None:
         """.gitignore が '*' のみ含む。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
+        cfg = _make_cfg(tmp_path, titanic_csv)
         result = _make_analyzer(cfg).analyze()
         gitignore = result.report_dir / ".gitignore"
         assert gitignore.exists()
@@ -91,9 +115,9 @@ class TestReportDirectoryCreation:
 
 class TestParquetOutput:
     def test_basic_stats_always_saves_parquet(self, titanic_csv: Path, tmp_path: Path) -> None:
-        """PolarsAnalyzer は output_format 設定に関わらず常に .parquet を出力する。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
-        result = _make_analyzer(cfg).analyze()
+        """PolarsAnalyzer は常に .parquet を出力する。"""
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg, [{"type": "basic_stats"}]).analyze()
 
         stats_dir = result.report_dir / "statistics"
         assert len(list(stats_dir.glob("*.parquet"))) >= 1
@@ -108,16 +132,16 @@ class TestParquetOutput:
 class TestBasicStats:
     def test_basic_stats_creates_summary(self, titanic_csv: Path, tmp_path: Path) -> None:
         """basic_stats で summary ファイルが生成される。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg, [{"type": "basic_stats"}]).analyze()
 
         stats_dir = result.report_dir / "statistics"
         assert len(list(stats_dir.glob("train_summary*"))) == 1
 
     def test_basic_stats_creates_missing(self, titanic_csv: Path, tmp_path: Path) -> None:
         """basic_stats で欠損値集計ファイルが生成される。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg, [{"type": "basic_stats"}]).analyze()
 
         stats_dir = result.report_dir / "statistics"
         assert len(list(stats_dir.glob("train_missing*"))) == 1
@@ -131,8 +155,8 @@ class TestBasicStats:
 class TestDistributions:
     def test_distributions_creates_images(self, titanic_csv: Path, tmp_path: Path) -> None:
         """distributions で PNG が images/ に生成される。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "distributions"}])
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg, [{"type": "distributions"}]).analyze()
 
         images_dir = result.report_dir / "images"
         assert len(list(images_dir.glob("train_*_dist.png"))) >= 1
@@ -143,8 +167,8 @@ class TestDistributions:
         df = pd.DataFrame({f"col{i}": range(5) for i in range(10)})
         df.to_csv(wide_csv, index=False)
 
-        cfg = _make_cfg(tmp_path, wide_csv, [{"type": "distributions"}], max_plot_cols=2)
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, wide_csv, max_plot_cols=2)
+        result = _make_analyzer(cfg, [{"type": "distributions"}]).analyze()
 
         images_dir = result.report_dir / "images"
         assert len(list(images_dir.glob("wide_*_dist.png"))) <= 2
@@ -158,8 +182,8 @@ class TestDistributions:
 class TestMissingValues:
     def test_missing_values_creates_heatmap(self, titanic_csv: Path, tmp_path: Path) -> None:
         """missing_values でヒートマップ PNG が生成される。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "missing_values"}])
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg, [{"type": "missing_values"}]).analyze()
 
         images_dir = result.report_dir / "images"
         assert len(list(images_dir.glob("train_missing_heatmap.png"))) == 1
@@ -171,14 +195,14 @@ class TestMissingValues:
 
 
 class TestGroupStats:
-    def test_group_stats_creates_file_and_image(self, titanic_csv: Path, tmp_path: Path) -> None:
+    def test_group_stats_creates_file_and_image(
+        self, titanic_csv: Path, tmp_path: Path
+    ) -> None:
         """group_stats で統計ファイルとグループ棒グラフが生成される。"""
-        cfg = _make_cfg(
-            tmp_path,
-            titanic_csv,
-            [{"type": "group_stats", "group_by": "Survived"}],
-        )
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(
+            cfg, [{"type": "group_stats", "group_by": "Survived"}]
+        ).analyze()
 
         stats_dir = result.report_dir / "statistics"
         images_dir = result.report_dir / "images"
@@ -189,8 +213,8 @@ class TestGroupStats:
         self, titanic_csv: Path, tmp_path: Path
     ) -> None:
         """analyses に含まれなければ group_stats は実行されない。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg, [{"type": "basic_stats"}]).analyze()
 
         stats_dir = result.report_dir / "statistics"
         assert len(list(stats_dir.glob("*group_stats*"))) == 0
@@ -208,8 +232,10 @@ class TestIdTransitions:
         df = pd.DataFrame({"id": [1, 1, 2, 3], "value": [10, 20, 30, 40]})
         df.to_csv(csv_file, index=False)
 
-        cfg = _make_cfg(tmp_path, csv_file, [{"type": "id_transitions", "id_col": "id"}])
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, csv_file)
+        result = _make_analyzer(
+            cfg, [{"type": "id_transitions", "id_col": "id"}]
+        ).analyze()
 
         images_dir = result.report_dir / "images"
         assert len(list(images_dir.glob("dup_id_transitions.png"))) == 1
@@ -220,8 +246,10 @@ class TestIdTransitions:
         df = pd.DataFrame({"id": [1, 2, 3], "value": [10, 20, 30]})
         df.to_csv(csv_file, index=False)
 
-        cfg = _make_cfg(tmp_path, csv_file, [{"type": "id_transitions", "id_col": "id"}])
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, csv_file)
+        result = _make_analyzer(
+            cfg, [{"type": "id_transitions", "id_col": "id"}]
+        ).analyze()
 
         images_dir = result.report_dir / "images"
         assert len(list(images_dir.glob("nodup_id_transitions.png"))) == 0
@@ -235,7 +263,7 @@ class TestIdTransitions:
 class TestMetainfo:
     def test_metainfo_contains_commit_hash(self, titanic_csv: Path, tmp_path: Path) -> None:
         """metainfo.yaml に commit_hash が含まれること（DoD 要件）。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
+        cfg = _make_cfg(tmp_path, titanic_csv)
         result = _make_analyzer(cfg).analyze()
 
         assert result.metainfo_path.exists()
@@ -250,7 +278,7 @@ class TestMetainfo:
 class TestInputPaths:
     def test_input_path_as_file(self, titanic_csv: Path, tmp_path: Path) -> None:
         """input_paths にファイルを直接指定したとき分析が実行される。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
+        cfg = _make_cfg(tmp_path, titanic_csv)
         result = _make_analyzer(cfg).analyze()
         assert len(result.file_results) == 1
 
@@ -269,7 +297,6 @@ class TestInputPaths:
                     "name": "titanic",
                     "input_paths": [str(raw_dir)],
                 },
-                "analyses": [{"type": "basic_stats"}],
             }
         )
         result = _make_analyzer(cfg).analyze()
@@ -284,8 +311,8 @@ class TestInputPaths:
 class TestReadme:
     def test_readme_contains_schema_table(self, titanic_csv: Path, tmp_path: Path) -> None:
         """README.md にスキーマテーブルが含まれる。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}])
-        result = _make_analyzer(cfg).analyze()
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg, [{"type": "basic_stats"}]).analyze()
 
         content = (result.report_dir / "README.md").read_text()
         assert "| Column |" in content
@@ -300,7 +327,7 @@ class TestReadme:
 
 class TestErrorHandling:
     def test_unknown_analysis_type_raises(self, titanic_csv: Path, tmp_path: Path) -> None:
-        """未知の type は ValueError を送出する。"""
-        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "nonexistent_step"}])
+        """未知の analysis type は ValueError を送出する。"""
+        cfg = _make_cfg(tmp_path, titanic_csv)
         with pytest.raises(ValueError, match="Unknown analysis type"):
-            _make_analyzer(cfg).analyze()
+            _make_analyzer(cfg, [{"type": "nonexistent_step"}]).analyze()
