@@ -4,6 +4,8 @@ data/**
 !data/**/
 !data/**/.gitkeep
 !data/**/.gitignore
+!data/**/*.yaml
+!data/**/*.html
 
 # EDA reports (auto-generated outputs - same pattern as data/)
 competition/**

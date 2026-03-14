@@ -39,15 +39,6 @@ class PreprocessUseCase:
         output_dir = Path(str(cfg.output_dir)) / job_id / timestamp
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # runs_dir が指定されていれば yaml/html の保存先を output_dir から分離する
-        # （data/** は .gitignore 対象のため、git 管理したいマニフェストを runs_dir/ に置く）
-        runs_dir_raw = cfg.get("runs_dir", None)
-        if runs_dir_raw:
-            manifest_dir = Path(str(runs_dir_raw)) / job_id / timestamp
-        else:
-            manifest_dir = output_dir
-        manifest_dir.mkdir(parents=True, exist_ok=True)
-
         # commit hash の取得（失敗しても続行）
         commit_hash = self._get_commit_hash()
 
@@ -77,10 +68,10 @@ class PreprocessUseCase:
             cv_splits=cv_splits,
         )
 
-        # DAG 可視化（manifest_dir に保存）
-        PipelineVisualizer(nodes).save_html(manifest_dir / "pipeline_dag.html")
+        # DAG 可視化（output_dir に保存）
+        PipelineVisualizer(nodes).save_html(output_dir / "pipeline_dag.html")
 
-        # preprocess_result.yaml の書き出し（manifest_dir に保存）
+        # preprocess_result.yaml の書き出し（output_dir に保存）
         manifest = self._build_manifest(
             job_id=job_id,
             commit_hash=commit_hash,
@@ -89,7 +80,7 @@ class PreprocessUseCase:
             step_results=step_results,
             output_dir=output_dir,
         )
-        with open(manifest_dir / "preprocess_result.yaml", "w") as f:
+        with open(output_dir / "preprocess_result.yaml", "w") as f:
             yaml.dump(manifest, f, allow_unicode=True, default_flow_style=False)
 
         return PreprocessResult(

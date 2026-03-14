@@ -146,24 +146,22 @@ class TestPreprocessUseCase:
         assert all(r.status in ("ok", "skipped", "failed") for r in result.step_results)
 
 
-class TestRunsDir:
+class TestMetadataInOutputDir:
     """
     なぜこのテストが必要か:
-    - `data/**` は .gitignore 対象のため、output_dir 以下のファイルは git に入らない。
-    - 実験マニフェスト（preprocess_result.yaml）と DAG 可視化（pipeline_dag.html）は
-      git で履歴管理したいため、git-tracked な `runs_dir/` に保存する必要がある。
-    - runs_dir を分離することで「データ（大容量）」と「メタデータ（小容量）」を
-      明確に分離でき、レビュアーが実験記録を git 上で追跡できるようになる。
+    - preprocess_result.yaml と pipeline_dag.html はメタデータとして git 管理したい。
+    - .gitignore の data/** に対して *.yaml / *.html を除外対象外にすることで
+      output_dir（data/processed/）以下に保存しつつ git に入れる設計。
+    - runs/ のような別ディレクトリは不要で、データとメタデータを同じ場所に置く。
     """
 
     @pytest.fixture()
     def base_cfg(self, train_csv: Path, tmp_path: Path) -> dict[str, Any]:
         return {
             "usecase": "preprocess",
-            "job_id": "runs_test_job",
+            "job_id": "metadata_test_job",
             "inputs": [{"id": "raw_train", "path": str(train_csv), "format": "csv"}],
             "output_dir": str(tmp_path / "processed"),
-            "runs_dir": str(tmp_path / "runs"),
             "executor": {"type": "local"},
             "cv": {"strategy": "none", "n_splits": 5, "time_col": None, "target_col": None},
             "steps": [
@@ -184,37 +182,27 @@ class TestRunsDir:
             "seed": 42,
         }
 
-    def test_preprocess_result_yaml_saved_in_runs_dir(
+    def test_preprocess_result_yaml_saved_in_output_dir(
         self, base_cfg: dict[str, Any], tmp_path: Path
     ) -> None:
-        """runs_dir が指定された場合、preprocess_result.yaml は runs_dir/ 以下に保存される。"""
+        """preprocess_result.yaml は output_dir/ 以下に保存される。"""
         cfg = OmegaConf.create(base_cfg)
         PreprocessUseCase(cfg).execute()
 
-        runs_dir = tmp_path / "runs"
-        result_yamls = list(runs_dir.rglob("preprocess_result.yaml"))
-        assert len(result_yamls) >= 1, "preprocess_result.yaml が runs_dir/ 以下に存在すること"
-
-        # output_dir 側には yaml が存在しないこと
         output_dir = tmp_path / "processed"
-        output_yamls = list(output_dir.rglob("preprocess_result.yaml"))
-        assert len(output_yamls) == 0, "preprocess_result.yaml が output_dir/ 以下に存在しないこと"
+        result_yamls = list(output_dir.rglob("preprocess_result.yaml"))
+        assert len(result_yamls) >= 1, "preprocess_result.yaml が output_dir/ 以下に存在すること"
 
-    def test_pipeline_dag_html_saved_in_runs_dir(
+    def test_pipeline_dag_html_saved_in_output_dir(
         self, base_cfg: dict[str, Any], tmp_path: Path
     ) -> None:
-        """runs_dir が指定された場合、pipeline_dag.html は runs_dir/ 以下に保存される。"""
+        """pipeline_dag.html は output_dir/ 以下に保存される。"""
         cfg = OmegaConf.create(base_cfg)
         PreprocessUseCase(cfg).execute()
 
-        runs_dir = tmp_path / "runs"
-        html_files = list(runs_dir.rglob("pipeline_dag.html"))
-        assert len(html_files) >= 1, "pipeline_dag.html が runs_dir/ 以下に存在すること"
-
-        # output_dir 側には html が存在しないこと
         output_dir = tmp_path / "processed"
-        output_htmls = list(output_dir.rglob("pipeline_dag.html"))
-        assert len(output_htmls) == 0, "pipeline_dag.html が output_dir/ 以下に存在しないこと"
+        html_files = list(output_dir.rglob("pipeline_dag.html"))
+        assert len(html_files) >= 1, "pipeline_dag.html が output_dir/ 以下に存在すること"
 
     def test_preprocess_result_yaml_contains_output_dir(
         self, base_cfg: dict[str, Any], tmp_path: Path
@@ -225,8 +213,8 @@ class TestRunsDir:
         cfg = OmegaConf.create(base_cfg)
         PreprocessUseCase(cfg).execute()
 
-        runs_dir = tmp_path / "runs"
-        result_yamls = list(runs_dir.rglob("preprocess_result.yaml"))
+        output_dir = tmp_path / "processed"
+        result_yamls = list(output_dir.rglob("preprocess_result.yaml"))
         assert len(result_yamls) >= 1
 
         with open(result_yamls[0]) as f:
