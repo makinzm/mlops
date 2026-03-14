@@ -64,7 +64,6 @@ class PandasAnalyzer:
         report_dir.mkdir(parents=True, exist_ok=True)
         (report_dir / "statistics").mkdir(exist_ok=True)
         (report_dir / "images").mkdir(exist_ok=True)
-        (report_dir / ".gitignore").write_text("*\n")
 
         csv_files = self._collect_csv_files()
 

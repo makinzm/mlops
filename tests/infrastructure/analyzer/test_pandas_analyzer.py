@@ -104,13 +104,12 @@ class TestReportDirectoryCreation:
         result = _make_analyzer(cfg).analyze()
         assert result.report_dir.name == "pandas"
 
-    def test_gitignore_contains_star(self, titanic_csv: Path, tmp_path: Path) -> None:
-        """.gitignore が '*' のみ含む。"""
+    def test_no_local_gitignore(self, titanic_csv: Path, tmp_path: Path) -> None:
+        """ローカル .gitignore は生成しない（ルート .gitignore の competition/** で管理）。"""
         cfg = _make_cfg(tmp_path, titanic_csv)
         result = _make_analyzer(cfg).analyze()
         gitignore = result.report_dir / ".gitignore"
-        assert gitignore.exists()
-        assert gitignore.read_text().strip() == "*"
+        assert not gitignore.exists()
 
 
 # ---------------------------------------------------------------------------
