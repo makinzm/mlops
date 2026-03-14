@@ -24,3 +24,12 @@ assert 0 >= 1
 ```
 
 3テストとも同様に失敗（runs_dir/ にファイルが生成されない）。RED フェーズ完了。
+
+#### GREEN フェーズ
+
+変更内容:
+- `preprocess.py`: `runs_dir` パラメータを受け取り、`manifest_dir` を分離
+- `manifest_dir = runs_dir/job_id/timestamp`（runs_dir 指定時）
+- `_build_manifest` に `output_dir` フィールドを追加
+
+全 6 テスト通過。lefthook 通過。GREEN フェーズ完了。

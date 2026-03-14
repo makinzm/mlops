@@ -10,6 +10,7 @@ PreprocessUseCase の E2E テスト。
 """
 
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 import pytest
@@ -156,7 +157,7 @@ class TestRunsDir:
     """
 
     @pytest.fixture()
-    def base_cfg(self, train_csv: Path, tmp_path: Path) -> dict:
+    def base_cfg(self, train_csv: Path, tmp_path: Path) -> dict[str, Any]:
         return {
             "usecase": "preprocess",
             "job_id": "runs_test_job",
@@ -184,7 +185,7 @@ class TestRunsDir:
         }
 
     def test_preprocess_result_yaml_saved_in_runs_dir(
-        self, base_cfg: dict, tmp_path: Path
+        self, base_cfg: dict[str, Any], tmp_path: Path
     ) -> None:
         """runs_dir が指定された場合、preprocess_result.yaml は runs_dir/ 以下に保存される。"""
         cfg = OmegaConf.create(base_cfg)
@@ -200,7 +201,7 @@ class TestRunsDir:
         assert len(output_yamls) == 0, "preprocess_result.yaml が output_dir/ 以下に存在しないこと"
 
     def test_pipeline_dag_html_saved_in_runs_dir(
-        self, base_cfg: dict, tmp_path: Path
+        self, base_cfg: dict[str, Any], tmp_path: Path
     ) -> None:
         """runs_dir が指定された場合、pipeline_dag.html は runs_dir/ 以下に保存される。"""
         cfg = OmegaConf.create(base_cfg)
@@ -216,7 +217,7 @@ class TestRunsDir:
         assert len(output_htmls) == 0, "pipeline_dag.html が output_dir/ 以下に存在しないこと"
 
     def test_preprocess_result_yaml_contains_output_dir(
-        self, base_cfg: dict, tmp_path: Path
+        self, base_cfg: dict[str, Any], tmp_path: Path
     ) -> None:
         """preprocess_result.yaml に output_dir フィールドが含まれる（データの場所を記録）。"""
         import yaml
