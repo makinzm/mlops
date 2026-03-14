@@ -2,7 +2,8 @@
 usecase: "automatically_eda"
 seed: 42
 report_dir: "competition"
-output_format: "polars"   # "polars" → .parquet 出力 / "pandas" → .csv 出力
+analyzer_type: "pandas"   # "pandas" → PandasAnalyzer / "polars" → PolarsAnalyzer
+output_format: "polars"   # PandasAnalyzer のみ有効: "polars" → .parquet / "pandas" → .csv
 
 # 分析ステップをリストで定義
 # - 汎用（generic）: デフォルトで常時実行

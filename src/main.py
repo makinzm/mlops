@@ -40,10 +40,21 @@ def _resolve_downloader(cfg: DictConfig) -> object:
 
 
 def _resolve_analyzer(cfg: DictConfig) -> object:
-    from src.infrastructure.analyzer.pandas_analyzer import PandasAnalyzer
     from src.infrastructure.repository.git import GitRepositoryImpl
 
-    return PandasAnalyzer(cfg, GitRepositoryImpl())
+    commit_hash = GitRepositoryImpl().get_commit_hash()
+    analyzer_type: str = cfg.get("analyzer_type", "pandas")
+
+    if analyzer_type == "pandas":
+        from src.infrastructure.analyzer.pandas_analyzer import PandasAnalyzer
+
+        return PandasAnalyzer(cfg, commit_hash)
+    elif analyzer_type == "polars":
+        from src.infrastructure.analyzer.polars_analyzer import PolarsAnalyzer
+
+        return PolarsAnalyzer(cfg, commit_hash)
+    else:
+        raise ValueError(f"Unknown analyzer_type: {analyzer_type!r}. Supported: 'pandas', 'polars'")
 
 
 @hydra.main(config_path=_CONF_DIR, config_name="config", version_base=None)

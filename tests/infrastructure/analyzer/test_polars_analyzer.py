@@ -13,7 +13,6 @@ from omegaconf import OmegaConf
 
 from src.infrastructure.analyzer.polars_analyzer import PolarsAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # フィクスチャ
 # ---------------------------------------------------------------------------
@@ -172,9 +171,7 @@ class TestMissingValues:
 
 
 class TestGroupStats:
-    def test_group_stats_creates_file_and_image(
-        self, titanic_csv: Path, tmp_path: Path
-    ) -> None:
+    def test_group_stats_creates_file_and_image(self, titanic_csv: Path, tmp_path: Path) -> None:
         """group_stats で統計ファイルとグループ棒グラフが生成される。"""
         cfg = _make_cfg(
             tmp_path,

@@ -1,5 +1,8 @@
 """
-Pandas ベースの EDA アナライザー。
+Polars ベースの EDA アナライザー。
+
+データの読み込みと統計計算を polars で行い、統計ファイルは常に .parquet で保存する。
+プロット生成には matplotlib を使用（polars Series → list 変換経由）。
 
 matplotlib は import 前に非インタラクティブ backend を設定する必要があるため、
 モジュール先頭で matplotlib.use("Agg") を呼ぶ。
@@ -17,7 +20,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
-import pandas as pd
+import polars as pl
 import seaborn as sns
 import yaml
 from omegaconf import DictConfig, OmegaConf
@@ -27,11 +30,11 @@ from src.domain.data.eda import AnalysisStep, EDAResult, FileEDAResult
 logger = logging.getLogger(__name__)
 
 
-class PandasAnalyzer:
-    """DataAnalyzer Protocol を満たす Pandas 実装。
+class PolarsAnalyzer:
+    """DataAnalyzer Protocol を満たす Polars 実装。
 
+    統計ファイルは常に .parquet（polars ネイティブ）で保存する。
     commit_hash は呼び出し元（main.py の DI 層）で取得して渡す。
-    インフラ層同士の依存（GitRepository への直接依存）を持たない設計にする。
     """
 
     def __init__(self, cfg: DictConfig, commit_hash: str) -> None:
@@ -43,7 +46,6 @@ class PandasAnalyzer:
     # ------------------------------------------------------------------
 
     def analyze(self) -> EDAResult:
-        commit_hash = self.commit_hash
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         report_dir = Path(self.cfg.report_dir) / f"{self.cfg.competition.name}_report" / timestamp
         report_dir.mkdir(parents=True, exist_ok=True)
@@ -56,17 +58,17 @@ class PandasAnalyzer:
 
         file_results: list[FileEDAResult] = []
         for csv_path in csv_files:
-            df = pd.read_csv(csv_path)
+            df = pl.read_csv(csv_path, infer_schema_length=10000)
             file_result = self._analyze_file(df, csv_path, report_dir, analyses)
             file_results.append(file_result)
 
         readme_path = self._write_readme(report_dir, file_results, analyses)
-        metainfo_path = self._write_metainfo(report_dir, commit_hash, csv_files)
+        metainfo_path = self._write_metainfo(report_dir, csv_files)
 
         return EDAResult(
             report_dir=report_dir,
             file_results=file_results,
-            commit_hash=commit_hash,
+            commit_hash=self.commit_hash,
             readme_path=readme_path,
             metainfo_path=metainfo_path,
         )
@@ -91,7 +93,7 @@ class PandasAnalyzer:
 
     def _analyze_file(
         self,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         csv_path: Path,
         report_dir: Path,
         analyses: list[AnalysisStep],
@@ -103,20 +105,19 @@ class PandasAnalyzer:
             files = self._run_step(step, df, stem, report_dir)
             output_files.extend(files)
 
+        null_counts = df.null_count().row(0)
         return FileEDAResult(
             source_path=csv_path,
-            shape=(len(df), len(df.columns)),
-            dtypes={str(col): str(dtype) for col, dtype in df.dtypes.items()},
-            missing_counts={
-                str(col): int(cnt) for col, cnt in df.isnull().sum().items() if cnt > 0
-            },
+            shape=(df.height, df.width),
+            dtypes={col: str(dtype) for col, dtype in zip(df.columns, df.dtypes)},
+            missing_counts={col: cnt for col, cnt in zip(df.columns, null_counts) if cnt > 0},
             output_files=output_files,
         )
 
     def _run_step(
         self,
         step: AnalysisStep,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         stem: str,
         report_dir: Path,
     ) -> list[Path]:
@@ -137,23 +138,32 @@ class PandasAnalyzer:
 
     def _step_basic_stats(
         self,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         stem: str,
         report_dir: Path,
         _params: dict[str, Any],
     ) -> list[Path]:
         stats_dir = report_dir / "statistics"
-        summary = df.describe(include="all").T
-        missing = df.isnull().sum().rename("missing_count").to_frame()
-        missing["missing_pct"] = missing["missing_count"] / len(df) * 100
-
-        summary_path = self._save_stats(summary, stats_dir / f"{stem}_summary")
-        missing_path = self._save_stats(missing, stats_dir / f"{stem}_missing")
+        summary = df.describe()
+        null_counts = df.null_count()
+        missing = pl.DataFrame(
+            {
+                "column": df.columns,
+                "missing_count": list(null_counts.row(0)),
+                "missing_pct": [
+                    cnt / df.height * 100 if df.height else 0.0 for cnt in null_counts.row(0)
+                ],
+            }
+        )
+        summary_path = stats_dir / f"{stem}_summary.parquet"
+        missing_path = stats_dir / f"{stem}_missing.parquet"
+        summary.write_parquet(summary_path)
+        missing.write_parquet(missing_path)
         return [summary_path, missing_path]
 
     def _step_distributions(
         self,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         stem: str,
         report_dir: Path,
         _params: dict[str, Any],
@@ -162,18 +172,19 @@ class PandasAnalyzer:
         max_cols: int = int(self.cfg.max_plot_cols)
         output: list[Path] = []
 
-        numeric_cols = df.select_dtypes(include="number").columns.tolist()
-        cat_cols = df.select_dtypes(exclude="number").columns.tolist()
+        numeric_cols = [c for c, t in zip(df.columns, df.dtypes) if t.is_numeric()]
+        cat_cols = [c for c, t in zip(df.columns, df.dtypes) if not t.is_numeric()]
         cols = (numeric_cols + cat_cols)[:max_cols]
 
         for col in cols:
             fig, ax = plt.subplots(figsize=(6, 4))
             if col in numeric_cols:
-                ax.hist(df[col].dropna(), bins=30, edgecolor="black")
+                data = df[col].drop_nulls().to_list()
+                ax.hist(data, bins=30, edgecolor="black")
                 ax.set_title(f"{col} distribution")
             else:
-                vc = df[col].value_counts().head(20)
-                ax.bar(vc.index.astype(str), vc.values.tolist())
+                vc = df[col].value_counts().sort("count", descending=True).head(20)
+                ax.bar(vc[col].to_list(), vc["count"].to_list())
                 ax.set_title(f"{col} value counts")
                 plt.xticks(rotation=45, ha="right")
             ax.set_xlabel(col)
@@ -187,15 +198,15 @@ class PandasAnalyzer:
 
     def _step_missing_values(
         self,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         stem: str,
         report_dir: Path,
         _params: dict[str, Any],
     ) -> list[Path]:
         images_dir = report_dir / "images"
+        null_matrix = df.select([pl.col(c).is_null().cast(pl.Int32) for c in df.columns]).to_numpy()
         fig, ax = plt.subplots(figsize=(10, 6))
-        missing_matrix = df.isnull().astype(int)
-        sns.heatmap(missing_matrix, cbar=False, ax=ax, yticklabels=False)
+        sns.heatmap(null_matrix, cbar=False, ax=ax, yticklabels=False)
         ax.set_title(f"{stem} missing values")
         out = images_dir / f"{stem}_missing_heatmap.png"
         fig.tight_layout()
@@ -205,7 +216,7 @@ class PandasAnalyzer:
 
     def _step_group_stats(
         self,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         stem: str,
         report_dir: Path,
         params: dict[str, Any],
@@ -215,14 +226,24 @@ class PandasAnalyzer:
         images_dir = report_dir / "images"
         output: list[Path] = []
 
-        group_stats = df.groupby(group_by).describe(include="all")
-        stats_path = self._save_stats(group_stats, stats_dir / f"{stem}_group_stats")
+        numeric_cols = [
+            c for c, t in zip(df.columns, df.dtypes) if t.is_numeric() and c != group_by
+        ]
+        aggs = [pl.col(c).mean().alias(f"{c}_mean") for c in numeric_cols]
+        aggs += [pl.col(c).std().alias(f"{c}_std") for c in numeric_cols]
+        aggs.append(pl.len().alias("count"))
+        group_stats = df.group_by(group_by).agg(aggs).sort(group_by)
+
+        stats_path = stats_dir / f"{stem}_group_stats.parquet"
+        group_stats.write_parquet(stats_path)
         output.append(stats_path)
 
-        # グループカウント棒グラフ
         fig, ax = plt.subplots(figsize=(6, 4))
-        counts = df[group_by].value_counts()
-        ax.bar(counts.index.astype(str), counts.values.tolist())
+        counts = df[group_by].value_counts().sort(group_by)
+        ax.bar(
+            [str(v) for v in counts[group_by].to_list()],
+            counts["count"].to_list(),
+        )
         ax.set_title(f"{stem} group counts by {group_by}")
         ax.set_xlabel(group_by)
         out = images_dir / f"{stem}_group_counts.png"
@@ -235,7 +256,7 @@ class PandasAnalyzer:
 
     def _step_id_transitions(
         self,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         stem: str,
         report_dir: Path,
         params: dict[str, Any],
@@ -243,17 +264,21 @@ class PandasAnalyzer:
         id_col: str = params["id_col"]
         images_dir = report_dir / "images"
 
-        # 重複 ID がない場合はスキップ
-        if df[id_col].duplicated().sum() == 0:
+        if not df[id_col].is_duplicated().any():
             return []
 
-        dup_ids = df[id_col][df[id_col].duplicated(keep=False)].unique()
-        subset = df[df[id_col].isin(dup_ids)].copy()
-        subset["_order"] = range(len(subset))
+        dup_ids = df.filter(pl.col(id_col).is_duplicated())[id_col].unique().to_list()
+        subset = df.filter(pl.col(id_col).is_in(dup_ids)).with_row_index("_order")
 
         fig, ax = plt.subplots(figsize=(8, 5))
-        for id_val, grp in subset.groupby(id_col):
-            ax.plot(grp["_order"], [str(id_val)] * len(grp), "o-", label=str(id_val))
+        for id_val in dup_ids:
+            grp = subset.filter(pl.col(id_col) == id_val)
+            ax.plot(
+                grp["_order"].to_list(),
+                [str(id_val)] * grp.height,
+                "o-",
+                label=str(id_val),
+            )
         ax.set_title(f"{stem} — duplicate ID transitions ({id_col})")
         ax.set_xlabel("row index")
         ax.set_ylabel(id_col)
@@ -262,22 +287,6 @@ class PandasAnalyzer:
         fig.savefig(out)
         plt.close(fig)
         return [out]
-
-    # ------------------------------------------------------------------
-    # Output helpers
-    # ------------------------------------------------------------------
-
-    def _save_stats(self, df: pd.DataFrame, path_without_ext: Path) -> Path:
-        """output_format に応じて .parquet (polars) または .csv (pandas) で保存する。"""
-        if self.cfg.output_format == "polars":
-            import polars as pl
-
-            out = path_without_ext.with_suffix(".parquet")
-            pl.from_pandas(df.reset_index()).write_parquet(out)
-        else:
-            out = path_without_ext.with_suffix(".csv")
-            df.to_csv(out)
-        return out
 
     # ------------------------------------------------------------------
     # Report generation
@@ -314,10 +323,8 @@ class PandasAnalyzer:
                 missing_pct = f"{missing / fr.shape[0] * 100:.1f}%" if fr.shape[0] else "-"
                 lines.append(f"| {col} | {dtype} | {missing} | {missing_pct} |")
             lines.append("")
-        lines += [
-            "## Analyses run",
-            "",
-        ]
+
+        lines += ["## Analyses run", ""]
         for step in analyses:
             lines.append(f"- `{step.type}`" + (f" params={step.params}" if step.params else ""))
 
@@ -325,14 +332,9 @@ class PandasAnalyzer:
         path.write_text("\n".join(lines))
         return path
 
-    def _write_metainfo(
-        self,
-        report_dir: Path,
-        commit_hash: str,
-        csv_files: list[Path],
-    ) -> Path:
+    def _write_metainfo(self, report_dir: Path, csv_files: list[Path]) -> Path:
         info = {
-            "commit_hash": commit_hash,
+            "commit_hash": self.commit_hash,
             "generated_at": datetime.now().isoformat(timespec="seconds"),
             "competition": OmegaConf.to_container(self.cfg.competition),
             "input_files": [str(f) for f in csv_files],
