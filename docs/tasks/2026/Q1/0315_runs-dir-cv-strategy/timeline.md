@@ -33,3 +33,37 @@ assert 0 >= 1
 - `_build_manifest` に `output_dir` フィールドを追加
 
 全 6 テスト通過。lefthook 通過。GREEN フェーズ完了。
+
+#### REFACTOR フェーズ
+
+- `conf/usecase/preprocess.yaml`: `runs_dir: runs` と CV に `group_col`, `input_id` を追加
+- `conf/usecase/preprocess_titanic.yaml`: `runs_dir: runs` 追加、`strategy: stratified_kfold` に変更
+- `runs/.gitkeep` を作成
+
+サイクル1 完了。
+
+---
+
+### サイクル2: CV 戦略の拡充
+
+#### RED フェーズ開始
+
+テスト対象:
+- `test_cv_stratified_kfold`: strategy=stratified_kfold で 5 splits 返る
+- `test_cv_group_kfold`: strategy=group_kfold で 5 splits 返る
+- `test_cv_stratified_group_kfold`: strategy=stratified_group_kfold で splits 返る
+- `test_cv_leave_one_group_out`: strategy=leave_one_group_out でグループ数の splits 返る
+- `test_cv_input_id_selects_correct_df`: input_id で対象 df を指定できる
+
+テストが失敗する理由:
+- `_build_cv_splits` に stratified_kfold/group_kfold/stratified_group_kfold/leave_one_group_out が未実装
+
+#### RED エラーログ
+
+```
+FAILED tests/usecase/preprocessing/test_preprocess.py::TestCvStrategy::test_cv_stratified_kfold
+AssertionError: stratified_kfold で n_splits=5 の splits が生成されること
+assert None == 5
+```
+
+`_build_cv_splits` が未知の strategy に対して None を返すため n_splits=None になる。RED フェーズ完了。
