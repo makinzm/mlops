@@ -15,7 +15,6 @@ from omegaconf import OmegaConf
 
 from src.infrastructure.analyzer.pandas_analyzer import PandasAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # フィクスチャ
 # ---------------------------------------------------------------------------
@@ -191,9 +190,7 @@ class TestMissingValues:
 
 
 class TestGroupStats:
-    def test_group_stats_creates_file_and_image(
-        self, titanic_csv: Path, tmp_path: Path
-    ) -> None:
+    def test_group_stats_creates_file_and_image(self, titanic_csv: Path, tmp_path: Path) -> None:
         """group_stats ステップで統計ファイルとグループ棒グラフが生成される。"""
         cfg = _make_cfg(
             tmp_path,
@@ -228,9 +225,7 @@ class TestGroupStats:
 
 
 class TestIdTransitions:
-    def test_id_transitions_image_for_duplicate_ids(
-        self, tmp_path: Path
-    ) -> None:
+    def test_id_transitions_image_for_duplicate_ids(self, tmp_path: Path) -> None:
         """重複 ID があるとき id_transitions 画像が生成される。"""
         csv_file = tmp_path / "dup.csv"
         df = pd.DataFrame({"id": [1, 1, 2, 3], "value": [10, 20, 30, 40]})
@@ -248,9 +243,7 @@ class TestIdTransitions:
         images_dir = result.report_dir / "images"
         assert len(list(images_dir.glob("dup_id_transitions.png"))) == 1
 
-    def test_no_id_transitions_when_no_duplicates(
-        self, tmp_path: Path
-    ) -> None:
+    def test_no_id_transitions_when_no_duplicates(self, tmp_path: Path) -> None:
         """重複 ID がないとき id_transitions 画像は生成されない。"""
         csv_file = tmp_path / "nodup.csv"
         df = pd.DataFrame({"id": [1, 2, 3], "value": [10, 20, 30]})
@@ -277,9 +270,7 @@ class TestIdTransitions:
 class TestOutputFormat:
     def test_polars_output_saves_parquet(self, titanic_csv: Path, tmp_path: Path) -> None:
         """output_format=polars のとき statistics が .parquet で保存される。"""
-        cfg = _make_cfg(
-            tmp_path, titanic_csv, [{"type": "basic_stats"}], output_format="polars"
-        )
+        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}], output_format="polars")
         analyzer = _make_analyzer(cfg)
 
         result = analyzer.analyze()
@@ -290,9 +281,7 @@ class TestOutputFormat:
 
     def test_pandas_output_saves_csv(self, titanic_csv: Path, tmp_path: Path) -> None:
         """output_format=pandas のとき statistics が .csv で保存される。"""
-        cfg = _make_cfg(
-            tmp_path, titanic_csv, [{"type": "basic_stats"}], output_format="pandas"
-        )
+        cfg = _make_cfg(tmp_path, titanic_csv, [{"type": "basic_stats"}], output_format="pandas")
         analyzer = _make_analyzer(cfg)
 
         result = analyzer.analyze()

@@ -29,6 +29,8 @@ dev = [
     "ruff>=0.1",
     "mypy>=1.0",
     "types-PyYAML>=6.0",
+    "pandas-stubs>=3.0.0.260204",
+    "types-seaborn>=0.13.2.20251221",
 ]
 gcp = [
     "google-cloud-storage>=2.0",

@@ -1,0 +1,21 @@
+# @package _global_
+usecase: "automatically_eda"
+seed: 42
+report_dir: "competition"
+output_format: "polars"   # "polars" → .parquet 出力 / "pandas" → .csv 出力
+
+# 分析ステップをリストで定義
+# - 汎用（generic）: デフォルトで常時実行
+# - アドホック（adhoc）: ユーザーが追加・コメントアウトで取捨選択
+analyses:
+  # --- Generic (汎用) ---
+  - type: basic_stats       # shape, dtypes, describe, 欠損値集計
+  - type: distributions     # 数値列: ヒストグラム / カテゴリ列: 棒グラフ
+  - type: missing_values    # 欠損値ヒートマップ
+  # --- Adhoc (アドホック: 必要に応じてコメントアウトを外す) ---
+  # - type: group_stats
+  #   group_by: "Survived"
+  # - type: id_transitions
+  #   id_col: "PassengerId"
+
+max_plot_cols: 20

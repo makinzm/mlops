@@ -1,12 +1,12 @@
 """
 MLOps CLI エントリーポイント。
 
-Hydra で設定を読み込み、downloader.type に応じてインフラを DI して UseCase を実行する。
+Hydra で設定を読み込み、usecase に応じてインフラを DI して UseCase を実行する。
 Kaggle 認証は ~/.kaggle/access_token に保存したトークンを使用する。
 
 実行例:
     uv run python -m src usecase=download_dataset downloader=kaggle
-    uv run python -m src downloader.dataset=owner/name
+    uv run python -m src usecase=automatically_eda competition=titanic
 """
 
 import logging
@@ -39,18 +39,39 @@ def _resolve_downloader(cfg: DictConfig) -> object:
         raise ValueError(f"Unknown downloader type: {downloader_type!r}. Supported: 'kaggle'")
 
 
+def _resolve_analyzer(cfg: DictConfig) -> object:
+    from src.infrastructure.analyzer.pandas_analyzer import PandasAnalyzer
+    from src.infrastructure.repository.git import GitRepositoryImpl
+
+    return PandasAnalyzer(cfg, GitRepositoryImpl())
+
+
 @hydra.main(config_path=_CONF_DIR, config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
     from src.infrastructure.logger.python_logger import PythonAppLogger
-    from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
 
     logger = PythonAppLogger(__name__)
-    try:
-        downloader = _resolve_downloader(cfg)
-    except Exception:
-        logger.error("ダウンローダーの初期化に失敗しました", exc_info=True)
-        raise
-    DownloadDatasetUseCase(downloader, logger).execute()  # type: ignore[arg-type]
+    usecase_name: str = cfg.get("usecase", "download_dataset")
+
+    if usecase_name == "download_dataset":
+        from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
+
+        try:
+            downloader = _resolve_downloader(cfg)
+        except Exception:
+            logger.error("ダウンローダーの初期化に失敗しました", exc_info=True)
+            raise
+        DownloadDatasetUseCase(downloader, logger).execute()  # type: ignore[arg-type]
+
+    elif usecase_name == "automatically_eda":
+        from src.usecase.eda.automatically_eda import AutomaticallyEDAUseCase
+
+        AutomaticallyEDAUseCase(_resolve_analyzer(cfg), logger).execute()  # type: ignore[arg-type]
+
+    else:
+        raise ValueError(
+            f"Unknown usecase: {usecase_name!r}. Supported: 'download_dataset', 'automatically_eda'"
+        )
 
 
 if __name__ == "__main__":

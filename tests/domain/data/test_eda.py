@@ -8,8 +8,6 @@ EDAResult / FileEDAResult / AnalysisStep / DataAnalyzer Protocol が
 
 from pathlib import Path
 
-import pytest
-
 from src.domain.data.eda import AnalysisStep, DataAnalyzer, EDAResult, FileEDAResult
 
 
