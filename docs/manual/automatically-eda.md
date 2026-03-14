@@ -3,7 +3,8 @@
 ## 概要
 
 ダウンロードした CSV データセットを読み込み、EDA レポートを自動生成する。
-出力先: `competition/<competition_name>_report/YYYYMMDD_HHMM/`
+
+出力先: `<report_dir>/<competition_name>_report/YYYYMMDD_HHMM/<analyzer_type>/`
 
 ---
 
@@ -25,26 +26,49 @@ uv run python -m src usecase=automatically_eda competition=titanic
 
 ## 出力先
 
+`analyze` に複数アナライザーを指定した場合、それぞれ独立したサブディレクトリに出力される。
+
 ```
 competition/titanic_report/YYYYMMDD_HHMM/
-├── .gitignore          # "*" で全ファイルを gitignore
-├── README.md           # ファイルごとの shape・欠損・実行ステップサマリー
-├── metainfo.yaml       # commit_hash, config, input_files, generated_at
-├── statistics/
-│   ├── train_summary.parquet   (output_format=polars の場合)
-│   └── train_missing.parquet
-└── images/
-    ├── train_Age_dist.png
-    ├── train_Survived_dist.png
-    └── train_missing_heatmap.png
+├── pandas/
+│   ├── .gitignore          # "*" で全ファイルを gitignore
+│   ├── README.md           # ファイルごとの shape・欠損・スキーマ・実行ステップサマリー
+│   ├── metainfo.yaml       # commit_hash, config, input_files, generated_at
+│   ├── statistics/
+│   │   ├── train_summary.parquet   (output_format=parquet の場合)
+│   │   ├── train_summary.csv       (output_format=csv の場合)
+│   │   └── train_missing.parquet / .csv
+│   └── images/
+│       ├── train_Age_dist.png
+│       ├── train_Survived_dist.png
+│       └── train_missing_heatmap.png
+└── polars/                 (polars アナライザーを有効にした場合)
+    ├── .gitignore
+    ├── README.md
+    ├── metainfo.yaml
+    ├── statistics/
+    └── images/
 ```
 
-> **注意**: `competition/` ディレクトリは各レポートの `.gitignore` で管理され、
-> git には追加されない。
+> **注意**: 各アナライザーディレクトリ内の `.gitignore` で管理され、git には追加されない。
 
 ---
 
 ## 設定のカスタマイズ
+
+### `conf/usecase/automatically_eda.yaml` の構造
+
+```yaml
+# @package _global_
+analyze:
+  <analyzer_type>:         # pandas | polars
+    output_format: parquet # pandas のみ有効: "parquet" | "csv"
+                           # polars は常に parquet
+    steps:
+      - type: <step_type>  # 分析ステップ（後述）
+      - type: <step_type>
+        param_key: param_value
+```
 
 ### input_paths の変更
 
@@ -58,38 +82,45 @@ uv run python -m src usecase=automatically_eda competition=titanic \
   "competition.input_paths=[data/2026/Q1/raw/train.csv,data/2026/Q1/raw/test.csv]"
 ```
 
-### 出力フォーマットの変更
+### 出力フォーマットの変更（pandas のみ）
 
 ```bash
 # statistics を CSV で出力（デフォルトは parquet）
-uv run python -m src usecase=automatically_eda competition=titanic output_format=pandas
+uv run python -m src usecase=automatically_eda competition=titanic \
+  "analyze.pandas.output_format=csv"
 ```
 
-### アドホック分析の追加
+### アドホック分析の追加（yaml を直接編集）
 
-```bash
-# グループ統計を追加（Survived 列でグループ化）
-uv run python -m src usecase=automatically_eda competition=titanic \
-  "analyses=[{type:basic_stats},{type:distributions},{type:missing_values},{type:group_stats,group_by:Survived}]"
-
-# ID 遷移可視化を追加（PassengerId 列で重複チェック）
-uv run python -m src usecase=automatically_eda competition=titanic \
-  "analyses=[{type:basic_stats},{type:id_transitions,id_col:PassengerId}]"
-```
-
-### conf/usecase/automatically_eda.yaml での永続設定
-
-アドホック分析を常時有効にしたい場合は設定ファイルのコメントを外す:
+`conf/usecase/automatically_eda.yaml` のコメントを外す:
 
 ```yaml
-# conf/usecase/automatically_eda.yaml
-analyses:
-  - type: basic_stats
-  - type: distributions
-  - type: missing_values
-  # 以下のコメントを外す
-  - type: group_stats
-    group_by: "Survived"
+analyze:
+  pandas:
+    output_format: parquet
+    steps:
+      - type: basic_stats
+      - type: distributions
+      - type: missing_values
+      # 以下のコメントを外す
+      - type: group_stats
+        group_by: "Survived"
+      - type: id_transitions
+        id_col: "PassengerId"
+```
+
+### Polars アナライザーを有効にする
+
+```yaml
+analyze:
+  pandas:
+    output_format: parquet
+    steps:
+      - type: basic_stats
+      - type: distributions
+  polars:
+    steps:
+      - type: distributions
 ```
 
 ---
@@ -103,6 +134,15 @@ analyses:
 | `missing_values` | 欠損値ヒートマップ | `images/<file>_missing_heatmap.png` |
 | `group_stats` | グループ集計（`group_by` 必須） | `statistics/<file>_group_stats.*`, `images/<file>_group_counts.png` |
 | `id_transitions` | 重複 ID の遷移可視化（`id_col` 必須） | `images/<file>_id_transitions.png`（重複ありのみ） |
+
+---
+
+## アナライザーの違い
+
+| アナライザー | 出力フォーマット | 備考 |
+|-------------|----------------|------|
+| `pandas` | `parquet` or `csv` | `output_format` で切替可能 |
+| `polars` | `parquet` のみ | polars ネイティブ出力 |
 
 ---
 
@@ -133,6 +173,6 @@ ls competition/titanic_report/
 # 最新レポートを確認
 ls competition/titanic_report/$(ls competition/titanic_report/ | sort | tail -1)/
 
-# metainfo（commit hash など）を確認
-cat competition/titanic_report/$(ls competition/titanic_report/ | sort | tail -1)/metainfo.yaml
+# pandas アナライザーの metainfo（commit hash など）を確認
+cat competition/titanic_report/$(ls competition/titanic_report/ | sort | tail -1)/pandas/metainfo.yaml
 ```
