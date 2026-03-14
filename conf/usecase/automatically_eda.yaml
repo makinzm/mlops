@@ -2,21 +2,23 @@
 usecase: "automatically_eda"
 seed: 42
 report_dir: "competition"
-analyzer_type: "pandas"   # "pandas" → PandasAnalyzer / "polars" → PolarsAnalyzer
-output_format: "polars"   # PandasAnalyzer のみ有効: "polars" → .parquet / "pandas" → .csv
-
-# 分析ステップをリストで定義
-# - 汎用（generic）: デフォルトで常時実行
-# - アドホック（adhoc）: ユーザーが追加・コメントアウトで取捨選択
-analyses:
-  # --- Generic (汎用) ---
-  - type: basic_stats       # shape, dtypes, describe, 欠損値集計
-  - type: distributions     # 数値列: ヒストグラム / カテゴリ列: 棒グラフ
-  - type: missing_values    # 欠損値ヒートマップ
-  # --- Adhoc (アドホック: 必要に応じてコメントアウトを外す) ---
-  # - type: group_stats
-  #   group_by: "Survived"
-  # - type: id_transitions
-  #   id_col: "PassengerId"
-
 max_plot_cols: 20
+
+# Infra:method 形式でアナライザーと分析ステップを指定する。
+# - 複数のアナライザーを同時に実行可能（各アナライザーは独自サブディレクトリに出力）
+# - output_format: "parquet" | "csv"（pandas アナライザーのみ有効。polars は常に parquet）
+analyze:
+  pandas:
+    output_format: parquet
+    steps:
+      - type: basic_stats       # describe, 欠損値集計
+      - type: distributions     # ヒストグラム・棒グラフ
+      - type: missing_values    # 欠損値ヒートマップ
+      # --- Adhoc（必要に応じてコメントアウトを外す） ---
+      # - type: group_stats
+      #   group_by: "Survived"
+      # - type: id_transitions
+      #   id_col: "PassengerId"
+  # polars:
+  #   steps:
+  #     - type: distributions

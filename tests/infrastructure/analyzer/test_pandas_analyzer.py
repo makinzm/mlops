@@ -184,14 +184,10 @@ class TestMissingValues:
 
 
 class TestGroupStats:
-    def test_group_stats_creates_file_and_image(
-        self, titanic_csv: Path, tmp_path: Path
-    ) -> None:
+    def test_group_stats_creates_file_and_image(self, titanic_csv: Path, tmp_path: Path) -> None:
         """group_stats で統計ファイルとグループ棒グラフが生成される。"""
         cfg = _make_cfg(tmp_path, titanic_csv)
-        result = _make_analyzer(
-            cfg, [{"type": "group_stats", "group_by": "Survived"}]
-        ).analyze()
+        result = _make_analyzer(cfg, [{"type": "group_stats", "group_by": "Survived"}]).analyze()
 
         stats_dir = result.report_dir / "statistics"
         images_dir = result.report_dir / "images"
@@ -222,9 +218,7 @@ class TestIdTransitions:
         df.to_csv(csv_file, index=False)
 
         cfg = _make_cfg(tmp_path, csv_file)
-        result = _make_analyzer(
-            cfg, [{"type": "id_transitions", "id_col": "id"}]
-        ).analyze()
+        result = _make_analyzer(cfg, [{"type": "id_transitions", "id_col": "id"}]).analyze()
 
         images_dir = result.report_dir / "images"
         assert len(list(images_dir.glob("dup_id_transitions.png"))) == 1
@@ -236,9 +230,7 @@ class TestIdTransitions:
         df.to_csv(csv_file, index=False)
 
         cfg = _make_cfg(tmp_path, csv_file)
-        result = _make_analyzer(
-            cfg, [{"type": "id_transitions", "id_col": "id"}]
-        ).analyze()
+        result = _make_analyzer(cfg, [{"type": "id_transitions", "id_col": "id"}]).analyze()
 
         images_dir = result.report_dir / "images"
         assert len(list(images_dir.glob("nodup_id_transitions.png"))) == 0
@@ -253,9 +245,7 @@ class TestOutputFormat:
     def test_parquet_output_saves_parquet(self, titanic_csv: Path, tmp_path: Path) -> None:
         """output_format=parquet のとき statistics が .parquet で保存される。"""
         cfg = _make_cfg(tmp_path, titanic_csv)
-        result = _make_analyzer(
-            cfg, [{"type": "basic_stats"}], output_format="parquet"
-        ).analyze()
+        result = _make_analyzer(cfg, [{"type": "basic_stats"}], output_format="parquet").analyze()
 
         stats_dir = result.report_dir / "statistics"
         assert len(list(stats_dir.glob("*.parquet"))) >= 1
@@ -264,9 +254,7 @@ class TestOutputFormat:
     def test_csv_output_saves_csv(self, titanic_csv: Path, tmp_path: Path) -> None:
         """output_format=csv のとき statistics が .csv で保存される。"""
         cfg = _make_cfg(tmp_path, titanic_csv)
-        result = _make_analyzer(
-            cfg, [{"type": "basic_stats"}], output_format="csv"
-        ).analyze()
+        result = _make_analyzer(cfg, [{"type": "basic_stats"}], output_format="csv").analyze()
 
         stats_dir = result.report_dir / "statistics"
         assert len(list(stats_dir.glob("*.csv"))) >= 1

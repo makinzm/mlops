@@ -33,13 +33,22 @@ logger = logging.getLogger(__name__)
 class PolarsAnalyzer:
     """DataAnalyzer Protocol を満たす Polars 実装。
 
-    統計ファイルは常に .parquet（polars ネイティブ）で保存する。
-    commit_hash は呼び出し元（main.py の DI 層）で取得して渡す。
+    - commit_hash と analyses は DI 層（main.py）から直接渡す。
+    - 統計ファイルは常に .parquet（polars ネイティブ）で保存する。
+    - 各インスタンスは {report_dir}/{ANALYZER_TYPE}/ サブディレクトリに出力する。
     """
 
-    def __init__(self, cfg: DictConfig, commit_hash: str) -> None:
+    ANALYZER_TYPE = "polars"
+
+    def __init__(
+        self,
+        cfg: DictConfig,
+        commit_hash: str,
+        analyses: list[AnalysisStep],
+    ) -> None:
         self.cfg = cfg
         self.commit_hash = commit_hash
+        self._analyses = analyses
 
     # ------------------------------------------------------------------
     # Public API
@@ -47,22 +56,26 @@ class PolarsAnalyzer:
 
     def analyze(self) -> EDAResult:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-        report_dir = Path(self.cfg.report_dir) / f"{self.cfg.competition.name}_report" / timestamp
+        report_dir = (
+            Path(self.cfg.report_dir)
+            / f"{self.cfg.competition.name}_report"
+            / timestamp
+            / self.ANALYZER_TYPE
+        )
         report_dir.mkdir(parents=True, exist_ok=True)
         (report_dir / "statistics").mkdir(exist_ok=True)
         (report_dir / "images").mkdir(exist_ok=True)
         (report_dir / ".gitignore").write_text("*\n")
 
         csv_files = self._collect_csv_files()
-        analyses = self._parse_analyses()
 
         file_results: list[FileEDAResult] = []
         for csv_path in csv_files:
             df = pl.read_csv(csv_path, infer_schema_length=10000)
-            file_result = self._analyze_file(df, csv_path, report_dir, analyses)
+            file_result = self._analyze_file(df, csv_path, report_dir, self._analyses)
             file_results.append(file_result)
 
-        readme_path = self._write_readme(report_dir, file_results, analyses)
+        readme_path = self._write_readme(report_dir, file_results, self._analyses)
         metainfo_path = self._write_metainfo(report_dir, csv_files)
 
         return EDAResult(
@@ -299,7 +312,7 @@ class PolarsAnalyzer:
         analyses: list[AnalysisStep],
     ) -> Path:
         lines = [
-            f"# EDA Report — {self.cfg.competition.name}",
+            f"# EDA Report — {self.cfg.competition.name} [{self.ANALYZER_TYPE}]",
             "",
             f"Generated: {datetime.now().isoformat(timespec='seconds')}",
             "",
@@ -335,24 +348,11 @@ class PolarsAnalyzer:
     def _write_metainfo(self, report_dir: Path, csv_files: list[Path]) -> Path:
         info = {
             "commit_hash": self.commit_hash,
+            "analyzer_type": self.ANALYZER_TYPE,
             "generated_at": datetime.now().isoformat(timespec="seconds"),
             "competition": OmegaConf.to_container(self.cfg.competition),
             "input_files": [str(f) for f in csv_files],
-            "config": OmegaConf.to_container(self.cfg),
         }
         path = report_dir / "metainfo.yaml"
         path.write_text(yaml.dump(info, allow_unicode=True))
         return path
-
-    # ------------------------------------------------------------------
-    # Config helpers
-    # ------------------------------------------------------------------
-
-    def _parse_analyses(self) -> list[AnalysisStep]:
-        raw = OmegaConf.to_container(self.cfg.analyses, resolve=True)
-        steps: list[AnalysisStep] = []
-        for item in raw:  # type: ignore[union-attr]
-            item_dict: dict[str, Any] = dict(item)  # type: ignore[arg-type]
-            step_type = item_dict.pop("type")
-            steps.append(AnalysisStep(type=step_type, params=item_dict))
-        return steps
