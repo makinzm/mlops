@@ -10,7 +10,6 @@ Hydra Config を受け取り、以下を行う:
 6. PreprocessResult を返す
 """
 
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -22,6 +21,7 @@ from omegaconf import DictConfig, OmegaConf
 from src.domain.data.preprocessor import Node, PreprocessResult, StepResult
 from src.infrastructure.executor.factory import ExecutorFactory
 from src.infrastructure.preprocessor.visualizer import PipelineVisualizer
+from src.infrastructure.repository.git import GitRepositoryImpl
 
 
 class PreprocessUseCase:
@@ -100,16 +100,8 @@ class PreprocessUseCase:
     # ------------------------------------------------------------------
 
     def _get_commit_hash(self) -> str:
-        try:
-            result = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            return result.stdout.strip()
-        except Exception:
-            return "unknown"
+        """GitRepositoryImpl 経由でコミットハッシュを取得する。"""
+        return GitRepositoryImpl().get_commit_hash()
 
     def _load_inputs(self, cfg: DictConfig) -> dict[str, pl.DataFrame]:
         """inputs: 設定から DataFrame を読み込む。"""
