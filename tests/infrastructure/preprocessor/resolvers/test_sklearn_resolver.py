@@ -76,9 +76,7 @@ class TestFillNaMedian:
                 "label": [0, 1, 0],
             }
         )
-        result_train, _ = resolver.fill_na(
-            train_df, strategy="median", columns=["col1", "col2"]
-        )
+        result_train, _ = resolver.fill_na(train_df, strategy="median", columns=["col1", "col2"])
         assert result_train["col1"].null_count() == 0
         assert result_train["col2"].null_count() == 0
         # label カラムは変更されない

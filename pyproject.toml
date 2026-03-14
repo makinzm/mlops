@@ -31,6 +31,7 @@ dev = [
     "types-PyYAML>=6.0",
     "pandas-stubs>=3.0.0.260204",
     "types-seaborn>=0.13.2.20251221",
+    "scikit-learn-stubs>=0.0.3",
 ]
 gcp = [
     "google-cloud-storage>=2.0",
