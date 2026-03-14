@@ -10,8 +10,6 @@ domain/data/preprocessor.py のデータクラスに対するユニットテス�
 
 from pathlib import Path
 
-import pytest
-
 from src.domain.data.preprocessor import (
     ColumnMeta,
     Node,
