@@ -67,3 +67,17 @@ assert None == 5
 ```
 
 `_build_cv_splits` が未知の strategy に対して None を返すため n_splits=None になる。RED フェーズ完了。
+
+#### GREEN フェーズ
+
+変更内容:
+- `_build_cv_splits` に stratified_kfold/group_kfold/stratified_group_kfold/leave_one_group_out を追加
+- `input_id` パラメータで CV に使う DataFrame を指定できるように対応
+
+全 11 テスト通過。lefthook 通過。GREEN フェーズ完了。
+
+#### REFACTOR フェーズ
+
+大きなリファクタは不要。timeline 更新のみ。
+
+サイクル2 完了。全タスク完了。
