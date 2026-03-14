@@ -118,9 +118,19 @@ def main(cfg: DictConfig) -> None:
         analyzers = _resolve_analyzers(cfg)
         AutomaticallyEDAUseCase(analyzers, logger).execute()  # type: ignore[arg-type]
 
+    elif usecase_name == "preprocess":
+        from src.usecase.preprocessing.preprocess import PreprocessUseCase
+
+        result = PreprocessUseCase(cfg).execute()
+        logger.info(
+            f"前処理完了: output_path={result.output_path}, "
+            f"steps={len(result.step_results)}, fallback={result.executor_fallback}"
+        )
+
     else:
         raise ValueError(
-            f"Unknown usecase: {usecase_name!r}. Supported: 'download_dataset', 'automatically_eda'"
+            f"Unknown usecase: {usecase_name!r}. "
+            "Supported: 'download_dataset', 'automatically_eda', 'preprocess'"
         )
 
 

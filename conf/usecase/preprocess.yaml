@@ -1,0 +1,32 @@
+# @package _global_
+# 前処理パイプライン設定のデフォルト値
+# ユーザーはこのファイルをコピーして各ジョブ用に編集する
+
+usecase: preprocess
+
+job_id: my_preprocess  # 省略時は timestamp 自動生成
+
+# 入力データソース（複数可）
+inputs:
+  - id: raw_train
+    path: ???  # 必須: data/raw/train.csv など
+    format: csv  # csv / parquet / jsonl
+
+output_dir: data/processed
+
+executor:
+  type: local  # local / ray_local / gcp_vertex / gcp_dataflow / aws_sagemaker / aws_emr
+
+cv:
+  strategy: none  # none / time_series / kfold / stratified_kfold
+  n_splits: 5
+  time_col: null
+  target_col: null
+
+# 変換ステップ（例）
+steps: []
+
+# 実行するターゲットノード（空の場合は全 output ノードを実行）
+targets: []
+
+seed: 42

@@ -8,8 +8,6 @@ ExecutorFactory のテスト。
   記録されることを確認する。
 """
 
-import pytest
-
 from src.infrastructure.executor.factory import ExecutorFactory
 from src.infrastructure.executor.local import LocalExecutor
 
