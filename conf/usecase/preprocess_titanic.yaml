@@ -17,15 +17,18 @@ inputs:
     format: csv
 
 output_dir: data/processed
+runs_dir: runs
 
 executor:
   type: local
 
 cv:
-  strategy: kfold
+  strategy: stratified_kfold
   n_splits: 5
   time_col: null
   target_col: Survived
+  group_col: null
+  input_id: null
 
 # ------------------------------------------------------------
 # DAG ステップ

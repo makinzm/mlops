@@ -13,15 +13,18 @@ inputs:
     format: csv  # csv / parquet / jsonl
 
 output_dir: data/processed
+runs_dir: runs  # git-tracked なマニフェスト保存先（yaml/html）。null にすると output_dir 以下に保存
 
 executor:
   type: local  # local / ray_local / gcp_vertex / gcp_dataflow / aws_sagemaker / aws_emr
 
 cv:
-  strategy: none  # none / time_series / kfold / stratified_kfold
+  strategy: none  # none / kfold / time_series / stratified_kfold / group_kfold / stratified_group_kfold / leave_one_group_out
   n_splits: 5
   time_col: null
-  target_col: null
+  target_col: null   # stratified_kfold / stratified_group_kfold で使用
+  group_col: null    # group_kfold / stratified_group_kfold / leave_one_group_out で使用
+  input_id: null     # CV に使う input の id（null = 最初の input）
 
 # 変換ステップ（例）
 steps: []
