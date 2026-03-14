@@ -303,9 +303,7 @@ class TestCvStrategy:
             }
         )
 
-    def test_cv_stratified_kfold(
-        self, df_with_label_and_group: Path, tmp_path: Path
-    ) -> None:
+    def test_cv_stratified_kfold(self, df_with_label_and_group: Path, tmp_path: Path) -> None:
         """stratified_kfold: target_col を指定するとクラス比率を保った 5 splits が生成される。"""
         cfg = self._make_cfg(
             df_with_label_and_group, tmp_path, "stratified_kfold", target_col="label"
@@ -313,20 +311,14 @@ class TestCvStrategy:
         result = PreprocessUseCase(cfg).execute()
         assert result.n_splits == 5, "stratified_kfold で n_splits=5 の splits が生成されること"
 
-    def test_cv_group_kfold(
-        self, df_with_label_and_group: Path, tmp_path: Path
-    ) -> None:
+    def test_cv_group_kfold(self, df_with_label_and_group: Path, tmp_path: Path) -> None:
         """group_kfold: group_col を指定するとグループ境界を守った splits が生成される。"""
-        cfg = self._make_cfg(
-            df_with_label_and_group, tmp_path, "group_kfold", group_col="group"
-        )
+        cfg = self._make_cfg(df_with_label_and_group, tmp_path, "group_kfold", group_col="group")
         result = PreprocessUseCase(cfg).execute()
         assert result.n_splits is not None
         assert result.n_splits >= 1, "group_kfold で splits が生成されること"
 
-    def test_cv_stratified_group_kfold(
-        self, df_with_label_and_group: Path, tmp_path: Path
-    ) -> None:
+    def test_cv_stratified_group_kfold(self, df_with_label_and_group: Path, tmp_path: Path) -> None:
         """stratified_group_kfold: target_col と group_col を両方指定すると splits が生成される。"""
         cfg = self._make_cfg(
             df_with_label_and_group,
@@ -340,9 +332,7 @@ class TestCvStrategy:
         assert result.n_splits is not None
         assert result.n_splits >= 1, "stratified_group_kfold で splits が生成されること"
 
-    def test_cv_leave_one_group_out(
-        self, df_with_label_and_group: Path, tmp_path: Path
-    ) -> None:
+    def test_cv_leave_one_group_out(self, df_with_label_and_group: Path, tmp_path: Path) -> None:
         """leave_one_group_out: group 数（5）と同数の splits が生成される。"""
         cfg = self._make_cfg(
             df_with_label_and_group, tmp_path, "leave_one_group_out", group_col="group"
