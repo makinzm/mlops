@@ -41,14 +41,21 @@ class DAGRunner:
     def run(self, targets: list[str]) -> dict[str, pl.DataFrame]:
         """targets を末尾として必要な Node だけを実行し、結果を返す。
 
+        処理順序:
+        1. まず全 Node の from_nodes を自動解決する（定義順の直前 Node を使う）
+        2. 次に targets から逆向きに依存を辿り、必要な Node を特定する
+        3. トポロジカルソートで実行順序を決定する
+        ※ 1 を先に行わないと from_nodes が空のまま依存解決が正しく行えない
+
         Returns:
             {node_id: DataFrame} — 実行されたノードの結果マップ
         """
+        # from: の自動解決（省略時は直前ノードを使う）
+        # _resolve_required より先に行う必要がある
+        self._resolve_auto_from_all()
+
         # 必要なノードを特定（targets から逆向きに依存解決）
         required = self._resolve_required(targets)
-
-        # from: の自動解決（省略時は直前ノードを使う）
-        self._resolve_auto_from(required)
 
         # トポロジカルソート
         execution_order = self._topological_sort(required)
@@ -111,12 +118,32 @@ class DAGRunner:
                 stack.append(dep)
         return required
 
+    def _resolve_auto_from_all(self) -> None:
+        """全ノードの from_nodes を自動設定する（required に関係なく全走査）。
+
+        定義順で走査し、from_nodes が空の変換ノードには
+        直前に出現した「Input Node または変換 Node」を設定する。
+        この処理を _resolve_required より先に行うことで、
+        逆向き依存解決が正しく動作する。
+        """
+        prev_id: str | None = None
+        for node in self._nodes:
+            if node.is_input:
+                prev_id = node.id
+                continue
+            if len(node.from_nodes) == 0 and prev_id is not None:
+                node.from_nodes = [prev_id]
+            prev_id = node.id
+
     def _resolve_auto_from(self, required: set[str]) -> None:
-        """from_nodes が空のノードに「直前ノード」を自動設定する。
+        """from_nodes が空のノードに「直前ノード」を自動設定する（required フィルタ版）。
 
         定義順で走査し、from_nodes が空の変換ノードには
         直前に出現した「Input Node または required ノード」を設定する。
         required 外のノードが挟まっても prev_id は維持する（Input Node は常に有効）。
+
+        Note: run() では _resolve_auto_from_all() を使用している。
+        このメソッドはテスト互換性のために残す。
         """
         prev_id: str | None = None
         for node in self._nodes:
