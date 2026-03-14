@@ -8,6 +8,8 @@ OutputResolver のテスト。
 - CV 分割が「fold ごとに Train/Test が正しく分かれている」ことを確認する。
 """
 
+from pathlib import Path
+
 import polars as pl
 import pytest
 
@@ -32,10 +34,10 @@ def sample_df() -> pl.DataFrame:
 
 class TestOutputNoCV:
     def test_single_parquet_created(
-        self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: "pytest.TempPathFactory"
+        self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """cv=false の場合、単一 .parquet ファイルが生成されること。"""
-        out = resolver.output(
+        resolver.output(
             df=sample_df,
             output_dir=tmp_path,
             node_id="tabular_out",
@@ -44,10 +46,9 @@ class TestOutputNoCV:
             splits=None,
         )
         assert (tmp_path / "tabular_out.parquet").exists()
-        assert out is None or isinstance(out, type(None))
 
     def test_parquet_content_matches(
-        self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: "pytest.TempPathFactory"
+        self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """生成された parquet の内容が指定カラムに一致すること。"""
         resolver.output(
@@ -65,7 +66,7 @@ class TestOutputNoCV:
 
 class TestOutputWithCV:
     def test_fold_directories_created(
-        self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: "pytest.TempPathFactory"
+        self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """cv=true の場合、fold_0 / fold_1 ディレクトリが生成されること。"""
         # n_splits=2 のシンプルな splits を作成
@@ -87,7 +88,7 @@ class TestOutputWithCV:
         assert (tmp_path / "tabular_out" / "fold_1" / "test.parquet").exists()
 
     def test_fold_row_counts(
-        self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: "pytest.TempPathFactory"
+        self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """fold_0/train.parquet が train_indices の行数と一致すること。"""
         splits = [

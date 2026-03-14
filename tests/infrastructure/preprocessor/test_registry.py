@@ -11,7 +11,6 @@ RESOLVER_REGISTRY の graceful skip テスト。
 import polars as pl
 import pytest
 
-from src.domain.data.preprocessor import StepResult
 from src.infrastructure.preprocessor.registry import run_step
 
 
@@ -22,7 +21,7 @@ def sample_df() -> pl.DataFrame:
 
 class TestRunStep:
     def test_resolver_not_found_returns_skipped(self, sample_df: pl.DataFrame) -> None:
-        """未登録 Resolver は StepResult(status='skipped', reason='resolver not found') を返すこと。"""
+        """未登録 Resolver は StepResult(status='skipped') を返すこと。"""
         result_df, step_result = run_step(
             df=sample_df,
             resolver_name="torchvision",
@@ -56,9 +55,7 @@ class TestRunStep:
         assert step_result.status == "ok"
         assert result_df.columns == ["id"]
 
-    def test_execution_error_returns_failed_and_continues(
-        self, sample_df: pl.DataFrame
-    ) -> None:
+    def test_execution_error_returns_failed_and_continues(self, sample_df: pl.DataFrame) -> None:
         """実行中に例外が発生しても StepResult(status='failed') を返し、例外を上げないこと。
 
         後続ステップが継続できるよう、DataFrame は変更前のものを返す。

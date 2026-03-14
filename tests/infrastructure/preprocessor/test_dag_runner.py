@@ -10,7 +10,6 @@ DAGRunner のテスト。
 """
 
 from pathlib import Path
-from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -38,7 +37,9 @@ class TestLinearFlow:
             Node(id="raw_train", resolver_cfg={}, is_input=True),
             Node(
                 id="selected",
-                resolver_cfg={"polars": {"method": "select_columns", "columns": ["id", "col1", "label"]}},
+                resolver_cfg={
+                    "polars": {"method": "select_columns", "columns": ["id", "col1", "label"]}
+                },
             ),
         ]
         input_dfs = {"raw_train": raw_df}
@@ -74,12 +75,16 @@ class TestBranchFrom:
             Node(id="raw_train", resolver_cfg={}, is_input=True),
             Node(
                 id="selected",
-                resolver_cfg={"polars": {"method": "select_columns", "columns": ["id", "col1", "label"]}},
+                resolver_cfg={
+                    "polars": {"method": "select_columns", "columns": ["id", "col1", "label"]}
+                },
             ),
             Node(
                 id="branch_from_raw",
                 from_nodes=["raw_train"],  # selected ではなく raw_train から分岐
-                resolver_cfg={"polars": {"method": "select_columns", "columns": ["id", "col2", "label"]}},
+                resolver_cfg={
+                    "polars": {"method": "select_columns", "columns": ["id", "col2", "label"]}
+                },
             ),
         ]
         input_dfs = {"raw_train": raw_df}
@@ -123,7 +128,12 @@ class TestTargetsPartialExecution:
         assert "expensive_node" not in results
 
     def test_skipped_step_continues_pipeline(self, raw_df: pl.DataFrame, tmp_path: Path) -> None:
-        """未知 Resolver があっても後続ステップが継続されること。"""
+        """未知 Resolver があっても後続ステップが継続されること。
+
+        unknown_step が selected の依存となるよう from_nodes で明示し、
+        selected が targets にある場合は unknown_step も実行されるが
+        graceful skip されて selected まで処理が継続することを確認する。
+        """
         nodes = [
             Node(id="raw_train", resolver_cfg={}, is_input=True),
             Node(
@@ -132,6 +142,7 @@ class TestTargetsPartialExecution:
             ),
             Node(
                 id="selected",
+                from_nodes=["unknown_step"],  # unknown_step の後続
                 resolver_cfg={"polars": {"method": "select_columns", "columns": ["id", "col1"]}},
             ),
         ]
