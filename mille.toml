@@ -11,7 +11,7 @@ name = "src_domain"
 paths = ["src/domain/**"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["dataclasses", "pathlib", "polars", "src", "typing"]
+external_allow = ["dataclasses", "pathlib", "src", "typing"]
 
 [[layers]]
 name = "src_infrastructure"
