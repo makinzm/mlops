@@ -34,6 +34,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from src.domain.model.trainer import Trainer, TrainResult
 from src.domain.repository.git import GitRepository
+from src.usecase._utils import build_tree_lines
 
 _MODELS_DIR_GITIGNORE = """\
 *
@@ -176,5 +177,16 @@ class TrainUseCase:
                 f"| {f.fold_idx} | {f.train_score:.4f} | {f.valid_score:.4f}"
                 f" | {best} | {f.n_train} | {f.n_valid} |"
             )
+
+        # ファイルツリー
+        lines += [
+            "",
+            "## Output Files",
+            "",
+            "```",
+            ts_dir.name + "/",
+        ]
+        lines += build_tree_lines(ts_dir)
+        lines.append("```")
 
         (ts_dir / "README.md").write_text("\n".join(lines) + "\n")
