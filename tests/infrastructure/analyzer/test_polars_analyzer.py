@@ -27,12 +27,9 @@ def _make_cfg(
     return OmegaConf.create(
         {
             "seed": 42,
-            "report_dir": str(tmp_path / "competition"),
+            "output_dir": str(tmp_path / "reports"),
             "max_plot_cols": max_plot_cols,
-            "competition": {
-                "name": "titanic",
-                "input_paths": [str(csv_path)],
-            },
+            "input_paths": [str(csv_path)],
         }
     )
 
@@ -99,12 +96,16 @@ class TestReportDirectoryCreation:
         result = _make_analyzer(cfg).analyze()
         assert result.report_dir.name == "polars"
 
-    def test_no_local_gitignore(self, titanic_csv: Path, tmp_path: Path) -> None:
-        """ローカル .gitignore は生成しない（ルート .gitignore の competition/** で管理）。"""
+    def test_gitignore_created_at_output_dir(self, titanic_csv: Path, tmp_path: Path) -> None:
+        """analyze() 呼び出しで output_dir に .gitignore が生成される。
+
+        output_dir がどこに設定されていても PNG / parquet 等の大容量ファイルを
+        git 管理外に置き、yaml / md 等のメタ情報だけを保持するため。
+        """
         cfg = _make_cfg(tmp_path, titanic_csv)
-        result = _make_analyzer(cfg).analyze()
-        gitignore = result.report_dir / ".gitignore"
-        assert not gitignore.exists()
+        _make_analyzer(cfg).analyze()
+        gitignore = (tmp_path / "reports") / ".gitignore"
+        assert gitignore.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -282,12 +283,9 @@ class TestInputPaths:
         cfg = OmegaConf.create(
             {
                 "seed": 42,
-                "report_dir": str(tmp_path / "competition"),
+                "output_dir": str(tmp_path / "reports"),
                 "max_plot_cols": 20,
-                "competition": {
-                    "name": "titanic",
-                    "input_paths": [str(raw_dir)],
-                },
+                "input_paths": [str(raw_dir)],
             }
         )
         result = _make_analyzer(cfg).analyze()
@@ -322,3 +320,79 @@ class TestErrorHandling:
         cfg = _make_cfg(tmp_path, titanic_csv)
         with pytest.raises(ValueError, match="Unknown analysis type"):
             _make_analyzer(cfg, [{"type": "nonexistent_step"}]).analyze()
+
+
+# ---------------------------------------------------------------------------
+# input / output 分離チェック
+# （再現性保証: 入力と出力が同じディレクトリだと生成ファイルが入力を汚染する）
+# ---------------------------------------------------------------------------
+
+
+class TestInputOutputSeparation:
+    def test_raises_when_output_dir_is_same_as_input_path(self, tmp_path: Path) -> None:
+        """output_dir と input_path が同一ディレクトリのとき ValueError が発生すること。
+
+        EDA の出力ファイルが入力 CSV と同じディレクトリに書き込まれると、
+        次回実行時に生成済みファイルが input として混入し再現性が壊れる。
+        """
+        shared = tmp_path / "data"
+        shared.mkdir()
+        csv_file = shared / "train.csv"
+        csv_file.write_text("a\n1\n")
+        cfg = OmegaConf.create(
+            {
+                "seed": 42,
+                "output_dir": str(shared),
+                "max_plot_cols": 20,
+                "input_paths": [str(shared)],
+            }
+        )
+        with pytest.raises(ValueError, match="output_dir"):
+            _make_analyzer(cfg).analyze()
+
+    def test_raises_when_input_path_is_inside_output_dir(self, tmp_path: Path) -> None:
+        """input_path が output_dir の配下にある場合も ValueError が発生すること。
+
+        出力先がすでに入力を含んでいる状況では追記ごとに入力が変化してしまう。
+        """
+        out_dir = tmp_path / "reports"
+        in_dir = out_dir / "raw"
+        in_dir.mkdir(parents=True)
+        csv_file = in_dir / "train.csv"
+        csv_file.write_text("a\n1\n")
+        cfg = OmegaConf.create(
+            {
+                "seed": 42,
+                "output_dir": str(out_dir),
+                "max_plot_cols": 20,
+                "input_paths": [str(in_dir)],
+            }
+        )
+        with pytest.raises(ValueError, match="output_dir"):
+            _make_analyzer(cfg).analyze()
+
+    def test_raises_when_output_dir_is_inside_input_path(self, tmp_path: Path) -> None:
+        """output_dir が input_path 配下にある場合も ValueError が発生すること。"""
+        in_dir = tmp_path / "data"
+        out_dir = in_dir / "reports"
+        in_dir.mkdir()
+        csv_file = in_dir / "train.csv"
+        csv_file.write_text("a\n1\n")
+        cfg = OmegaConf.create(
+            {
+                "seed": 42,
+                "output_dir": str(out_dir),
+                "max_plot_cols": 20,
+                "input_paths": [str(in_dir)],
+            }
+        )
+        with pytest.raises(ValueError, match="output_dir"):
+            _make_analyzer(cfg).analyze()
+
+    def test_passes_when_input_and_output_are_separate(
+        self, titanic_csv: Path, tmp_path: Path
+    ) -> None:
+        """input と output が完全に別ディレクトリの場合は正常に完了すること。"""
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg).analyze()
+        assert result.report_dir.exists()

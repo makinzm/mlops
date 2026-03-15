@@ -1,16 +1,8 @@
-# Data (raw/processed datasets - excluded from version control)
-# data/ だと親ごと除外され子の !.gitkeep が効かないため data/** を使う
-data/**
-!data/**/
-!data/**/.gitkeep
-!data/**/.gitignore
+# Data and report directories are managed by per-directory .gitignore files
+# created at runtime (setup_data_dir / analyzer._setup_output_gitignore).
+# Only metadata (*.yaml, *.md, *.html) is kept; images and parquet are excluded.
 
-# EDA reports (auto-generated outputs - same pattern as data/)
-competition/**
-!competition/**/
-!competition/**/.gitkeep
-!competition/**/README.md
-
+# Hydra outputs (run logs, hydra config snapshots)
 outputs/
 
 # Python

@@ -33,13 +33,13 @@ def _resolve_downloader(cfg: DictConfig) -> object:
     from src.infrastructure.repository.git import GitRepositoryImpl
 
     git_repo = GitRepositoryImpl()
-    downloader_type = cfg.downloader.type
-    if downloader_type == "kaggle":
+    source = str(cfg.get("source", "kaggle"))
+    if source == "kaggle":
         from src.infrastructure.downloader.kaggle import KaggleDownloader
 
         return KaggleDownloader(cfg, git_repo)
     else:
-        raise ValueError(f"Unknown downloader type: {downloader_type!r}. Supported: 'kaggle'")
+        raise ValueError(f"Unknown source: {source!r}. Supported: 'kaggle'")
 
 
 def _parse_analyses(steps_cfg: Any) -> list[Any]:
@@ -118,9 +118,22 @@ def main(cfg: DictConfig) -> None:
         analyzers = _resolve_analyzers(cfg)
         AutomaticallyEDAUseCase(analyzers, logger).execute()  # type: ignore[arg-type]
 
+    elif usecase_name == "preprocess":
+        from src.usecase.preprocessing.pipeline_loader import load_pipeline_cfgs
+        from src.usecase.preprocessing.preprocess import PreprocessUseCase
+
+        pipeline_cfgs = load_pipeline_cfgs(cfg, Path(_CONF_DIR))
+        for pipeline_cfg in pipeline_cfgs:
+            result = PreprocessUseCase(pipeline_cfg).execute()
+            logger.info(
+                f"前処理完了[{pipeline_cfg.get('job_id', '?')}]: "
+                f"output_path={result.output_path}, steps={len(result.step_results)}"
+            )
+
     else:
         raise ValueError(
-            f"Unknown usecase: {usecase_name!r}. Supported: 'download_dataset', 'automatically_eda'"
+            f"Unknown usecase: {usecase_name!r}. "
+            "Supported: 'download_dataset', 'automatically_eda', 'preprocess'"
         )
 
 

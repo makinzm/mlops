@@ -29,6 +29,14 @@ from src.domain.data.eda import AnalysisStep, EDAResult, FileEDAResult
 
 logger = logging.getLogger(__name__)
 
+_EDA_DIR_GITIGNORE = """\
+*
+!.gitignore
+!*.yaml
+!*.md
+!*/
+"""
+
 
 class PolarsAnalyzer:
     """DataAnalyzer Protocol を満たす Polars 実装。
@@ -50,15 +58,21 @@ class PolarsAnalyzer:
         self.commit_hash = commit_hash
         self._analyses = analyses
 
+    @property
+    def _competition_name(self) -> str:
+        return str((self.cfg.get("competition") or {}).get("name") or "eda")
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
     def analyze(self) -> EDAResult:
+        self._check_io_separation()
+        self._setup_output_gitignore()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         report_dir = (
-            Path(self.cfg.report_dir)
-            / f"{self.cfg.competition.name}_report"
+            Path(self.cfg.output_dir)
+            / f"{self._competition_name}_report"
             / timestamp
             / self.ANALYZER_TYPE
         )
@@ -86,12 +100,38 @@ class PolarsAnalyzer:
         )
 
     # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    def _setup_output_gitignore(self) -> None:
+        """output_dir に .gitignore を生成し PNG/parquet 等を git 管理外にする。"""
+        out = Path(self.cfg.output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        gitignore = out / ".gitignore"
+        if not gitignore.exists():
+            gitignore.write_text(_EDA_DIR_GITIGNORE)
+
+    def _check_io_separation(self) -> None:
+        """input_paths と output_dir が重複していないことを確認する。
+
+        出力ファイルが入力ディレクトリに混入すると次回実行時の再現性が壊れる。
+        """
+        out = Path(self.cfg.output_dir).resolve()
+        for path_str in self.cfg.input_paths:
+            inp = Path(path_str).resolve()
+            if out.is_relative_to(inp) or inp.is_relative_to(out):
+                raise ValueError(
+                    f"output_dir '{out}' と input_path '{inp}' が重複しています。"
+                    " 入力と出力は別ディレクトリにしてください。"
+                )
+
+    # ------------------------------------------------------------------
     # File collection
     # ------------------------------------------------------------------
 
     def _collect_csv_files(self) -> list[Path]:
         csv_files: list[Path] = []
-        for path_str in self.cfg.competition.input_paths:
+        for path_str in self.cfg.input_paths:
             p = Path(path_str)
             if p.is_file():
                 csv_files.append(p)
@@ -311,7 +351,7 @@ class PolarsAnalyzer:
         analyses: list[AnalysisStep],
     ) -> Path:
         lines = [
-            f"# EDA Report — {self.cfg.competition.name} [{self.ANALYZER_TYPE}]",
+            f"# EDA Report — {self._competition_name} [{self.ANALYZER_TYPE}]",
             "",
             f"Generated: {datetime.now().isoformat(timespec='seconds')}",
             "",
@@ -349,7 +389,11 @@ class PolarsAnalyzer:
             "commit_hash": self.commit_hash,
             "analyzer_type": self.ANALYZER_TYPE,
             "generated_at": datetime.now().isoformat(timespec="seconds"),
-            "competition": OmegaConf.to_container(self.cfg.competition),
+            "competition": (
+                OmegaConf.to_container(self.cfg.competition)
+                if self.cfg.get("competition")
+                else None
+            ),
             "input_files": [str(f) for f in csv_files],
         }
         path = report_dir / "metainfo.yaml"

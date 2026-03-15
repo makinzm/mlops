@@ -1,0 +1,3 @@
+# LocalExecutor 設定
+# ローカルプロセスで逐次実行（デフォルト）
+type: local

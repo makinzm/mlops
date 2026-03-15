@@ -44,7 +44,7 @@ class KaggleDownloader:
             ) from e
 
     def download(self) -> DownloadResult:
-        mode = self.cfg.downloader.mode
+        mode = self.cfg.kaggle.mode
         if mode == "dataset":
             return self._download_dataset()
         elif mode == "competition":
@@ -53,16 +53,15 @@ class KaggleDownloader:
             raise ValueError(f"Unknown mode: {mode!r}. Choose 'dataset' or 'competition'.")
 
     def _download_dataset(self) -> DownloadResult:
-        if not self.cfg.downloader.dataset:
+        if not self.cfg.kaggle.dataset:
             raise ValueError(
-                "dataset が未指定です。"
-                " 例: uv run python -m src downloader.dataset=owner/dataset-name"
+                "dataset が未指定です。 例: uv run python -m src kaggle.dataset=owner/dataset-name"
             )
         output_dir = Path(self.cfg.output_dir)
         self.git_repo.setup_data_dir(output_dir)
         self._check_force(output_dir)
         self.api.dataset_download_files(
-            dataset=self.cfg.downloader.dataset,
+            dataset=self.cfg.kaggle.dataset,
             path=output_dir,
             unzip=False,
             force=self.cfg.force,
@@ -72,15 +71,15 @@ class KaggleDownloader:
         return self._build_result(output_dir)
 
     def _download_competition(self) -> DownloadResult:
-        if not self.cfg.downloader.competition:
+        if not self.cfg.kaggle.competition:
             raise ValueError(
-                "competition が未指定です。 例: uv run python -m src downloader.competition=titanic"
+                "competition が未指定です。 例: uv run python -m src kaggle.competition=titanic"
             )
         output_dir = Path(self.cfg.output_dir)
         self.git_repo.setup_data_dir(output_dir)
         self._check_force(output_dir)
         self.api.competition_download_files(
-            competition=self.cfg.downloader.competition,
+            competition=self.cfg.kaggle.competition,
             path=output_dir,
             force=self.cfg.force,
         )

@@ -1,0 +1,5 @@
+# RayExecutor（ローカル）設定 — 将来実装予定
+# 未実装のため LocalExecutor にフォールバックする
+type: ray_local
+num_cpus: 4
+num_gpus: 0

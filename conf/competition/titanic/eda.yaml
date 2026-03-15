@@ -1,0 +1,20 @@
+# @package _global_
+usecase: "automatically_eda"
+seed: 42
+output_dir: "reports/2026/Q1/eda/${competition.name}"
+max_plot_cols: 20
+
+input_paths:
+  - "data/2026/Q1/raw/titanic"
+
+analyze:
+  pandas:
+    output_format: parquet
+    steps:
+      - type: basic_stats
+      - type: distributions
+      - type: missing_values
+      # - type: group_stats
+      #   group_by: "Survived"
+      # - type: id_transitions
+      #   id_col: "PassengerId"

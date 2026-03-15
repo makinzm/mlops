@@ -35,8 +35,7 @@ def dataset_cfg(tmp_path: Path) -> DictConfig:
             "output_dir": str(tmp_path),
             "unzip": True,
             "force": False,
-            "downloader": {
-                "type": "kaggle",
+            "kaggle": {
                 "mode": "dataset",
                 "dataset": "testuser/test-dataset",
                 "competition": None,
@@ -52,8 +51,7 @@ def competition_cfg(tmp_path: Path) -> DictConfig:
             "output_dir": str(tmp_path),
             "unzip": True,
             "force": False,
-            "downloader": {
-                "type": "kaggle",
+            "kaggle": {
                 "mode": "competition",
                 "dataset": None,
                 "competition": "test-competition",
@@ -69,8 +67,7 @@ def dataset_cfg_no_unzip(tmp_path: Path) -> DictConfig:
             "output_dir": str(tmp_path),
             "unzip": False,
             "force": False,
-            "downloader": {
-                "type": "kaggle",
+            "kaggle": {
                 "mode": "dataset",
                 "dataset": "testuser/test-dataset",
                 "competition": None,
@@ -86,8 +83,7 @@ def competition_cfg_no_unzip(tmp_path: Path) -> DictConfig:
             "output_dir": str(tmp_path),
             "unzip": False,
             "force": False,
-            "downloader": {
-                "type": "kaggle",
+            "kaggle": {
                 "mode": "competition",
                 "dataset": None,
                 "competition": "test-competition",
@@ -204,7 +200,7 @@ class TestKaggleDownloaderMetadata:
             result = KaggleDownloader(dataset_cfg, mock_git_repo).download()
             metadata = yaml.safe_load((result.output_dir / "metadata.yaml").read_text())
             assert "config" in metadata
-            assert metadata["config"]["downloader"]["dataset"] == "testuser/test-dataset"
+            assert metadata["config"]["kaggle"]["dataset"] == "testuser/test-dataset"
 
     def test_metadata_contains_downloaded_at(
         self, dataset_cfg: DictConfig, mock_git_repo: MagicMock
@@ -429,7 +425,7 @@ class TestKaggleDownloaderInvalidMode:
         """
         from omegaconf import DictConfig
 
-        merged = OmegaConf.merge(dataset_cfg, {"downloader": {"mode": "unknown_mode"}})
+        merged = OmegaConf.merge(dataset_cfg, {"kaggle": {"mode": "unknown_mode"}})
         assert isinstance(merged, DictConfig)
         cfg = merged
         with patch("kaggle.api.kaggle_api_extended.KaggleApi") as mock_cls:

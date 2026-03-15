@@ -1,0 +1,13 @@
+# @package _global_
+usecase: "download_dataset"
+output_dir: "data/2026/Q1/raw/${competition.name}"
+unzip: true
+force: true
+
+source: kaggle  # kaggle / (将来: gcs, s3, huggingface)
+kaggle:
+  mode: "competition"       # competition / dataset
+  competition: ${competition.name}  # mode=competition のとき: Kaggle competition slug
+  dataset: null             # mode=dataset のとき: owner/dataset-name
+
+seed: 42

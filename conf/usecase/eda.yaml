@@ -1,0 +1,28 @@
+# @package _global_
+usecase: "automatically_eda"
+seed: 42
+output_dir: "reports/2026/Q1/eda/${competition.name}"
+max_plot_cols: 20
+
+# competition.name は conf/competition/{name}.yaml から補間される
+input_paths:
+  - "data/2026/Q1/raw/${competition.name}"
+
+# Infra:method 形式でアナライザーと分析ステップを指定する。
+# - 複数のアナライザーを同時に実行可能（各アナライザーは独自サブディレクトリに出力）
+# - output_format: "parquet" | "csv"（pandas アナライザーのみ有効。polars は常に parquet）
+analyze:
+  pandas:
+    output_format: parquet
+    steps:
+      - type: basic_stats       # describe, 欠損値集計
+      - type: distributions     # ヒストグラム・棒グラフ
+      - type: missing_values    # 欠損値ヒートマップ
+      # --- Adhoc（必要に応じてコメントアウトを外す） ---
+      # - type: group_stats
+      #   group_by: "Survived"
+      # - type: id_transitions
+      #   id_col: "PassengerId"
+  # polars:
+  #   steps:
+  #     - type: distributions

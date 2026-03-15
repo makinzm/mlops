@@ -1,0 +1,7 @@
+# @package _global_
+usecase: preprocess
+
+# pipeline: 省略すると competition/preprocess/ 配下の全パイプラインを実行
+# 特定のパイプラインだけ実行したい場合は CLI で指定:
+#   uv run python -m src usecase=preprocess pipeline=base
+# pipeline: base

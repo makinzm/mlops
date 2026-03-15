@@ -1,0 +1,10 @@
+analyzer_type: pandas
+commit_hash: 506abecedc632c683794af7f5e664d54d3451197
+competition:
+  name: titanic
+generated_at: '2026-03-15T11:38:59'
+input_files:
+- data/2026/Q1/raw/titanic/gender_submission.csv
+- data/2026/Q1/raw/titanic/test.csv
+- data/2026/Q1/raw/titanic/train.csv
+output_format: parquet
