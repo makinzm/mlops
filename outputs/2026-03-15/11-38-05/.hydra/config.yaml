@@ -1,0 +1,12 @@
+competition:
+  name: titanic
+usecase: download_dataset
+output_dir: data/2026/Q1/raw/${competition.name}
+unzip: true
+force: true
+source: kaggle
+kaggle:
+  mode: competition
+  competition: ${competition.name}
+  dataset: null
+seed: 42
