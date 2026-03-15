@@ -12,15 +12,12 @@ Phase 2: trainer_loader — 設定から Trainer を選択するファクトリ�
 """
 
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 from omegaconf import DictConfig, OmegaConf
 
 from src.domain.model.trainer import Trainer
 from src.usecase.training.trainer_loader import load_trainer_cfgs, resolve_trainer
-
 
 # ──────────────────────────────────────────────────────────────
 # load_trainer_cfgs
@@ -33,12 +30,8 @@ def conf_dir(tmp_path: Path) -> Path:
     training_dir = tmp_path / "competition" / "titanic" / "training"
     training_dir.mkdir(parents=True)
 
-    (training_dir / "lgbm.yaml").write_text(
-        "trainer:\n  type: lgbm\n  n_folds: 5\n  seed: 42\n"
-    )
-    (training_dir / "nn.yaml").write_text(
-        "trainer:\n  type: nn\n  n_folds: 5\n  seed: 42\n"
-    )
+    (training_dir / "lgbm.yaml").write_text("trainer:\n  type: lgbm\n  n_folds: 5\n  seed: 42\n")
+    (training_dir / "nn.yaml").write_text("trainer:\n  type: nn\n  n_folds: 5\n  seed: 42\n")
     return tmp_path
 
 
@@ -60,7 +53,7 @@ class TestLoadTrainerCfgs:
         self, conf_dir: Path, base_cfg: DictConfig
     ) -> None:
         """trainer=lgbm を指定したときは lgbm.yaml のみロードすること。"""
-        cfg = OmegaConf.merge(base_cfg, OmegaConf.create({"trainer_name": "lgbm"}))
+        cfg = DictConfig(OmegaConf.merge(base_cfg, OmegaConf.create({"trainer_name": "lgbm"})))
         cfgs = load_trainer_cfgs(cfg, conf_dir)
         assert len(cfgs) == 1
         assert cfgs[0].trainer.type == "lgbm"
@@ -69,23 +62,17 @@ class TestLoadTrainerCfgs:
         self, conf_dir: Path, base_cfg: DictConfig
     ) -> None:
         """存在しない trainer 名を指定したときは ValueError。"""
-        cfg = OmegaConf.merge(
-            base_cfg, OmegaConf.create({"trainer_name": "xgboost"})
-        )
+        cfg = DictConfig(OmegaConf.merge(base_cfg, OmegaConf.create({"trainer_name": "xgboost"})))
         with pytest.raises(ValueError, match="xgboost"):
             load_trainer_cfgs(cfg, conf_dir)
 
-    def test_raises_when_training_dir_is_empty(
-        self, tmp_path: Path, base_cfg: DictConfig
-    ) -> None:
+    def test_raises_when_training_dir_is_empty(self, tmp_path: Path, base_cfg: DictConfig) -> None:
         """training ディレクトリが空のとき ValueError。"""
         (tmp_path / "competition" / "titanic" / "training").mkdir(parents=True)
         with pytest.raises(ValueError, match="training"):
             load_trainer_cfgs(base_cfg, tmp_path)
 
-    def test_base_cfg_keys_are_merged(
-        self, conf_dir: Path, base_cfg: DictConfig
-    ) -> None:
+    def test_base_cfg_keys_are_merged(self, conf_dir: Path, base_cfg: DictConfig) -> None:
         """base_cfg のキー（seed など）がマージ結果に含まれること。"""
         cfgs = load_trainer_cfgs(base_cfg, conf_dir)
         assert all(c.seed == 42 for c in cfgs)
