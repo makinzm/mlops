@@ -146,12 +146,46 @@ class TestPreprocessUseCase:
         assert all(r.status in ("ok", "skipped", "failed") for r in result.step_results)
 
 
+class TestGitignoreCreation:
+    """
+    なぜこのテストが必要か:
+    - output_dir（data/processed/ 等）には parquet が大量に生成される。
+    - per-directory .gitignore を execute() 時に自動生成し、
+      parquet 等の大容量ファイルを git 管理外にする。
+    - yaml / md / html のメタ情報だけ git に残す方針。
+    - output_dir がどこに設定されていても（CI・本番・ローカル全環境）機能する。
+    """
+
+    def test_gitignore_created_at_output_dir(self, train_csv: Path, tmp_path: Path) -> None:
+        """execute() で output_dir に .gitignore が生成される。"""
+        cfg = OmegaConf.create(
+            {
+                "usecase": "preprocess",
+                "job_id": "gitignore_test",
+                "inputs": [{"id": "raw_train", "path": str(train_csv), "format": "csv"}],
+                "output_dir": str(tmp_path / "processed"),
+                "executor": {"type": "local"},
+                "cv": {"strategy": "none", "n_splits": 5, "time_col": None, "target_col": None},
+                "steps": [
+                    {
+                        "id": "out",
+                        "output": {"columns": ["id", "col1"], "format": "parquet", "cv": False},
+                    }
+                ],
+                "targets": ["out"],
+                "seed": 42,
+            }
+        )
+        PreprocessUseCase(cfg).execute()
+        assert (tmp_path / "processed" / ".gitignore").exists()
+
+
 class TestMetadataInOutputDir:
     """
     なぜこのテストが必要か:
     - preprocess_result.yaml と pipeline_dag.html はメタデータとして git 管理したい。
-    - .gitignore の data/** に対して *.yaml / *.html を除外対象外にすることで
-      output_dir（data/processed/）以下に保存しつつ git に入れる設計。
+    - per-directory .gitignore（execute() 時に自動生成）で parquet を除外しつつ
+      *.yaml / *.md / *.html のみを git に残す設計。
     - runs/ のような別ディレクトリは不要で、データとメタデータを同じ場所に置く。
     """
 
