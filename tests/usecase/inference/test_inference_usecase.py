@@ -163,3 +163,58 @@ class TestInferenceUseCaseRun:
 
         gitignore_path = Path(cfg.output_dir) / ".gitignore"
         assert gitignore_path.exists(), f".gitignore が生成されていない: {gitignore_path}"
+
+    def test_run_skips_submission_when_no_test_path(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """test_path=None のとき submission.csv をスキップし、metainfo.yaml と README.md は生成すること。
+
+        なぜこのテストが必要か:
+          - test データなしコンペ（推論先が存在しない場合）でも usecase が crash せずに
+            metainfo.yaml / README.md だけ出力できることを保証する。
+          - Kaggle の一部コンペは test.csv を提供しないため、null チェックは必須。
+        """
+        cfg = _make_cfg(tmp_path)
+        # test_path を None に上書き
+        raw = OmegaConf.to_container(cfg, resolve=True)
+        assert isinstance(raw, dict)
+        raw["test_path"] = None
+        cfg = OmegaConf.create(raw)
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        usecase.run(cfg)
+
+        submission_path = Path(cfg.output_dir) / "submission.csv"
+        assert not submission_path.exists(), "test_path=None でも submission.csv が生成されてしまった"
+
+        metainfo_path = Path(cfg.output_dir) / "metainfo.yaml"
+        assert metainfo_path.exists(), "metainfo.yaml が生成されていない"
+
+        readme_path = Path(cfg.output_dir) / "README.md"
+        assert readme_path.exists(), "README.md が生成されていない"
+
+    def test_run_skips_submission_when_test_file_missing(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """test_path が指定されていてもファイルが存在しない場合は submission.csv をスキップすること。
+
+        なぜこのテストが必要か:
+          - パス設定ミスや前処理が未実行の場合に usecase が crash すると
+            pipeline 全体が止まってしまう。
+          - ファイル不在を graceful に扱い、metainfo.yaml / README.md だけ出力することで
+            後から原因を特定しやすくなる。
+        """
+        cfg = _make_cfg(tmp_path)
+        # test_path は設定されているが、ファイルを作成しない
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        usecase.run(cfg)
+
+        submission_path = Path(cfg.output_dir) / "submission.csv"
+        assert not submission_path.exists(), "存在しない test_path でも submission.csv が生成されてしまった"
+
+        metainfo_path = Path(cfg.output_dir) / "metainfo.yaml"
+        assert metainfo_path.exists(), "metainfo.yaml が生成されていない"
+
+        readme_path = Path(cfg.output_dir) / "README.md"
+        assert readme_path.exists(), "README.md が生成されていない"
