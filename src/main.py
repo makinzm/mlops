@@ -131,13 +131,15 @@ def main(cfg: DictConfig) -> None:
             )
 
     elif usecase_name == "train":
+        from src.infrastructure.repository.git import GitRepositoryImpl
         from src.usecase.training.train import TrainUseCase
         from src.usecase.training.trainer_loader import load_trainer_cfgs, resolve_trainer
 
+        git_repo = GitRepositoryImpl()
         trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
         for trainer_cfg in trainer_cfgs:
             trainer = resolve_trainer(trainer_cfg)
-            train_result = TrainUseCase(trainer_cfg, trainer=trainer).execute()
+            train_result = TrainUseCase(trainer_cfg, trainer=trainer, git_repo=git_repo).execute()
             logger.info(
                 f"学習完了[{train_result.job_id}]: "
                 f"CV {train_result.metric}="

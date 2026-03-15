@@ -7,16 +7,18 @@ LightGBM Trainer — Trainer Protocol の実装。
     2. サンプル重みを構築（sample_weight_col > class_weight > is_unbalance）
     3. lgb.Dataset を作成
     4. lgb.train() — early stopping
-    5. fold_{N}/model.txt に保存
+    5. fold_{N}/model.lgbm に保存
     6. validation セットで予測 → oof_train.parquet
     7. error_analysis.parquet（TP/TN/FP/FN サンプリング）
     8. feature_importance.parquet
   CV スコアを集計して TrainResult を返す。
+
+  timestamp / commit_hash は TrainUseCase が生成して cfg に含めて渡す。
+  (_timestamp, _commit_hash キー)
 """
 
 from __future__ import annotations
 
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -42,14 +44,20 @@ class LightGBMTrainer:
         output_dir: Path,
         cfg: dict[str, Any],
     ) -> TrainResult:
-        """fold ごとに学習し TrainResult を返す。"""
+        """fold ごとに学習し TrainResult を返す。
+
+        output_dir は TrainUseCase が生成した {job_id}/{timestamp}/ を受け取る。
+        fold_{N}/ ディレクトリはこの直下に作成される。
+        """
         dcfg = self._cfg
         fold_dirs = sorted(preprocess_output_dir.glob("fold_*"))
         if not fold_dirs:
             raise ValueError(f"fold ディレクトリが見つかりません: {preprocess_output_dir}")
 
-        timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-        commit_hash = _get_commit_hash()
+        # timestamp / commit_hash は UseCase 側が生成して cfg に含めて渡す
+        timestamp: str = cfg.get("_timestamp", datetime.now().strftime("%Y%m%dT%H%M%S"))
+        commit_hash: str = cfg.get("_commit_hash", "unknown")
+
         job_id: str = cfg.get("job_id", "lgbm")
         target_col: str = dcfg.target_col
         feature_cols: list[str] = list(dcfg.feature_cols)
@@ -118,8 +126,8 @@ class LightGBMTrainer:
             valid_score = float(booster.best_score.get("valid", {}).get(metric, 0.0))
             best_iter = int(booster.best_iteration)
 
-            # model 保存
-            model_path = fold_out / "model.txt"
+            # model 保存（LightGBM のテキスト形式 → .lgbm）
+            model_path = fold_out / "model.lgbm"
             booster.save_model(str(model_path))
 
             # OOF 予測保存
@@ -137,6 +145,7 @@ class LightGBMTrainer:
 
             # feature importance 保存
             fi_path: Path | None = None
+            fi: dict[str, float] = {}
             if dcfg.logging.get("save_importance", True):
                 fi_path = fold_out / "feature_importance.parquet"
                 fi = dict(
@@ -162,7 +171,7 @@ class LightGBMTrainer:
                     n_train=len(X_train),
                     n_valid=len(X_valid),
                     best_iteration=best_iter,
-                    feature_importances=fi if fi_path else {},
+                    feature_importances=fi,
                 )
             )
 
@@ -187,13 +196,6 @@ class LightGBMTrainer:
 # ──────────────────────────────────────────────────────────────
 # ヘルパー関数
 # ──────────────────────────────────────────────────────────────
-
-
-def _get_commit_hash() -> str:
-    try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
-    except Exception:
-        return "unknown"
 
 
 def _build_weights(

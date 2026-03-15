@@ -101,15 +101,22 @@ def base_cfg(tmp_path: Path) -> dict[str, Any]:
 # ──────────────────────────────────────────────────────────────
 
 
+_FAKE_COMMIT = "b" * 40  # フルハッシュ（40文字）を UseCase が渡す想定
+
+
 class TestLightGBMTrainerFitFolds:
     def _run(self, fold_dir: Path, tmp_path: Path, cfg_dict: dict[str, Any]) -> TrainResult:
-        output_dir = tmp_path / "models" / "test_lgbm"
+        output_dir = tmp_path / "models" / "test_lgbm" / "20260315T120000"
+        output_dir.mkdir(parents=True, exist_ok=True)
         cfg = OmegaConf.create(cfg_dict)
         trainer = LightGBMTrainer(cfg)
+        full_cfg = dict(cfg_dict)
+        full_cfg["_timestamp"] = "20260315T120000"
+        full_cfg["_commit_hash"] = _FAKE_COMMIT
         return trainer.fit_folds(
             preprocess_output_dir=fold_dir,
             output_dir=output_dir,
-            cfg=cfg_dict,
+            cfg=full_cfg,
         )
 
     def test_returns_train_result(
@@ -120,6 +127,14 @@ class TestLightGBMTrainerFitFolds:
         assert isinstance(result, TrainResult)
         assert result.trainer_type == "lgbm"
         assert result.metric == "auc"
+
+    def test_commit_hash_comes_from_cfg(
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
+    ) -> None:
+        """commit_hash は cfg['_commit_hash'] をそのまま使うこと（フルハッシュ保証）。"""
+        result = self._run(fold_dir, tmp_path, base_cfg)
+        assert result.commit_hash == _FAKE_COMMIT
+        assert len(result.commit_hash) == 40
 
     def test_fold_results_count_matches_folds(
         self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
@@ -141,9 +156,10 @@ class TestLightGBMTrainerFitFolds:
     def test_model_file_saved(
         self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
-        """model.txt が fold ディレクトリに保存されること。"""
+        """model.lgbm が fold ディレクトリに保存されること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
         assert result.fold_results[0].model_path.exists()
+        assert result.fold_results[0].model_path.suffix == ".lgbm"
 
     def test_oof_parquet_saved(
         self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
