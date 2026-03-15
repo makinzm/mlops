@@ -83,6 +83,24 @@ class TestNotebookGeneration:
         cell1_source = "".join(notebook["cells"][0]["source"])
         assert "pip install" in cell1_source, "セル1に pip install が含まれない"
 
+    def test_generated_notebook_cell1_smart_install_filters_indented_comments(
+        self, tmp_path: Path
+    ) -> None:
+        """セル1の _smart_install が先頭スペース付きコメント行（`    # via aiohttp`）を
+        除外すること。`uv export` は `    # via pkg` のようにインデントされたコメントを
+        生成するため、strip() 後の startswith('#') で判定しないと pip に渡されてしまう。"""
+        cfg = _make_cfg(tmp_path)
+        mock_api = MagicMock()
+        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # type: ignore[arg-type]
+        result = usecase.execute()
+        notebook = json.loads(result.notebook_path.read_text())
+        cell1_source = "".join(notebook["cells"][0]["source"])
+        # strip().startswith が使われていることを確認（元行に先頭スペースがあっても除外できる）
+        assert "l.strip().startswith('#')" in cell1_source, (
+            "_smart_install が l.strip().startswith('#') を使っていない — "
+            "uv export の `    # via aiohttp` がpipに渡されてしまう"
+        )
+
     def test_generated_notebook_cell2_contains_competition_slug(self, tmp_path: Path) -> None:
         """セル2に competition slug（titanic）が含まれること（設定上書きセル）。"""
         cfg = _make_cfg(tmp_path)

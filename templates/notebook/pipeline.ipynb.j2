@@ -31,7 +31,7 @@
     "# メジャーバージョンが異なる場合は WARNING を出すがインストールはしない。\n",
     "def _smart_install(req_path: str) -> None:\n",
     "    with open(req_path) as f:\n",
-    "        lines = [l.strip() for l in f if l.strip() and not l.startswith('#')]\n",
+    "        lines = [l.strip() for l in f if l.strip() and not l.strip().startswith('#')]\n",
     "    to_install = []\n",
     "    for line in lines:\n",
     "        m = re.match(r'^([A-Za-z0-9_\\-\\.]+)==(.+)$', line)\n",
