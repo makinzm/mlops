@@ -1,0 +1,131 @@
+# @package _global_
+# Titanic 前処理パイプライン — Target Encoding バリアント
+# base.yaml の fill_na / family 特徴量に加えて、
+# Sex と Embarked を OOF Target Encoding に変換する。
+#
+# 注意:
+# - target_encode は OOF（Out-of-Fold）CV で実装されるため、
+#   Train の val fold は fold 外の統計量でエンコードされる（データリーク防止）。
+# - Test には transform_target_encode が適用される（Train の full_encoder を使用）。
+
+usecase: preprocess
+job_id: titanic_preprocess_target_encoding
+
+inputs:
+  - id: raw_train
+    path: data/2026/Q1/raw/titanic/train.csv
+    format: csv
+  - id: raw_test
+    path: data/2026/Q1/raw/titanic/test.csv
+    format: csv
+
+output_dir: data/2026/Q1/processed
+
+cv:
+  strategy: stratified_kfold
+  n_splits: 5
+  target_col: Survived
+
+steps:
+  # ----------------------------------------------------------------
+  # Train ブランチ
+  # ----------------------------------------------------------------
+
+  - id: train_selected
+    from: raw_train
+    polars:
+      method: select_columns
+      columns: [PassengerId, Survived, Pclass, Sex, Age, SibSp, Parch, Fare, Embarked]
+
+  - id: train_filled_age
+    sklearn:
+      method: fill_na
+      strategy: median
+      columns: [Age, Fare]
+
+  - id: train_filled_embarked
+    sklearn:
+      method: fill_na
+      strategy: constant
+      columns: [Embarked]
+      fill_value: "S"
+
+  - id: train_family
+    polars:
+      method: arithmetic
+      operation: add
+      col_a: SibSp
+      col_b: Parch
+      output_col: FamilySize
+
+  # Sex, Embarked を OOF Target Encoding に変換
+  # smoothing=1.0: 小カテゴリの過学習を防ぐ
+  - id: train_target_encoded
+    sklearn:
+      method: target_encode
+      columns: [Sex, Embarked]
+      target_col: Survived
+      n_splits: 5
+      smoothing: 1.0
+
+  # ----------------------------------------------------------------
+  # Test ブランチ
+  # ----------------------------------------------------------------
+
+  - id: test_selected
+    from: raw_test
+    polars:
+      method: select_columns
+      columns: [PassengerId, Pclass, Sex, Age, SibSp, Parch, Fare, Embarked]
+
+  - id: test_filled_age
+    sklearn:
+      method: fill_na
+      strategy: median
+      columns: [Age, Fare]
+
+  - id: test_filled_embarked
+    sklearn:
+      method: fill_na
+      strategy: constant
+      columns: [Embarked]
+      fill_value: "S"
+
+  - id: test_family
+    polars:
+      method: arithmetic
+      operation: add
+      col_a: SibSp
+      col_b: Parch
+      output_col: FamilySize
+
+  # Test は Train の full_encoder を使って変換（train_target_encoded の encoder を参照）
+  - id: test_target_encoded
+    from_encoder: train_target_encoded
+    sklearn:
+      method: transform_target_encode
+      columns: [Sex, Embarked]
+
+  # ----------------------------------------------------------------
+  # 出力
+  # ----------------------------------------------------------------
+
+  - id: train_out
+    from: train_target_encoded
+    output:
+      columns: [PassengerId, Survived, Pclass, Age, SibSp, Parch, Fare, FamilySize, Sex, Embarked]
+      format: parquet
+      cv: true
+
+  - id: test_out
+    from: test_target_encoded
+    output:
+      columns: [PassengerId, Pclass, Age, SibSp, Parch, Fare, FamilySize, Sex, Embarked]
+      format: parquet
+      cv: false
+
+targets:
+  - train_out
+  - test_out
+
+seed: 42

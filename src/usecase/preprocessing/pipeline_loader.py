@@ -24,7 +24,8 @@ def load_pipeline_cfgs(cfg: DictConfig, conf_dir: Path) -> list[DictConfig]:
         ValueError: pipeline が見つからない / preprocess ディレクトリが空の場合。
     """
     competition_name: str = cfg.competition.name
-    pipeline: str | None = cfg.get("pipeline")
+    # recipe= を優先し、旧パラメータ pipeline= へのフォールバックで後方互換性を保つ
+    pipeline: str | None = cfg.get("recipe", cfg.get("pipeline"))
 
     preprocess_dir = conf_dir / "competition" / competition_name / "preprocess"
 
