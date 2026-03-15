@@ -222,3 +222,83 @@ class TestInferenceUseCaseRun:
 
         readme_path = Path(cfg.output_dir) / "README.md"
         assert readme_path.exists(), "README.md が生成されていない"
+
+
+class TestInferenceUseCaseTimestamp:
+    """タイムスタンプ付き出力ディレクトリ構造のテスト。
+
+    なぜこのテストが必要か:
+      - train/preprocess と同様に {output_dir}/{job_id}/{YYYYMMDDTHHMMSS}/ 形式で
+        出力ディレクトリを作成することで、実行ごとの結果が上書きされず
+        過去の推論結果を追跡できることを保証する。
+      - latest シンボリックリンク解決や pipeline usecase での連携にも必要。
+    """
+
+    def test_run_output_dir_has_timestamp_subdir(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """output_dir/{job_id}/{timestamp}/ サブディレクトリが生成されること。
+
+        現行実装は {output_dir}/ 直下にファイルを生成するため、このテストは FAIL する。
+        """
+        cfg = _make_cfg(tmp_path)
+        _make_test_parquet(Path(cfg.test_path))
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        usecase.run(cfg)
+
+        job_dir = Path(cfg.output_dir) / str(cfg.job_id)
+        assert job_dir.exists(), f"job_id ディレクトリが生成されていない: {job_dir}"
+
+        # job_dir 直下に YYYYMMDDTHHMMSS 形式のサブディレクトリが存在すること
+        ts_dirs = [d for d in job_dir.iterdir() if d.is_dir() and len(d.name) == 15]
+        assert len(ts_dirs) >= 1, (
+            f"{job_dir} 直下にタイムスタンプサブディレクトリが生成されていない"
+        )
+
+    def test_run_returns_submission_path_in_timestamp_dir(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """run() の戻り値が {output_dir}/{job_id}/{timestamp}/submission.csv であること。"""
+        cfg = _make_cfg(tmp_path)
+        _make_test_parquet(Path(cfg.test_path))
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        result = usecase.run(cfg)
+
+        assert result is not None, "submission.csv のパスが None"
+        assert result.exists(), f"submission.csv が存在しない: {result}"
+
+        # パスが {output_dir}/{job_id}/{timestamp}/submission.csv であること
+        assert result.name == "submission.csv"
+        # timestamp ディレクトリは result.parent.name、job_id は result.parent.parent.name
+        ts_name = result.parent.name
+        assert len(ts_name) == 15, (
+            f"timestamp ディレクトリ名が YYYYMMDDTHHMMSS 形式でない: {ts_name}"
+        )
+        assert result.parent.parent.name == str(cfg.job_id), (
+            f"job_id ディレクトリ名が一致しない: {result.parent.parent.name}"
+        )
+
+    def test_run_metainfo_records_timestamp(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """metainfo.yaml に timestamp が記録されること。"""
+        import yaml
+
+        cfg = _make_cfg(tmp_path)
+        _make_test_parquet(Path(cfg.test_path))
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        result = usecase.run(cfg)
+
+        assert result is not None
+        metainfo_path = result.parent / "metainfo.yaml"
+        assert metainfo_path.exists(), f"metainfo.yaml が生成されていない: {metainfo_path}"
+
+        with open(metainfo_path) as f:
+            meta = yaml.safe_load(f)
+        assert "timestamp" in meta, "metainfo.yaml に timestamp が記録されていない"
+        assert len(meta["timestamp"]) == 15, (
+            f"timestamp が YYYYMMDDTHHMMSS 形式でない: {meta['timestamp']}"
+        )
