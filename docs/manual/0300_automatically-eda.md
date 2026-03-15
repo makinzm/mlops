@@ -19,7 +19,7 @@
 
 ```bash
 # Titanic データセットの EDA を実行（デフォルト設定）
-uv run python -m src +competition/titanic=eda
+uv run python -m src competition/titanic=eda
 ```
 
 ---
@@ -74,11 +74,11 @@ analyze:
 
 ```bash
 # 特定のファイルを直接指定
-uv run python -m src +competition/titanic=eda \
+uv run python -m src competition/titanic=eda \
   "input_paths=[data/2026/Q1/raw/titanic/train.csv]"
 
 # 複数ファイルを指定
-uv run python -m src +competition/titanic=eda \
+uv run python -m src competition/titanic=eda \
   "input_paths=[data/2026/Q1/raw/titanic/train.csv,data/2026/Q1/raw/titanic/test.csv]"
 ```
 
@@ -86,7 +86,7 @@ uv run python -m src +competition/titanic=eda \
 
 ```bash
 # statistics を CSV で出力（デフォルトは parquet）
-uv run python -m src +competition/titanic=eda \
+uv run python -m src competition/titanic=eda \
   "analyze.pandas.output_format=csv"
 ```
 

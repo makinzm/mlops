@@ -150,7 +150,7 @@ uv run python -m src +competition/house-prices=eda
 | 操作 | コマンド |
 |------|---------|
 | ダウンロード（デフォルト競技） | `uv run python -m src +usecase=download_dataset` |
-| EDA（デフォルト競技） | `uv run python -m src +competition/titanic=eda` |
+| EDA（デフォルト競技） | `uv run python -m src competition/titanic=eda` |
 | 前処理（base） | `uv run python -m src '+competition/titanic/preprocess=base'` |
 
 ---
