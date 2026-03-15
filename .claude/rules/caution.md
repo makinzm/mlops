@@ -18,11 +18,36 @@
 - **OK**: `src/__main__.py` を作り `main()` を呼ぶ。README に書いたコマンドは必ず動作確認する
 - task README に書いたコマンド例は必ず手元で実行して確認する
 
-### データディレクトリは .gitignore + .gitkeep で管理する
+### `__main__.py` で CWD をプロジェクトルートに固定する
 
-- **NG**: `data/` を `.gitignore` するだけでディレクトリ自体が git に入らない。また `data/2026/Q1/raw/` のように出力先をハードコードした `.gitkeep` を repo に入れる
-- **OK**: `output_dir` は conf で自由に変わるため、**ダウンロード実行時に動的に** `.gitkeep` と `.gitignore` を生成するロジックを実装に組み込む
-- その責務は `GitRepository.setup_data_dir()` に持たせ、downloader から DI で使う
+- **NG**: `src/__main__.py` に `os.chdir` なしのまま → mlops 外から実行すると `data/2026/Q1/raw/...` が CWD 基準で解決されてファイルが見つからない
+- **OK**: `src/__main__.py` の冒頭で `os.chdir(Path(__file__).parent.parent)` を呼ぶ
+- **Why**: Hydra の `config_path` は `Path(__file__)` 基準で絶対パス指定済みのため影響なし。data パスだけが CWD 依存になる
+- **How to apply**: 新しいエントリーポイントを作るたびに必ず追加する
+
+### データディレクトリは per-directory .gitignore で管理する（実行時生成）
+
+- **NG**: ルート `.gitignore` に `data/**` パターンを書いて一括管理する（output_dir が変わったとき機能しない）
+- **OK**: `output_dir` ごとに実行時 `.gitignore` を動的生成する。責務は以下に持たせる:
+  - download: `GitRepositoryImpl.setup_data_dir(output_dir)`
+  - EDA: `_setup_output_gitignore()` in analyzer
+  - preprocess: `GitRepositoryImpl.setup_data_dir(cfg.output_dir)` in PreprocessUseCase
+- **Why**: `output_dir` は conf で自由に変わるため、どこに出力しても自動的に機能する必要がある
+- **How to apply**: 新しい usecase の output を追加するときは必ずこの一覧を確認し、.gitignore 生成を組み込む
+
+### per-directory .gitignore を設計するときは保持対象を全て洗い出す
+
+- **NG**: `!*.yaml` だけ追加して `*.html` / `*.md` を後から気づいて追加修正した
+- **OK**: そのディレクトリで生成されうる全ファイル種別を確認してから書く
+- 現プロジェクトの保持対象: `*.yaml`（metainfo, result）, `*.html`（pipeline_dag）, `*.md`（README）, `.gitkeep`, `.gitignore`, `*/`（サブディレクトリ）
+- **How to apply**: `_DATA_DIR_GITIGNORE` / `_EDA_DIR_GITIGNORE` を変更するときは出力ファイル一覧と照合する
+
+### .gitignore のクリーンアップ時は既知の除外対象を確認してから削除する
+
+- **NG**: `.gitignore` の整理で `outputs/`（Hydra ログ）まで削除してしまい、Hydra の設定スナップショットが staging された
+- **OK**: 各パターンを削除する前に「何のために書かれているか」を確認する。ツール固有の出力ディレクトリは絶対に消さない
+- **Why**: `outputs/` は Hydra のデフォルト出力ディレクトリ。プロジェクト独自のパターンと区別できていなかった
+- **How to apply**: `.gitignore` 変更 PR では削除したパターンの用途を必ずコメントに残す
 
 ### git 操作は GitRepository Protocol に集約する
 
@@ -136,13 +161,23 @@
 
 ## .gitignore パターン
 
-### `data/` ではなく `data/**` を使う
+### ~~`data/` ではなく `data/**` を使う~~（obsolete: per-directory 戦略に移行済み）
 
-- **NG**: ルートの `.gitignore` に `data/` と書く
-  （ディレクトリごと除外されるため、子ディレクトリの `!.gitkeep` 例外が効かない）
-- **OK**: `data/**` で内容物を除外し、`!data/**/` でディレクトリを再包含し、
-  `!data/**/.gitkeep` `!data/**/.gitignore` でファイルを個別に再包含する
-- git の仕様: 親ディレクトリが除外されると、子の negation ルールは機能しない
+> この方針は廃止。ルート `.gitignore` に `data/**` を書くのではなく、
+> 実行時に output_dir ごとへ per-directory `.gitignore` を動的生成する方針に移行した。
+> 詳細は「データディレクトリは per-directory .gitignore で管理する」を参照。
+
+### 既知のツール出力ディレクトリは必ず `.gitignore` に残す
+
+| ディレクトリ | 生成元 | 理由 |
+|------------|--------|------|
+| `outputs/` | Hydra | `@hydra.main` が実行時に config スナップショットとログを保存 |
+| `.pytest_cache/` | pytest | テストキャッシュ |
+| `mlruns/` | MLflow | 実験ログ |
+| `htmlcov/` | pytest-cov | カバレッジレポート |
+
+- **NG**: `.gitignore` 整理で `outputs/` を消す → Hydra の設定スナップショット（`.hydra/config.yaml` 等）が staging される
+- **OK**: ツール名とディレクトリの対応を把握したうえで削除判断する
 
 ---
 
@@ -155,6 +190,24 @@
 - **OK**: ルートレベルで参照したいキーを持つ config ファイルには `# @package _global_` を先頭に追加する
 - グループ名以下に置きたい設定（`cfg.downloader.*` など）は `@package _global_` 不要
 - マージ結果は `OmegaConf.to_yaml(cfg)` で確認する
+
+### 新しい usecase には必ず `conf/usecase/{name}.yaml` を作成する
+
+- **NG**: `main.py` に `elif usecase_name == "preprocess":` を追加しただけで実行すると `Could not find 'usecase/preprocess'` エラーになる
+- **OK**: usecase を追加するときは `conf/usecase/{name}.yaml`（最低でも `# @package _global_\nusecase: {name}` だけ）を必ず作成する
+- **Why**: Hydra は `usecase=preprocess` を `conf/usecase/preprocess.yaml` として解決するため、ファイルがないとエラーになる
+- **How to apply**: main.py に usecase 分岐を追加するときは conf とセットで追加する
+
+### Hydra struct モードの DictConfig に新しいキーをマージできない
+
+- **NG**: `OmegaConf.merge(hydra_cfg, external_yaml)` → `ConfigKeyError: Key 'job_id' is not in struct`（Hydra の DictConfig は struct mode で未定義キーを受け付けない）
+- **OK**: `OmegaConf.to_container(cfg, resolve=True)` で plain dict に変換 → `OmegaConf.create()` で非 struct DictConfig を作ってからマージする:
+  ```python
+  base = OmegaConf.create(OmegaConf.to_container(cfg, resolve=True))
+  merged = DictConfig(OmegaConf.merge(base, OmegaConf.load(yaml_path)))
+  ```
+- **Why**: Hydra が生成した DictConfig は struct mode になっており、スキーマ外のキーを追加できない
+- **How to apply**: 外部の yaml ファイル（competition 固有設定など）を Hydra cfg にマージするときは必ず to_container 経由にする
 
 ---
 
