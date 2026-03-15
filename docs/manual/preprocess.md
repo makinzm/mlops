@@ -3,14 +3,15 @@
 ## 実行
 
 ```bash
-uv run python -m src usecase=competition/titanic/preprocess/base
+uv run python -m src '+competition/titanic/preprocess=base'
 ```
 
 ---
 
 ## 設定ファイルの場所
 
-コンペごとの前処理設定は `conf/competition/{name}/preprocess/` に置く。
+コンペごとに `conf/competition/{name}/preprocess/` 以下に設定ファイルを置く。
+アンサンブル時はモデルごとにファイルを分ける。
 
 ```
 conf/competition/titanic/preprocess/
@@ -19,7 +20,7 @@ conf/competition/titanic/preprocess/
   nn.yaml        # NN 用（アンサンブル時）
 ```
 
-新しい設定を追加したい場合は `conf/usecase/preprocess.yaml` をテンプレートとしてコピーして編集する。
+新しい設定を作るときは `conf/usecase/preprocess.yaml` をコピーして編集する。
 
 ```bash
 cp conf/usecase/preprocess.yaml conf/competition/titanic/preprocess/lgbm.yaml
@@ -29,7 +30,7 @@ cp conf/usecase/preprocess.yaml conf/competition/titanic/preprocess/lgbm.yaml
 
 ## 設定のポイント
 
-**入力データ**
+**入力データ**（`inputs`）
 ```yaml
 inputs:
   - id: raw_train
@@ -37,7 +38,7 @@ inputs:
     format: csv   # csv / parquet
 ```
 
-**CV 戦略**
+**CV 戦略**（`cv`）
 ```yaml
 cv:
   strategy: stratified_kfold   # none / kfold / stratified_kfold / group_kfold / ...
@@ -46,7 +47,11 @@ cv:
   group_col: null              # group_kfold で必要
 ```
 
-**変換ステップ（DAG）**
+**変換ステップ**（`steps`）
+
+各ステップは `id` と resolver（`polars` / `sklearn`）を指定する。
+`from:` を省略すると直前のステップの出力を自動で使う。
+
 ```yaml
 steps:
   - id: selected
@@ -60,21 +65,21 @@ steps:
       strategy: median
       columns: [Age, Fare]
 
-  - id: train_out
+  - id: train_out         # output ステップで Parquet を書き出す
     output:
       columns: [PassengerId, Survived, Age, Fare]
       format: parquet
-      cv: true      # true → fold_N/train.parquet + test.parquet に分割
+      cv: true            # true → fold_N/train.parquet + test.parquet
 
 targets: [train_out]
 ```
 
-利用できる resolver / method の一覧:
+利用できる resolver / method:
 
 | resolver | method | 主なパラメータ |
 |----------|--------|--------------|
 | `polars` | `select_columns` | `columns` |
-| `polars` | `arithmetic` | `operation`, `col_a`, `col_b`, `output_col` |
+| `polars` | `arithmetic` | `operation`(add/subtract/multiply/divide/log1p), `col_a`, `col_b`, `output_col` |
 | `polars` | `exp_weight` | `time_col`, `decay`, `weight_col` |
 | `polars` | `join` | `on`, `how` |
 | `sklearn` | `fill_na` | `strategy`(median/mean/constant), `columns` |
@@ -85,10 +90,10 @@ targets: [train_out]
 
 ```
 data/processed/{job_id}/{timestamp}/
-  preprocess_result.yaml   # 実行マニフェスト（git 管理対象）
-  pipeline_dag.html        # DAG 可視化（ブラウザで開く）
-  {output_node_id}.parquet             # cv: false
-  {output_node_id}/fold_N/train.parquet  # cv: true
+  preprocess_result.yaml     # 実行マニフェスト（git 管理対象）
+  pipeline_dag.html          # DAG 可視化（ブラウザで開く）
+  {output_node_id}.parquet              # cv: false の場合
+  {output_node_id}/fold_N/train.parquet # cv: true の場合
   {output_node_id}/fold_N/test.parquet
 ```
 
