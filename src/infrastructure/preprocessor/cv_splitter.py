@@ -4,6 +4,8 @@ CVSplitter — CV 分割戦略のインフラ実装。
 UseCase 層が sklearn に直接依存しないよう、CV 分割ロジックを分離する。
 """
 
+import numpy as np
+
 from src.domain.data.table import DataFrame
 
 
@@ -47,7 +49,7 @@ class CVSplitter:
             kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
             return [
                 (list(map(int, train_idx)), list(map(int, test_idx)))
-                for train_idx, test_idx in kf.split(range(n))
+                for train_idx, test_idx in kf.split(np.arange(n))
             ]
 
         if strategy == "time_series":
@@ -56,7 +58,7 @@ class CVSplitter:
             tscv = TimeSeriesSplit(n_splits=n_splits)
             return [
                 (list(map(int, train_idx)), list(map(int, test_idx)))
-                for train_idx, test_idx in tscv.split(range(n))
+                for train_idx, test_idx in tscv.split(np.arange(n))
             ]
 
         if strategy == "stratified_kfold":

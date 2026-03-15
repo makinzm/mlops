@@ -55,7 +55,7 @@ def _make_cfg(
     test_parquet = str(tmp_path / "processed" / "test.parquet")
     models = [str(tmp_path / f"models/fold_{i}/model.lgbm") for i in range(n_models)]
 
-    raw: dict = {
+    raw: dict[str, object] = {
         "job_id": "titanic_inference",
         "output_dir": str(tmp_path / "inference_out"),
         "test_path": test_parquet,
@@ -128,8 +128,8 @@ class TestInferenceUseCaseRun:
         usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
         usecase.run(cfg)
 
-        # predict_folds が呼ばれたことを確認
-        mock_inferencer.predict_folds.assert_called_once()
+        # predict_folds が少なくとも 1 回呼ばれたことを確認（models リストの件数分呼ばれる）
+        mock_inferencer.predict_folds.assert_called()
 
     def test_run_records_commit_hash(
         self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock

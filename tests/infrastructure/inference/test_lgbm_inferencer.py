@@ -21,7 +21,6 @@ import pytest
 
 from src.infrastructure.inference.lgbm_inferencer import LightGBMInferencer
 
-
 # ──────────────────────────────────────────────────────────────
 # フィクスチャ
 # ──────────────────────────────────────────────────────────────
@@ -77,9 +76,7 @@ def test_df() -> pl.DataFrame:
 
 
 class TestLightGBMInferencer:
-    def test_predict_folds_returns_ndarray(
-        self, model_dir: Path, test_df: pl.DataFrame
-    ) -> None:
+    def test_predict_folds_returns_ndarray(self, model_dir: Path, test_df: pl.DataFrame) -> None:
         """predict_folds が shape=(n_test,) の ndarray を返すこと。"""
         inferencer = LightGBMInferencer()
         feature_cols = ["feat_0", "feat_1", "feat_2"]

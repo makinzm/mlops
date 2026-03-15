@@ -73,7 +73,7 @@ class SklearnResolver:
         imputer = SimpleImputer(strategy=strategy, fill_value=fill_value)
         subset = df.select(columns).to_pandas()
         imputer.fit(subset)
-        transformed = imputer.transform(subset)
+        transformed = np.asarray(imputer.transform(subset))
 
         result = df.clone()
         for i, col in enumerate(columns):
@@ -91,7 +91,7 @@ class SklearnResolver:
         Test データには必ずこのメソッドを使い、Train の統計量を適用する。
         """
         subset = df.select(columns).to_pandas()
-        transformed = imputer.transform(subset)
+        transformed = np.asarray(imputer.transform(subset))
 
         result = df.clone()
         for i, col in enumerate(columns):
