@@ -1,6 +1,8 @@
 pre-commit:
   parallel: true
   commands:
+    mille-check:
+      run: uv run mille check
     ruff-check:
       run: uv run ruff check .
     ruff-format:
