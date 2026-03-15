@@ -1,6 +1,8 @@
-downloaded_at: '2026-03-15T10:01:21'
-commit_hash: 87e425085b63ac12c038f59687acccfb1319cc16
+downloaded_at: '2026-03-15T11:27:38'
+commit_hash: 32f463a5915d5bf1271542a85a50f80002e02cb0
 config:
+  competition:
+    name: titanic
   usecase: download_dataset
   output_dir: data/2026/Q1/raw/titanic
   unzip: true
@@ -11,8 +13,6 @@ config:
     competition: titanic
     dataset: null
   seed: 42
-  competition:
-    name: titanic
 files:
 - test.csv
 - train.csv
