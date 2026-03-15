@@ -1,0 +1,39 @@
+job_id: titanic_lgbm
+timestamp: 20260315T131919
+commit_hash: 40f644f8ac2f8f5771c55bb886f5cbe6beffd272
+trainer_type: lgbm
+metric: auc
+cv_mean_score: 0.7863375329825153
+cv_std_score: 0.034772347280943756
+seed: 42
+folds:
+- fold_idx: 0
+  train_score: 0.8376096189308034
+  valid_score: 0.822266139657444
+  best_iteration: 32
+  n_train: 712
+  n_valid: 179
+- fold_idx: 1
+  train_score: 0.8948838601333489
+  valid_score: 0.8300802139037433
+  best_iteration: 105
+  n_train: 713
+  n_valid: 178
+- fold_idx: 2
+  train_score: 0.8839432685433051
+  valid_score: 0.7536096256684492
+  best_iteration: 70
+  n_train: 713
+  n_valid: 178
+- fold_idx: 3
+  train_score: 0.8472432369519313
+  valid_score: 0.7445855614973262
+  best_iteration: 29
+  n_train: 713
+  n_valid: 178
+- fold_idx: 4
+  train_score: 0.9135198135198135
+  valid_score: 0.7811461241856136
+  best_iteration: 123
+  n_train: 713
+  n_valid: 178
