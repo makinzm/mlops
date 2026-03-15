@@ -27,13 +27,18 @@ from omegaconf import OmegaConf
 from src.usecase.source_dataset.create_source_dataset import CreateSourceDatasetUseCase
 
 
-def _make_cfg(tmp_path: Path, kaggleignore_path: Path | None = None) -> object:
+def _make_cfg(
+    tmp_path: Path,
+    kaggleignore_path: Path | None = None,
+    conf_dir: Path | None = None,
+) -> object:
     """CreateSourceDatasetUseCase 用の DictConfig を生成する。"""
     return OmegaConf.create(
         {
             "usecase": "create_source_dataset",
             "source_dataset": {
                 "src_dir": str(tmp_path / "src"),
+                "conf_dir": str(conf_dir) if conf_dir is not None else str(tmp_path / "conf"),
                 "dataset_slug": "mlops-pipeline-src",
                 "title": "mlops-pipeline-src",
                 "license_name": "CC0-1.0",
@@ -175,3 +180,39 @@ class TestCreateSourceDatasetUseCaseExecute:
         assert re.match(r"source_dataset_\d{8}_\d{6}$", subdir_name), (
             f"staging subdir 名が期待形式でない: {subdir_name}"
         )
+
+    def test_execute_copies_conf_to_staging(self, tmp_path: Path) -> None:
+        """conf/ も staging にコピーされること。
+
+        なぜこのテストが必要か:
+          - Kaggle Notebook 上では /kaggle/input/mlops-pipeline-src/conf/ から
+            recipe yaml を読み込む。conf/ が staging に含まれないと Notebook 実行時に
+            FileNotFoundError になる。
+          - このテストで conf/ コピーが正しく機能することを保証する。
+        """
+        _setup_src(tmp_path)
+        # conf/ を作成
+        conf = tmp_path / "conf"
+        conf.mkdir()
+        recipe_dir = conf / "recipe"
+        recipe_dir.mkdir()
+        (recipe_dir / "base.yaml").write_text("steps: []")
+
+        cfg = _make_cfg(tmp_path, conf_dir=conf)
+        captured: dict[str, Path] = {}
+
+        mock_repo = MagicMock()
+
+        def capture_create(staging_dir: Path, metadata: object) -> None:
+            captured["staging_dir"] = staging_dir
+            # staging に conf/recipe/base.yaml が含まれていること
+            assert (staging_dir / "conf" / "recipe" / "base.yaml").exists(), (
+                "staging 内に conf/recipe/base.yaml がコピーされていない"
+            )
+
+        mock_repo.create.side_effect = capture_create
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+
+        usecase.execute()
+
+        assert "staging_dir" in captured, "create() が呼ばれていない"
