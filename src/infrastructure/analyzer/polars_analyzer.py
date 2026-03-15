@@ -29,6 +29,14 @@ from src.domain.data.eda import AnalysisStep, EDAResult, FileEDAResult
 
 logger = logging.getLogger(__name__)
 
+_EDA_DIR_GITIGNORE = """\
+*
+!.gitignore
+!*.yaml
+!*.md
+!*/
+"""
+
 
 class PolarsAnalyzer:
     """DataAnalyzer Protocol を満たす Polars 実装。
@@ -60,6 +68,7 @@ class PolarsAnalyzer:
 
     def analyze(self) -> EDAResult:
         self._check_io_separation()
+        self._setup_output_gitignore()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         report_dir = (
             Path(self.cfg.output_dir)
@@ -93,6 +102,14 @@ class PolarsAnalyzer:
     # ------------------------------------------------------------------
     # Validation
     # ------------------------------------------------------------------
+
+    def _setup_output_gitignore(self) -> None:
+        """output_dir に .gitignore を生成し PNG/parquet 等を git 管理外にする。"""
+        out = Path(self.cfg.output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        gitignore = out / ".gitignore"
+        if not gitignore.exists():
+            gitignore.write_text(_EDA_DIR_GITIGNORE)
 
     def _check_io_separation(self) -> None:
         """input_paths と output_dir が重複していないことを確認する。

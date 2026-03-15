@@ -1,7 +1,7 @@
 # @package _global_
 usecase: "automatically_eda"
 seed: 42
-output_dir: "reports"
+output_dir: "reports/2026/Q1/eda/${competition.name}"
 max_plot_cols: 20
 
 input_paths:
