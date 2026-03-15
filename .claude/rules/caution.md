@@ -198,6 +198,24 @@
 
 ## Hydra 設定
 
+### conf/config.yaml に宣言していないキーは CLI から渡せない
+
+- **NG**: `conf/config.yaml` に `recipe` キーを書かずに `uv run python -m src recipe=base` を実行する
+  → `Key 'recipe' is not in struct` エラーになる
+- **OK**: CLI で渡す予定のキーは `conf/config.yaml` に `recipe: null` 等として事前に宣言しておく
+- **Why**: Hydra はルートの DictConfig を struct mode で管理するため、未定義キーを受け付けない
+- **How to apply**: 新しい CLI パラメータ（`recipe=`, `trainer_name=` 等）を追加するときは
+  `conf/config.yaml` への追記とセットで行う
+
+### OutputResolver cv=False の出力形式はサブディレクトリ形式
+
+- **NG**: `cv=False` 時に `{output_dir}/{node_id}.parquet`（フラットファイル）で出力する
+  → `InferenceUseCase` が `{output_dir}/{node_id}/test.parquet` を期待するため FileNotFoundError
+- **OK**: `cv=False` 時も `{output_dir}/{node_id}/test.parquet`（サブディレクトリ）で出力する
+- **Why**: InferenceUseCase が `latest` 解決後に `test_out/test.parquet` を読むため、
+  フォルダ構造が統一されている必要がある
+- **How to apply**: OutputResolver の出力形式を変更するときは InferenceUseCase の読み込みパスも確認する
+
 ### config group のキーはグループ名以下に配置される
 
 - **NG**: `conf/usecase/download_dataset.yaml` に `output_dir` を書いて `cfg.output_dir` でアクセスする

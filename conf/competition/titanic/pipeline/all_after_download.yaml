@@ -1,0 +1,23 @@
+# @package _global_
+# Titanic パイプライン設定 — ダウンロード後の全ステップ
+#
+# ダウンロード済みデータから前処理 → 学習 → 推論まで一括実行する。
+#
+# 実行例:
+#   uv run python -m src usecase=pipeline recipe=all_after_download
+
+usecase: pipeline
+job_id: titanic_all_after_download
+
+steps:
+  # ① 前処理（Target Encoding なしのベースライン）
+  - usecase: preprocess
+    recipe: base
+
+  # ② 学習（LightGBM ベースライン）
+  - usecase: train
+    recipe: lgbm
+
+  # ③ 推論（LightGBM アンサンブル → submission.csv 生成）
+  - usecase: inference
+    recipe: titanic_ensemble

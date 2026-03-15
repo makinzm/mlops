@@ -25,7 +25,8 @@ def load_trainer_cfgs(cfg: DictConfig, conf_dir: Path) -> list[DictConfig]:
         ValueError: trainer が見つからない / training ディレクトリが空の場合。
     """
     competition_name: str = cfg.competition.name
-    trainer_name: str | None = cfg.get("trainer_name")
+    # recipe= を優先し、旧パラメータ trainer_name= へのフォールバックで後方互換性を保つ
+    trainer_name: str | None = cfg.get("recipe", cfg.get("trainer_name"))
 
     training_dir = conf_dir / "competition" / competition_name / "training"
 

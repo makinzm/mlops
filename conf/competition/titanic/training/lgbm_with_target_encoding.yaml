@@ -1,0 +1,69 @@
+# @package _global_
+# Titanic 学習設定 — Target Encoding 前処理済みデータ用
+# preprocess recipe=target_encoding の出力を入力として使用する。
+#
+# target_encoding.yaml では Sex, Embarked が float にエンコードされているため、
+# categorical_feature から除外している。
+
+usecase: train
+job_id: titanic_lgbm_with_target_encoding
+trainer:
+  type: lgbm
+
+# ── 入力 ──────────────────────────────────────────
+# "latest" を指定すると output_dir/job_id/ 配下の最新タイムスタンプを自動選択
+preprocess_output_dir: data/2026/Q1/processed/titanic_preprocess_target_encoding/latest/train_out
+target_col: Survived
+feature_cols:
+  - Pclass
+  - Age
+  - SibSp
+  - Parch
+  - Fare
+  - FamilySize
+  - Sex
+  - Embarked
+# Sex, Embarked は Target Encoding により float になるため categorical_feature から除外
+categorical_feature: []
+
+# ── サンプル重み ─────────────────────────────────
+sample_weight_col: null
+
+# ── 損失 / 評価 ──────────────────────────────────
+loss:
+  objective: binary
+  metric: auc
+  is_unbalance: false
+  class_weight: null
+
+# ── LightGBM ハイパーパラメータ ──────────────────
+lgbm:
+  num_leaves: 31
+  max_depth: -1
+  learning_rate: 0.05
+  n_estimators: 1000
+  feature_fraction: 0.9
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  min_child_samples: 20
+  reg_alpha: 0.0
+  reg_lambda: 0.0
+  verbose: -1
+  early_stopping_rounds: 50
+
+# ── モデルレポート ────────────────────────────────
+report:
+  n_error_samples: 50
+
+# ── 学習環境 ──────────────────────────────────────
+environment:
+  device: cpu
+  n_jobs: -1
+
+# ── ログ ─────────────────────────────────────────
+logging:
+  eval_freq: 100
+  save_importance: true
+
+output_dir: models/${competition.name}
+seed: 42

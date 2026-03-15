@@ -249,5 +249,5 @@ class TestResolveLatestDir:
         base = tmp_path / "processed"
         base.mkdir(parents=True)
 
-        with pytest.raises(ValueError, match="No processed directory"):
+        with pytest.raises(ValueError, match="No timestamp directory"):
             resolve_preprocess_dir(str(base / "latest"))

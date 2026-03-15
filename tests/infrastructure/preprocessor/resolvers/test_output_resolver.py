@@ -3,8 +3,11 @@ OutputResolver のテスト。
 
 なぜこのテストが必要か:
 - OutputResolver は学習コードが読むファイルを生成する最終ステップ。
-- cv=false → 単一 .parquet、cv=true → fold_N/train.parquet + fold_N/test.parquet
-  という出力形式の差分は学習コードの読み込み方に直結するため厳密に検証する。
+- cv=false → {node_id}/test.parquet（サブディレクトリ）
+  cv=true  → {node_id}/fold_N/train.parquet + fold_N/test.parquet
+  という出力形式の差分は学習コードと推論コードの読み込み方に直結するため厳密に検証する。
+- cv=false をサブディレクトリ形式にするのは InferenceUseCase が
+  {preprocess_output_dir}/test_out/test.parquet を期待するため。
 - CV 分割が「fold ごとに Train/Test が正しく分かれている」ことを確認する。
 """
 
@@ -33,10 +36,15 @@ def sample_df() -> pl.DataFrame:
 
 
 class TestOutputNoCV:
-    def test_single_parquet_created(
+    def test_subdir_parquet_created(
         self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: Path
     ) -> None:
-        """cv=false の場合、単一 .parquet ファイルが生成されること。"""
+        """cv=false の場合、{node_id}/test.parquet がサブディレクトリに生成されること。
+
+        なぜこの形式か:
+        InferenceUseCase が {preprocess_output_dir}/test_out/test.parquet を期待するため。
+        フラットファイル（test_out.parquet）では inference が FileNotFoundError になる。
+        """
         resolver.output(
             df=sample_df,
             output_dir=tmp_path,
@@ -45,7 +53,7 @@ class TestOutputNoCV:
             cv=False,
             splits=None,
         )
-        assert (tmp_path / "tabular_out.parquet").exists()
+        assert (tmp_path / "tabular_out" / "test.parquet").exists()
 
     def test_parquet_content_matches(
         self, resolver: OutputResolver, sample_df: pl.DataFrame, tmp_path: Path
@@ -59,7 +67,7 @@ class TestOutputNoCV:
             cv=False,
             splits=None,
         )
-        loaded = pl.read_parquet(tmp_path / "tabular_out.parquet")
+        loaded = pl.read_parquet(tmp_path / "tabular_out" / "test.parquet")
         assert loaded.columns == ["id", "col1"]
         assert len(loaded) == 10
 

@@ -34,7 +34,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from src.domain.model.trainer import Trainer, TrainResult
 from src.domain.repository.git import GitRepository
-from src.usecase._utils import build_tree_lines
+from src.usecase._utils import build_tree_lines, resolve_latest_dir
 
 _MODELS_DIR_GITIGNORE = """\
 *
@@ -48,26 +48,13 @@ _MODELS_DIR_GITIGNORE = """\
 def resolve_preprocess_dir(path_str: str) -> Path:
     """'latest' を含むパスを最新タイムスタンプディレクトリに解決する。
 
+    NOTE: `_utils.resolve_latest_dir()` への薄いラッパー。後方互換性のために残す。
+
     例）
       .../titanic_preprocess/latest/train_out
       → .../titanic_preprocess/20260315T180000/train_out
     """
-    parts = Path(path_str).parts
-    latest_indices = [i for i, p in enumerate(parts) if p == "latest"]
-    if not latest_indices:
-        return Path(path_str)
-
-    idx = latest_indices[0]
-    parent = Path(*parts[:idx])
-    suffix = Path(*parts[idx + 1 :]) if len(parts) > idx + 1 else Path()
-
-    candidates = sorted(parent.iterdir(), key=lambda p: p.name, reverse=True)
-    dirs = [c for c in candidates if c.is_dir()]
-    if not dirs:
-        raise ValueError(f"No processed directory found under {parent}")
-
-    resolved = dirs[0]
-    return resolved / suffix if str(suffix) != "." else resolved
+    return resolve_latest_dir(path_str)
 
 
 class TrainUseCase:
