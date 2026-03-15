@@ -10,6 +10,8 @@ _DATA_DIR_GITIGNORE = """\
 !.gitignore
 !.gitkeep
 !*.yaml
+!*.html
+!*.md
 !*/
 """
 

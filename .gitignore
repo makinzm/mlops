@@ -1,6 +1,9 @@
 # Data and report directories are managed by per-directory .gitignore files
 # created at runtime (setup_data_dir / analyzer._setup_output_gitignore).
-# Only metadata (*.yaml, *.md) is kept; images and parquet are excluded.
+# Only metadata (*.yaml, *.md, *.html) is kept; images and parquet are excluded.
+
+# Hydra outputs (run logs, hydra config snapshots)
+outputs/
 
 # Python
 __pycache__/

@@ -36,6 +36,10 @@ class PreprocessUseCase:
         job_id: str = cfg.get("job_id", datetime.now().strftime("%Y%m%dT%H%M%S"))
         seed: int = int(cfg.get("seed", 42))
         timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+
+        # output_dir に .gitignore を生成して parquet 等を git 管理外にする
+        GitRepositoryImpl().setup_data_dir(Path(str(cfg.output_dir)))
+
         output_dir = Path(str(cfg.output_dir)) / job_id / timestamp
         output_dir.mkdir(parents=True, exist_ok=True)
 
