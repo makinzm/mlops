@@ -10,13 +10,13 @@ job_id: titanic_preprocess
 
 inputs:
   - id: raw_train
-    path: data/2026/Q1/raw/train.csv
+    path: data/2026/Q1/raw/titanic/train.csv
     format: csv
   - id: raw_test
-    path: data/2026/Q1/raw/test.csv
+    path: data/2026/Q1/raw/titanic/test.csv
     format: csv
 
-output_dir: data/processed
+output_dir: data/2026/Q1/processed
 
 cv:
   strategy: stratified_kfold
