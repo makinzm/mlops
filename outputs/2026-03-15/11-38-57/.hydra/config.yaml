@@ -1,0 +1,15 @@
+competition:
+  name: titanic
+usecase: automatically_eda
+seed: 42
+output_dir: reports/2026/Q1/eda/${competition.name}
+max_plot_cols: 20
+input_paths:
+- data/2026/Q1/raw/${competition.name}
+analyze:
+  pandas:
+    output_format: parquet
+    steps:
+    - type: basic_stats
+    - type: distributions
+    - type: missing_values
