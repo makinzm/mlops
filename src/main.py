@@ -168,10 +168,25 @@ def main(cfg: DictConfig) -> None:
                 f"{train_result.cv_mean_score:.4f} ± {train_result.cv_std_score:.4f}"
             )
 
+    elif usecase_name == "inference":
+        from src.infrastructure.inference.lgbm_inferencer import LightGBMInferencer
+        from src.infrastructure.repository.git import GitRepositoryImpl
+        from src.usecase.inference.inference import InferenceUseCase
+        from src.usecase.inference.inference_loader import load_inference_cfgs
+
+        git_repo = GitRepositoryImpl()
+        inferencer = LightGBMInferencer()
+        inference_cfgs = load_inference_cfgs(cfg, Path(_CONF_DIR))
+        for inference_cfg in inference_cfgs:
+            submission_path = InferenceUseCase(inferencer=inferencer, git_repo=git_repo).run(
+                inference_cfg
+            )
+            logger.info(f"推論完了[{inference_cfg.get('job_id', '?')}]: {submission_path}")
+
     else:
         raise ValueError(
             f"Unknown usecase: {usecase_name!r}. "
-            "Supported: 'download_dataset', 'automatically_eda', 'preprocess', 'train'"
+            "Supported: 'download_dataset', 'automatically_eda', 'preprocess', 'train', 'inference'"
         )
 
 

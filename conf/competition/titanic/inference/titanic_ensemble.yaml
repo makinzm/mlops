@@ -1,0 +1,44 @@
+# @package _global_
+# Titanic 推論設定 — LightGBM モデルのアンサンブル
+#
+# 前提:
+# - usecase=train recipe=lgbm（または lgbm_with_target_encoding）で学習済みモデルが存在すること
+# - models に指定するパスは "latest" で最新タイムスタンプを自動解決する
+#
+# 実行例:
+#   uv run python -m src usecase=inference recipe=titanic_ensemble
+
+usecase: inference
+job_id: titanic_inference
+
+# ── テストデータ ──────────────────────────────────
+# "latest" を指定すると output_dir/job_id/ 配下の最新タイムスタンプを自動選択
+test_path: data/2026/Q1/processed/titanic_preprocess/latest/test_out/test.parquet
+
+# ── 特徴量 ────────────────────────────────────────
+feature_cols:
+  - Pclass
+  - Age
+  - SibSp
+  - Parch
+  - Fare
+  - FamilySize
+
+passenger_id_col: PassengerId
+
+# ── アンサンブル対象モデル ──────────────────────────
+# 各エントリは fold_N/model.lgbm を持つルートディレクトリ
+models:
+  - models/titanic/titanic_lgbm/latest
+
+# ── アンサンブル戦略 ──────────────────────────────
+# mean / weighted_mean / rank_average
+ensemble: mean
+
+# weighted_mean 使用時は weights を指定（models と同じ数）
+# weights: [0.6, 0.4]
+
+# ── 出力 ─────────────────────────────────────────
+output_dir: data/2026/Q1/inference/${competition.name}/${job_id}
+
+seed: 42
