@@ -1,5 +1,4 @@
 defaults:
   - usecase: download_dataset
-  - downloader: kaggle
   - competition: titanic/competition
   - _self_

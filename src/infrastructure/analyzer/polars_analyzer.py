@@ -50,6 +50,10 @@ class PolarsAnalyzer:
         self.commit_hash = commit_hash
         self._analyses = analyses
 
+    @property
+    def _competition_name(self) -> str:
+        return str((self.cfg.get("competition") or {}).get("name") or "eda")
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -58,7 +62,7 @@ class PolarsAnalyzer:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         report_dir = (
             Path(self.cfg.report_dir)
-            / f"{self.cfg.competition.name}_report"
+            / f"{self._competition_name}_report"
             / timestamp
             / self.ANALYZER_TYPE
         )
@@ -91,7 +95,7 @@ class PolarsAnalyzer:
 
     def _collect_csv_files(self) -> list[Path]:
         csv_files: list[Path] = []
-        for path_str in self.cfg.competition.input_paths:
+        for path_str in self.cfg.input_paths:
             p = Path(path_str)
             if p.is_file():
                 csv_files.append(p)
@@ -311,7 +315,7 @@ class PolarsAnalyzer:
         analyses: list[AnalysisStep],
     ) -> Path:
         lines = [
-            f"# EDA Report — {self.cfg.competition.name} [{self.ANALYZER_TYPE}]",
+            f"# EDA Report — {self._competition_name} [{self.ANALYZER_TYPE}]",
             "",
             f"Generated: {datetime.now().isoformat(timespec='seconds')}",
             "",
@@ -349,7 +353,11 @@ class PolarsAnalyzer:
             "commit_hash": self.commit_hash,
             "analyzer_type": self.ANALYZER_TYPE,
             "generated_at": datetime.now().isoformat(timespec="seconds"),
-            "competition": OmegaConf.to_container(self.cfg.competition),
+            "competition": (
+                OmegaConf.to_container(self.cfg.competition)
+                if self.cfg.get("competition")
+                else None
+            ),
             "input_files": [str(f) for f in csv_files],
         }
         path = report_dir / "metainfo.yaml"

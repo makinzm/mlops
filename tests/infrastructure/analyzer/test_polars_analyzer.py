@@ -29,10 +29,7 @@ def _make_cfg(
             "seed": 42,
             "report_dir": str(tmp_path / "competition"),
             "max_plot_cols": max_plot_cols,
-            "competition": {
-                "name": "titanic",
-                "input_paths": [str(csv_path)],
-            },
+            "input_paths": [str(csv_path)],
         }
     )
 
@@ -284,10 +281,7 @@ class TestInputPaths:
                 "seed": 42,
                 "report_dir": str(tmp_path / "competition"),
                 "max_plot_cols": 20,
-                "competition": {
-                    "name": "titanic",
-                    "input_paths": [str(raw_dir)],
-                },
+                "input_paths": [str(raw_dir)],
             }
         )
         result = _make_analyzer(cfg).analyze()

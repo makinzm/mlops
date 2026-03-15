@@ -33,13 +33,13 @@ def _resolve_downloader(cfg: DictConfig) -> object:
     from src.infrastructure.repository.git import GitRepositoryImpl
 
     git_repo = GitRepositoryImpl()
-    downloader_type = cfg.downloader.type
-    if downloader_type == "kaggle":
+    source = str(cfg.get("source", "kaggle"))
+    if source == "kaggle":
         from src.infrastructure.downloader.kaggle import KaggleDownloader
 
         return KaggleDownloader(cfg, git_repo)
     else:
-        raise ValueError(f"Unknown downloader type: {downloader_type!r}. Supported: 'kaggle'")
+        raise ValueError(f"Unknown source: {source!r}. Supported: 'kaggle'")
 
 
 def _parse_analyses(steps_cfg: Any) -> list[Any]:
