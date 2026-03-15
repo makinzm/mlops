@@ -30,7 +30,7 @@ import yaml
 from omegaconf import DictConfig
 
 from src.domain.repository.git import GitRepository
-from src.usecase._utils import build_tree_lines
+from src.usecase._utils import build_tree_lines, resolve_latest_dir
 from src.usecase.inference.ensemble_strategies import (
     EnsembleStrategy,
     MeanStrategy,
@@ -91,8 +91,9 @@ class InferenceUseCase:
         if not gitignore_path.exists():
             gitignore_path.write_text(_INFERENCE_OUTPUT_GITIGNORE)
 
-        # テストデータ読み込み
-        test_df = pl.read_parquet(str(cfg.test_path))
+        # テストデータ読み込み（"latest" を含むパスを最新タイムスタンプに解決）
+        test_path = resolve_latest_dir(str(cfg.test_path))
+        test_df = pl.read_parquet(str(test_path))
         feature_cols: list[str] = list(cfg.feature_cols)
         passenger_id_col: str = str(cfg.get("passenger_id_col", "PassengerId"))
 
@@ -109,7 +110,8 @@ class InferenceUseCase:
             )
 
         for model_path_str in models_cfg:
-            model_dir = Path(str(model_path_str))
+            # "latest" を含むパスを最新タイムスタンプに解決
+            model_dir = resolve_latest_dir(str(model_path_str))
             # モデルパスが fold_N/model.lgbm の場合は親ディレクトリを渡す
             if model_dir.suffix == ".lgbm":
                 model_dir = model_dir.parent.parent

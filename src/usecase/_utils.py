@@ -3,6 +3,36 @@
 from pathlib import Path
 
 
+def resolve_latest_dir(path_str: str) -> Path:
+    """パス文字列中の 'latest' を最新タイムスタンプディレクトリに解決する。
+
+    例）
+      .../titanic_preprocess/latest/train_out
+      → .../titanic_preprocess/20260315T180000/train_out
+
+    'latest' が含まれない場合はそのまま Path に変換して返す。
+
+    Raises:
+        ValueError: 'latest' ディレクトリ配下にタイムスタンプディレクトリが存在しない場合
+    """
+    parts = Path(path_str).parts
+    latest_indices = [i for i, p in enumerate(parts) if p == "latest"]
+    if not latest_indices:
+        return Path(path_str)
+
+    idx = latest_indices[0]
+    parent = Path(*parts[:idx])
+    suffix = Path(*parts[idx + 1 :]) if len(parts) > idx + 1 else Path()
+
+    candidates = sorted(parent.iterdir(), key=lambda p: p.name, reverse=True)
+    dirs = [c for c in candidates if c.is_dir()]
+    if not dirs:
+        raise ValueError(f"No timestamp directory found under {parent}")
+
+    resolved = dirs[0]
+    return resolved / suffix if str(suffix) != "." else resolved
+
+
 def build_tree_lines(directory: Path, prefix: str = "") -> list[str]:
     """directory 配下のファイル・ディレクトリを ASCII ツリー形式で返す。"""
     entries = sorted(directory.iterdir(), key=lambda p: (p.is_file(), p.name))
