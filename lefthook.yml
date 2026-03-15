@@ -1,6 +1,8 @@
 pre-commit:
   parallel: true
   commands:
+    mille-check:
+      run: uv run mille check
     ruff-check:
       run: uv run ruff check .
     ruff-format:
@@ -9,4 +11,4 @@ pre-commit:
       run: uv run mypy tests/ src/
     actionlint:
       glob: ".github/workflows/*.yml"
-      run: devenv shell -- actionlint {staged_files}
+      run: actionlint

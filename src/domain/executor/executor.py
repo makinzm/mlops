@@ -6,9 +6,8 @@ PreprocessUseCase は具体的な Executor クラスを知らず、この Protoc
 
 from typing import Protocol
 
-import polars as pl
-
 from src.domain.data.preprocessor import Node, StepResult
+from src.domain.data.table import DataFrame
 
 
 class Executor(Protocol):
@@ -21,10 +20,10 @@ class Executor(Protocol):
     def run(
         self,
         nodes: list[Node],
-        input_dfs: dict[str, pl.DataFrame],
+        input_dfs: dict[str, DataFrame],
         targets: list[str],
         output_dir: str,
         cv_splits: list[tuple[list[int], list[int]]] | None,
-    ) -> tuple[dict[str, pl.DataFrame], list[StepResult]]:
+    ) -> tuple[dict[str, DataFrame], list[StepResult]]:
         """パイプラインを実行して (結果DataFrame map, StepResult list) を返す。"""
         ...

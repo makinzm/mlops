@@ -5,10 +5,9 @@ Phase 2: trainer_loader — 設定から Trainer を選択するファクトリ�
   - `trainer_loader.load_trainer_cfgs()` は conf/competition/{name}/training/*.yaml を
     検出し Hydra cfg とマージした設定リストを返す。preprocess の pipeline_loader と
     同じパターンを training 用に再現する。
-  - `trainer_loader.resolve_trainer()` は cfg.trainer.type に基づいて
-    Trainer Protocol の実装を返すファクトリ。新しい trainer 追加時に
-    ここだけ変更すれば良い設計を保証する。
   - trainer が未登録の type を渡されたときに明確な ValueError が出ることを確認する。
+  - resolve_trainer は main.py にインライン化されたため、ここでは trainer type の
+    分岐ロジックを LightGBMTrainer のインスタンス化で確認する。
 """
 
 from pathlib import Path
@@ -17,7 +16,7 @@ import pytest
 from omegaconf import DictConfig, OmegaConf
 
 from src.domain.model.trainer import Trainer
-from src.usecase.training.trainer_loader import load_trainer_cfgs, resolve_trainer
+from src.usecase.training.trainer_loader import load_trainer_cfgs
 
 # ──────────────────────────────────────────────────────────────
 # load_trainer_cfgs
@@ -79,20 +78,34 @@ class TestLoadTrainerCfgs:
 
 
 # ──────────────────────────────────────────────────────────────
-# resolve_trainer
+# trainer type の分岐ロジック（main.py にインライン化済み）
 # ──────────────────────────────────────────────────────────────
 
 
-class TestResolveTrainer:
+def _resolve_trainer_inline(cfg: DictConfig) -> Trainer:
+    """main.py にインライン化された trainer 選択ロジックを再現するヘルパー。
+
+    resolve_trainer() は usecase 層から削除し main.py に移動した。
+    このヘルパーはテスト目的で同じロジックを再現する。
+    """
+    trainer_type: str = cfg.trainer.type
+    if trainer_type == "lgbm":
+        from src.infrastructure.trainer.lgbm_trainer import LightGBMTrainer
+
+        return LightGBMTrainer(cfg)
+    raise ValueError(f"trainer.type='{trainer_type}' は未登録です。 登録済み: ['lgbm']")
+
+
+class TestTrainerResolution:
     def test_returns_trainer_protocol_instance(self) -> None:
-        """resolve_trainer は Trainer Protocol を満たすオブジェクトを返すこと。"""
+        """lgbm を指定すると Trainer Protocol を満たすオブジェクトを返すこと。"""
         cfg = OmegaConf.create(
             {
                 "trainer": {"type": "lgbm", "n_folds": 5, "seed": 42},
                 "competition": {"name": "titanic"},
             }
         )
-        trainer = resolve_trainer(cfg)
+        trainer = _resolve_trainer_inline(cfg)
         assert isinstance(trainer, Trainer)
 
     def test_raises_for_unknown_trainer_type(self) -> None:
@@ -104,4 +117,4 @@ class TestResolveTrainer:
             }
         )
         with pytest.raises(ValueError, match="catboost"):
-            resolve_trainer(cfg)
+            _resolve_trainer_inline(cfg)

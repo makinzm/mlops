@@ -119,12 +119,29 @@ def main(cfg: DictConfig) -> None:
         AutomaticallyEDAUseCase(analyzers, logger).execute()  # type: ignore[arg-type]
 
     elif usecase_name == "preprocess":
+        from src.infrastructure.executor.factory import ExecutorFactory
+        from src.infrastructure.preprocessor.cv_splitter import CVSplitter
+        from src.infrastructure.preprocessor.input_loader import InputLoader
+        from src.infrastructure.preprocessor.visualizer import PipelineVisualizer
+        from src.infrastructure.repository.git import GitRepositoryImpl
         from src.usecase.preprocessing.pipeline_loader import load_pipeline_cfgs
         from src.usecase.preprocessing.preprocess import PreprocessUseCase
 
+        git_repo = GitRepositoryImpl()
         pipeline_cfgs = load_pipeline_cfgs(cfg, Path(_CONF_DIR))
         for pipeline_cfg in pipeline_cfgs:
-            result = PreprocessUseCase(pipeline_cfg).execute()
+            executor_type = str(pipeline_cfg.get("executor", {}).get("type", "local"))
+            executor, is_fallback = ExecutorFactory.build_with_fallback(executor_type)
+            result = PreprocessUseCase(
+                pipeline_cfg,
+                executor=executor,
+                git_repo=git_repo,
+                input_loader=InputLoader(),
+                cv_splitter=CVSplitter(),
+                visualizer=PipelineVisualizer(),
+                executor_fallback=is_fallback,
+                executor_requested=executor_type if is_fallback else None,
+            ).execute()
             logger.info(
                 f"前処理完了[{pipeline_cfg.get('job_id', '?')}]: "
                 f"output_path={result.output_path}, steps={len(result.step_results)}"
@@ -132,13 +149,18 @@ def main(cfg: DictConfig) -> None:
 
     elif usecase_name == "train":
         from src.infrastructure.repository.git import GitRepositoryImpl
+        from src.infrastructure.trainer.lgbm_trainer import LightGBMTrainer
         from src.usecase.training.train import TrainUseCase
-        from src.usecase.training.trainer_loader import load_trainer_cfgs, resolve_trainer
+        from src.usecase.training.trainer_loader import load_trainer_cfgs
 
         git_repo = GitRepositoryImpl()
         trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
         for trainer_cfg in trainer_cfgs:
-            trainer = resolve_trainer(trainer_cfg)
+            trainer_type: str = trainer_cfg.trainer.type
+            if trainer_type == "lgbm":
+                trainer = LightGBMTrainer(trainer_cfg)
+            else:
+                raise ValueError(f"trainer.type='{trainer_type}' は未登録です。 登録済み: ['lgbm']")
             train_result = TrainUseCase(trainer_cfg, trainer=trainer, git_repo=git_repo).execute()
             logger.info(
                 f"学習完了[{train_result.job_id}]: "

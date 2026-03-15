@@ -7,7 +7,9 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
+
+from src.domain.data.table import DataFrame
 
 
 @dataclass
@@ -77,3 +79,25 @@ class PreprocessResult:
     executor_used: str = "local"
     executor_fallback: bool = False
     executor_requested: str | None = None
+
+
+class InputLoaderPort(Protocol):
+    """inputs 設定から DataFrame を読み込む Port。UseCase が依存するインターフェース。"""
+
+    def load(self, inputs_raw: list[object]) -> dict[str, DataFrame]: ...
+
+
+class CVSplitterPort(Protocol):
+    """CV splits を生成する Port。UseCase が依存するインターフェース。"""
+
+    def build(
+        self,
+        cv_cfg: dict[str, object],
+        input_dfs: dict[str, DataFrame],
+    ) -> "list[tuple[list[int], list[int]]] | None": ...
+
+
+class PipelineVisualizerPort(Protocol):
+    """パイプライン DAG を可視化する Port。UseCase が依存するインターフェース。"""
+
+    def save_html(self, nodes: "list[Node]", path: Path) -> None: ...

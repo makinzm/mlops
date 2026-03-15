@@ -14,9 +14,34 @@ from typing import Any
 
 import polars as pl
 import pytest
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
+from src.infrastructure.executor.factory import ExecutorFactory
+from src.infrastructure.preprocessor.cv_splitter import CVSplitter
+from src.infrastructure.preprocessor.input_loader import InputLoader
+from src.infrastructure.preprocessor.visualizer import PipelineVisualizer
+from src.infrastructure.repository.git import GitRepositoryImpl
 from src.usecase.preprocessing.preprocess import PreprocessUseCase
+
+
+def _make_usecase(
+    cfg: DictConfig,
+    executor_fallback: bool = False,
+    executor_requested: str | None = None,
+) -> PreprocessUseCase:
+    """テスト用 PreprocessUseCase を構築するヘルパー。"""
+    executor_type = str(cfg.get("executor", {}).get("type", "local"))
+    executor, is_fallback = ExecutorFactory.build_with_fallback(executor_type)
+    return PreprocessUseCase(
+        cfg,
+        executor=executor,
+        git_repo=GitRepositoryImpl(),
+        input_loader=InputLoader(),
+        cv_splitter=CVSplitter(),
+        visualizer=PipelineVisualizer(),
+        executor_fallback=executor_fallback or is_fallback,
+        executor_requested=executor_requested or (executor_type if is_fallback else None),
+    )
 
 
 @pytest.fixture()
@@ -65,7 +90,7 @@ class TestPreprocessUseCase:
             }
         )
 
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         assert result is not None
 
         # parquet が生成されていること
@@ -108,7 +133,7 @@ class TestPreprocessUseCase:
             }
         )
 
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         assert result.executor_fallback is True
         assert result.executor_requested == "gcp_vertex"
         assert result.executor_used == "local"
@@ -141,7 +166,7 @@ class TestPreprocessUseCase:
                 "seed": 42,
             }
         )
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         assert len(result.step_results) >= 1
         assert all(r.status in ("ok", "skipped", "failed") for r in result.step_results)
 
@@ -176,7 +201,7 @@ class TestGitignoreCreation:
                 "seed": 42,
             }
         )
-        PreprocessUseCase(cfg).execute()
+        _make_usecase(cfg).execute()
         assert (tmp_path / "processed" / ".gitignore").exists()
 
 
@@ -211,7 +236,7 @@ class TestReadmeGeneration:
     def test_readme_created_in_job_dir(self, base_cfg: dict[str, Any], tmp_path: Path) -> None:
         """execute() で job/timestamp ディレクトリに README.md が生成される。"""
         cfg = OmegaConf.create(base_cfg)
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         assert (result.output_path / "README.md").exists()
 
     def test_readme_contains_tree(self, base_cfg: dict[str, Any], tmp_path: Path) -> None:
@@ -220,7 +245,7 @@ class TestReadmeGeneration:
         training など次のステップで入力ファイルを探すとき一目でわかるようにするため。
         """
         cfg = OmegaConf.create(base_cfg)
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         content = (result.output_path / "README.md").read_text()
         # 必ず生成される成果物が列挙されていること
         assert "preprocess_result.yaml" in content
@@ -229,7 +254,7 @@ class TestReadmeGeneration:
     def test_readme_contains_job_metadata(self, base_cfg: dict[str, Any], tmp_path: Path) -> None:
         """README.md に job_id と commit_hash が含まれる。"""
         cfg = OmegaConf.create(base_cfg)
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         content = (result.output_path / "README.md").read_text()
         assert "readme_test" in content  # job_id
         assert result.commit_hash in content
@@ -276,7 +301,7 @@ class TestMetadataInOutputDir:
     ) -> None:
         """preprocess_result.yaml は output_dir/ 以下に保存される。"""
         cfg = OmegaConf.create(base_cfg)
-        PreprocessUseCase(cfg).execute()
+        _make_usecase(cfg).execute()
 
         output_dir = tmp_path / "processed"
         result_yamls = list(output_dir.rglob("preprocess_result.yaml"))
@@ -287,7 +312,7 @@ class TestMetadataInOutputDir:
     ) -> None:
         """pipeline_dag.html は output_dir/ 以下に保存される。"""
         cfg = OmegaConf.create(base_cfg)
-        PreprocessUseCase(cfg).execute()
+        _make_usecase(cfg).execute()
 
         output_dir = tmp_path / "processed"
         html_files = list(output_dir.rglob("pipeline_dag.html"))
@@ -300,7 +325,7 @@ class TestMetadataInOutputDir:
         import yaml
 
         cfg = OmegaConf.create(base_cfg)
-        PreprocessUseCase(cfg).execute()
+        _make_usecase(cfg).execute()
 
         output_dir = tmp_path / "processed"
         result_yamls = list(output_dir.rglob("preprocess_result.yaml"))
@@ -385,13 +410,13 @@ class TestCvStrategy:
         cfg = self._make_cfg(
             df_with_label_and_group, tmp_path, "stratified_kfold", target_col="label"
         )
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         assert result.n_splits == 5, "stratified_kfold で n_splits=5 の splits が生成されること"
 
     def test_cv_group_kfold(self, df_with_label_and_group: Path, tmp_path: Path) -> None:
         """group_kfold: group_col を指定するとグループ境界を守った splits が生成される。"""
         cfg = self._make_cfg(df_with_label_and_group, tmp_path, "group_kfold", group_col="group")
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         assert result.n_splits is not None
         assert result.n_splits >= 1, "group_kfold で splits が生成されること"
 
@@ -405,7 +430,7 @@ class TestCvStrategy:
             target_col="label",
             group_col="group",
         )
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         assert result.n_splits is not None
         assert result.n_splits >= 1, "stratified_group_kfold で splits が生成されること"
 
@@ -414,7 +439,7 @@ class TestCvStrategy:
         cfg = self._make_cfg(
             df_with_label_and_group, tmp_path, "leave_one_group_out", group_col="group"
         )
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         # グループ数 = 5 なので splits も 5
         assert result.n_splits == 5, "leave_one_group_out でグループ数の splits が生成されること"
 
@@ -473,6 +498,6 @@ class TestCvStrategy:
                 "seed": 42,
             }
         )
-        result = PreprocessUseCase(cfg).execute()
+        result = _make_usecase(cfg).execute()
         # df_a (10行) で stratified_kfold n_splits=5 → 5 splits
         assert result.n_splits == 5, "input_id で指定した df_a の行数で splits が生成されること"

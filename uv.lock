@@ -1848,6 +1848,12 @@ wheels = [
 ]
 
 [[package]]
+name = "mille"
+version = "0.0.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/be/c2b994f374686bcc8b7cb54fba31cbb4a450ef94f9e5fb3605535a7c4764/mille-0.0.12.tar.gz", hash = "sha256:cbdc61e21dcd2afdfadfca94f275b3412d86d31f4246d7d0280d952775a477a1", size = 1617591, upload-time = "2026-03-15T01:13:22.005Z" }
+
+[[package]]
 name = "mlflow"
 version = "3.8.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1950,6 +1956,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "mille" },
     { name = "mypy" },
     { name = "pandas-stubs" },
     { name = "pytest" },
@@ -1986,6 +1993,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "mille", specifier = ">=0.0.12" },
     { name = "mypy", specifier = ">=1.0" },
     { name = "pandas-stubs", specifier = ">=3.0.0.260204" },
     { name = "pytest", specifier = ">=7.0" },

@@ -6,9 +6,8 @@ LocalExecutor — ローカルプロセスで逐次実行する Executor。
 
 from pathlib import Path
 
-import polars as pl
-
 from src.domain.data.preprocessor import Node, StepResult
+from src.domain.data.table import DataFrame
 from src.infrastructure.preprocessor.dag_runner import DAGRunner
 
 
@@ -18,11 +17,11 @@ class LocalExecutor:
     def run(
         self,
         nodes: list[Node],
-        input_dfs: dict[str, pl.DataFrame],
+        input_dfs: dict[str, DataFrame],
         targets: list[str],
         output_dir: str,
         cv_splits: list[tuple[list[int], list[int]]] | None,
-    ) -> tuple[dict[str, pl.DataFrame], list[StepResult]]:
+    ) -> tuple[dict[str, DataFrame], list[StepResult]]:
         """DAGRunner を使ってパイプラインをローカル実行する。"""
         runner = DAGRunner(
             nodes=nodes,
