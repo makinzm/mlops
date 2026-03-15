@@ -1,0 +1,19 @@
+downloaded_at: '2026-03-15T10:01:21'
+commit_hash: 87e425085b63ac12c038f59687acccfb1319cc16
+config:
+  usecase: download_dataset
+  output_dir: data/2026/Q1/raw/titanic
+  unzip: true
+  force: true
+  source: kaggle
+  kaggle:
+    mode: competition
+    competition: titanic
+    dataset: null
+  seed: 42
+  competition:
+    name: titanic
+files:
+- test.csv
+- train.csv
+- gender_submission.csv
