@@ -22,7 +22,7 @@ per-directory .gitignore は動的生成する（ルート .gitignore への追�
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -37,29 +37,7 @@ from src.usecase.inference.ensemble_strategies import (
     RankAverageStrategy,
     WeightedMeanStrategy,
 )
-
-
-class Inferencer(Protocol):
-    """推論実行の Protocol。"""
-
-    def predict_folds(
-        self,
-        model_dir: Path,
-        test_df: pl.DataFrame,
-        feature_cols: list[str],
-    ) -> np.ndarray:
-        """全 fold のモデルで予測し、平均値を返す。
-
-        Args:
-            model_dir: fold_N/ サブディレクトリを持つモデルルートディレクトリ
-            test_df: 予測対象 DataFrame
-            feature_cols: 使用する特徴量カラム名リスト
-
-        Returns:
-            shape=(n_test,) の予測値 ndarray
-        """
-        ...
-
+from src.usecase.inference.inferencer import Inferencer
 
 _INFERENCE_OUTPUT_GITIGNORE = """\
 *
