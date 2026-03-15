@@ -3,7 +3,7 @@
 ## 実行
 
 ```bash
-uv run python -m src usecase=download_dataset
+uv run python -m src +usecase=download_dataset
 ```
 
 デフォルトで Titanic データを `data/2026/Q1/raw/titanic/` にダウンロードする。

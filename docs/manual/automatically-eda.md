@@ -19,7 +19,7 @@
 
 ```bash
 # Titanic データセットの EDA を実行（デフォルト設定）
-uv run python -m src +competition/titanic/eda=eda
+uv run python -m src +competition/titanic=eda
 ```
 
 ---
@@ -29,7 +29,7 @@ uv run python -m src +competition/titanic/eda=eda
 `analyze` に複数アナライザーを指定した場合、それぞれ独立したサブディレクトリに出力される。
 
 ```
-competition/titanic_report/YYYYMMDD_HHMM/
+reports/titanic_report/YYYYMMDD_HHMM/
 ├── pandas/
 │   ├── .gitignore          # "*" で全ファイルを gitignore
 │   ├── README.md           # ファイルごとの shape・欠損・スキーマ・実行ステップサマリー
@@ -74,11 +74,11 @@ analyze:
 
 ```bash
 # 特定のファイルを直接指定
-uv run python -m src +competition/titanic/eda=eda \
+uv run python -m src +competition/titanic=eda \
   "input_paths=[data/2026/Q1/raw/titanic/train.csv]"
 
 # 複数ファイルを指定
-uv run python -m src +competition/titanic/eda=eda \
+uv run python -m src +competition/titanic=eda \
   "input_paths=[data/2026/Q1/raw/titanic/train.csv,data/2026/Q1/raw/titanic/test.csv]"
 ```
 
@@ -86,7 +86,7 @@ uv run python -m src +competition/titanic/eda=eda \
 
 ```bash
 # statistics を CSV で出力（デフォルトは parquet）
-uv run python -m src +competition/titanic/eda=eda \
+uv run python -m src +competition/titanic=eda \
   "analyze.pandas.output_format=csv"
 ```
 
@@ -160,7 +160,7 @@ name: "house-prices"
 # @package _global_
 usecase: "automatically_eda"
 seed: 42
-report_dir: "competition"
+output_dir: "reports"
 max_plot_cols: 20
 input_paths:
   - "data/2026/Q1/raw/house-prices"
@@ -176,7 +176,7 @@ analyze:
 3. 実行:
 
 ```bash
-uv run python -m src +competition/house-prices/eda=eda
+uv run python -m src +competition/house-prices=eda
 ```
 
 ---
@@ -185,11 +185,11 @@ uv run python -m src +competition/house-prices/eda=eda
 
 ```bash
 # レポートディレクトリを確認
-ls competition/titanic_report/
+ls reports/titanic_report/
 
 # 最新レポートを確認
-ls competition/titanic_report/$(ls competition/titanic_report/ | sort | tail -1)/
+ls reports/titanic_report/$(ls reports/titanic_report/ | sort | tail -1)/
 
 # pandas アナライザーの metainfo（commit hash など）を確認
-cat competition/titanic_report/$(ls competition/titanic_report/ | sort | tail -1)/pandas/metainfo.yaml
+cat reports/titanic_report/$(ls reports/titanic_report/ | sort | tail -1)/pandas/metainfo.yaml
 ```

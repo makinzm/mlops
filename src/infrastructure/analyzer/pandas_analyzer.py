@@ -58,9 +58,10 @@ class PandasAnalyzer:
     # ------------------------------------------------------------------
 
     def analyze(self) -> EDAResult:
+        self._check_io_separation()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         report_dir = (
-            Path(self.cfg.report_dir)
+            Path(self.cfg.output_dir)
             / f"{self._competition_name}_report"
             / timestamp
             / self.ANALYZER_TYPE
@@ -87,6 +88,24 @@ class PandasAnalyzer:
             readme_path=readme_path,
             metainfo_path=metainfo_path,
         )
+
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    def _check_io_separation(self) -> None:
+        """input_paths と output_dir が重複していないことを確認する。
+
+        出力ファイルが入力ディレクトリに混入すると次回実行時の再現性が壊れる。
+        """
+        out = Path(self.cfg.output_dir).resolve()
+        for path_str in self.cfg.input_paths:
+            inp = Path(path_str).resolve()
+            if out.is_relative_to(inp) or inp.is_relative_to(out):
+                raise ValueError(
+                    f"output_dir '{out}' と input_path '{inp}' が重複しています。"
+                    " 入力と出力は別ディレクトリにしてください。"
+                )
 
     # ------------------------------------------------------------------
     # File collection

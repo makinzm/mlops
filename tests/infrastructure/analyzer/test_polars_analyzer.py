@@ -325,9 +325,7 @@ class TestErrorHandling:
 
 
 class TestInputOutputSeparation:
-    def test_raises_when_output_dir_is_same_as_input_path(
-        self, tmp_path: Path
-    ) -> None:
+    def test_raises_when_output_dir_is_same_as_input_path(self, tmp_path: Path) -> None:
         """output_dir と input_path が同一ディレクトリのとき ValueError が発生すること。
 
         EDA の出力ファイルが入力 CSV と同じディレクトリに書き込まれると、
@@ -348,9 +346,7 @@ class TestInputOutputSeparation:
         with pytest.raises(ValueError, match="output_dir"):
             _make_analyzer(cfg).analyze()
 
-    def test_raises_when_input_path_is_inside_output_dir(
-        self, tmp_path: Path
-    ) -> None:
+    def test_raises_when_input_path_is_inside_output_dir(self, tmp_path: Path) -> None:
         """input_path が output_dir の配下にある場合も ValueError が発生すること。
 
         出力先がすでに入力を含んでいる状況では追記ごとに入力が変化してしまう。
@@ -371,9 +367,7 @@ class TestInputOutputSeparation:
         with pytest.raises(ValueError, match="output_dir"):
             _make_analyzer(cfg).analyze()
 
-    def test_raises_when_output_dir_is_inside_input_path(
-        self, tmp_path: Path
-    ) -> None:
+    def test_raises_when_output_dir_is_inside_input_path(self, tmp_path: Path) -> None:
         """output_dir が input_path 配下にある場合も ValueError が発生すること。"""
         in_dir = tmp_path / "data"
         out_dir = in_dir / "reports"

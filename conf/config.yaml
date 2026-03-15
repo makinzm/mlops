@@ -1,4 +1,3 @@
 defaults:
-  - usecase: download_dataset
   - competition: titanic/competition
   - _self_
