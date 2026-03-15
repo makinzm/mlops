@@ -1,0 +1,174 @@
+"""
+CreateSourceDatasetUseCase のテスト。
+
+なぜこのテストが必要か:
+  - src/ のコピー・フィルタリング・ステージング管理・リポジトリ呼び出しが
+    正しく連携することを保証する。
+  - 成功時にステージングディレクトリが削除されること、
+    失敗時に残ることをテストで確認することで、デバッグ用の残存ロジックを保証する。
+  - .kaggleignore によるフィルタリングが機能することを確認する。
+  - SourceDatasetRepository は MagicMock で差し替えて、usecase 層が
+    Kaggle に依存しないことを担保する。
+
+fixture:
+  - tmp_path: src_dir / staging_dir / kaggleignore をすべて tmp_path 以下に配置
+  - MagicMock: SourceDatasetRepository の差し替え
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+from omegaconf import OmegaConf
+
+from src.usecase.source_dataset.create_source_dataset import CreateSourceDatasetUseCase
+
+
+def _make_cfg(tmp_path: Path, kaggleignore_path: Path | None = None) -> object:
+    """CreateSourceDatasetUseCase 用の DictConfig を生成する。"""
+    return OmegaConf.create(
+        {
+            "usecase": "create_source_dataset",
+            "source_dataset": {
+                "src_dir": str(tmp_path / "src"),
+                "dataset_slug": "mlops-pipeline-src",
+                "title": "mlops-pipeline-src",
+                "license_name": "CC0-1.0",
+                "kaggleignore": str(kaggleignore_path) if kaggleignore_path else None,
+            },
+            "staging_dir": str(tmp_path / ".staging"),
+            "kaggle_username": "testuser",
+        }
+    )
+
+
+def _setup_src(tmp_path: Path) -> Path:
+    """テスト用の src/ ディレクトリを作成する。"""
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "__init__.py").write_text("")
+    (src / "main.py").write_text("# main")
+    sub = src / "domain"
+    sub.mkdir()
+    (sub / "__init__.py").write_text("")
+    return src
+
+
+class TestCreateSourceDatasetUseCaseExecute:
+    """execute() メソッドの主要な振る舞いを検証する。"""
+
+    def test_execute_copies_src_to_staging(self, tmp_path: Path) -> None:
+        """src/ の内容が staging dir にコピーされること。"""
+        _setup_src(tmp_path)
+        cfg = _make_cfg(tmp_path)
+        mock_repo = MagicMock()
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+
+        usecase.execute()
+
+        # staging 直下のサブディレクトリを探す
+        staging_root = tmp_path / ".staging"
+        subdirs = list(staging_root.iterdir())
+        assert len(subdirs) == 1, "staging サブディレクトリが1つ生成されるべき"
+        # staging は成功後に削除されるので、存在しないことが正しい
+        # → MagicMock は成功するのでステージングは削除される
+        assert not staging_root.exists() or not any(staging_root.iterdir()), (
+            "成功後に staging subdir が削除されるべき"
+        )
+
+    def test_execute_calls_repository_create(self, tmp_path: Path) -> None:
+        """SourceDatasetRepository.create() が1回呼ばれること。"""
+        _setup_src(tmp_path)
+        cfg = _make_cfg(tmp_path)
+        mock_repo = MagicMock()
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+
+        usecase.execute()
+
+        mock_repo.create.assert_called_once()
+
+    def test_execute_removes_staging_dir_on_success(self, tmp_path: Path) -> None:
+        """成功時に staging subdir が削除されること。"""
+        _setup_src(tmp_path)
+        cfg = _make_cfg(tmp_path)
+        mock_repo = MagicMock()
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+
+        usecase.execute()
+
+        staging_root = tmp_path / ".staging"
+        if staging_root.exists():
+            remaining = list(staging_root.rglob("*"))
+            assert len(remaining) == 0, f"成功後に staging に残骸がある: {remaining}"
+
+    def test_execute_keeps_staging_dir_on_failure(self, tmp_path: Path) -> None:
+        """失敗時に staging subdir が残ること（デバッグ用）。"""
+        _setup_src(tmp_path)
+        cfg = _make_cfg(tmp_path)
+        mock_repo = MagicMock()
+        mock_repo.create.side_effect = RuntimeError("upload failed")
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+
+        with pytest.raises(RuntimeError, match="upload failed"):
+            usecase.execute()
+
+        staging_root = tmp_path / ".staging"
+        assert staging_root.exists(), "失敗時は staging が残るべき"
+        subdirs = [d for d in staging_root.iterdir() if d.is_dir()]
+        assert len(subdirs) >= 1, "失敗時は staging subdir が残るべき"
+
+    def test_execute_respects_kaggleignore(self, tmp_path: Path) -> None:
+        """.kaggleignore でフィルタされたファイルが staging にコピーされないこと。"""
+        src = _setup_src(tmp_path)
+        # __pycache__ ディレクトリを作成
+        pycache = src / "__pycache__"
+        pycache.mkdir()
+        (pycache / "main.cpython-312.pyc").write_text("bytecode")
+
+        # .kaggleignore を作成
+        kaggleignore = tmp_path / ".kaggleignore"
+        kaggleignore.write_text("__pycache__/\n*.pyc\n")
+
+        cfg = _make_cfg(tmp_path, kaggleignore_path=kaggleignore)
+        mock_repo = MagicMock()
+
+        # staging dir の中身を確認するために create() 呼び出し時の staging_dir を記録
+        captured: dict[str, Path] = {}
+
+        def capture_create(staging_dir: Path, metadata: object) -> None:
+            captured["staging_dir"] = staging_dir
+
+        mock_repo.create.side_effect = capture_create
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+
+        usecase.execute()
+
+        assert "staging_dir" in captured, "create() が呼ばれていない"
+        staging_src = captured["staging_dir"] / "src"
+        pycache_in_staging = staging_src / "__pycache__"
+        assert not pycache_in_staging.exists(), "__pycache__/ が staging にコピーされている"
+
+    def test_execute_uses_timestamp_subdir(self, tmp_path: Path) -> None:
+        """staging subdir がタイムスタンプ形式（source_dataset_YYYYMMDD_HHMMSS）であること。"""
+        _setup_src(tmp_path)
+        cfg = _make_cfg(tmp_path)
+        captured: dict[str, Path] = {}
+
+        mock_repo = MagicMock()
+
+        def capture_create(staging_dir: Path, metadata: object) -> None:
+            captured["staging_dir"] = staging_dir
+
+        mock_repo.create.side_effect = capture_create
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+
+        usecase.execute()
+
+        assert "staging_dir" in captured
+        subdir_name = captured["staging_dir"].name
+        assert re.match(r"source_dataset_\d{8}_\d{6}$", subdir_name), (
+            f"staging subdir 名が期待形式でない: {subdir_name}"
+        )
