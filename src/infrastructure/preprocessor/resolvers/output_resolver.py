@@ -3,8 +3,11 @@ OutputResolver — パイプラインの最終出力ステップ。
 
 対応メソッド:
 - output : 指定カラムを Parquet で書き出す。
-           cv=false → {output_dir}/{node_id}.parquet（単一ファイル）
+           cv=false → {output_dir}/{node_id}/test.parquet（サブディレクトリ）
            cv=true  → {output_dir}/{node_id}/fold_N/train.parquet + test.parquet
+
+なぜ cv=false もサブディレクトリ形式にするか:
+  InferenceUseCase が {preprocess_output_dir}/test_out/test.parquet を期待するため。
 
 OutputResolver だけは DataFrame を変換せず、ファイルに書き出す副作用を持つ。
 戻り値は元の DataFrame をそのまま返す（後続ステップから参照可能にするため）。
@@ -67,9 +70,11 @@ class OutputResolver:
         subset = df.select(columns)
 
         if not cv:
-            out_path = output_dir / f"{node_id}.parquet"
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            subset.write_parquet(out_path)
+            # サブディレクトリ形式: {output_dir}/{node_id}/test.parquet
+            # InferenceUseCase が {preprocess_output_dir}/{node_id}/test.parquet を期待するため
+            out_dir = output_dir / node_id
+            out_dir.mkdir(parents=True, exist_ok=True)
+            subset.write_parquet(out_dir / "test.parquet")
         else:
             if splits is None:
                 raise ValueError("splits must be provided when cv=True")

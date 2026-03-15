@@ -96,8 +96,9 @@ class TestPreprocessUseCase:
         # parquet が生成されていること
         job_dir = tmp_path / "processed" / "test_job"
         assert job_dir.exists()
-        # タイムスタンプ付きサブディレクトリに tabular_out.parquet が存在すること
-        parquet_files = list(job_dir.rglob("tabular_out.parquet"))
+        # cv=false の場合、タイムスタンプ付きサブディレクトリに
+        # tabular_out/test.parquet が存在すること（サブディレクトリ形式）
+        parquet_files = list(job_dir.rglob("test.parquet"))
         assert len(parquet_files) >= 1
 
         # preprocess_result.yaml が生成されていること
