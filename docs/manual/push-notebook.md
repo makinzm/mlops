@@ -37,34 +37,53 @@ Notebook 実行時に Kaggle 環境から `src/` のコードを参照するた�
 
 #### Dataset のスラッグ名の確認方法
 
-設定ファイル（`conf/usecase/push_notebook.yaml`）の `notebook.src_dataset` に記載されたスラッグを使う。
+設定ファイル（`conf/usecase/create_source_dataset.yaml`）の `source_dataset.dataset_slug` に記載されたスラッグを使う。
 デフォルトは `mlops-pipeline-src`。
 
-Kaggle Dataset の URL は `https://www.kaggle.com/datasets/{username}/{src_dataset}` になる。
+Kaggle Dataset の URL は `https://www.kaggle.com/datasets/{username}/{dataset_slug}` になる。
 
-#### Dataset の作成手順
+#### Dataset の新規作成（初回のみ）
 
 ```bash
-# Kaggle Dataset 用のディレクトリを作成
-mkdir -p /tmp/mlops-pipeline-src
-cp -r src/ /tmp/mlops-pipeline-src/
-
-# dataset-metadata.json を作成
-cat > /tmp/mlops-pipeline-src/dataset-metadata.json <<'EOF'
-{
-  "title": "mlops-pipeline-src",
-  "id": "YOUR_USERNAME/mlops-pipeline-src",
-  "licenses": [{"name": "CC0-1.0"}]
-}
-EOF
-
-# Kaggle API でプッシュ
-uv run python -c "
-from kaggle.api.kaggle_api_extended import KaggleApi
-api = KaggleApi(); api.authenticate()
-api.dataset_create_new('/tmp/mlops-pipeline-src', public=False, quiet=False)
-"
+uv run python -m src usecase=create_source_dataset
 ```
+
+実行すると `.staging/source_dataset_{YYYYMMDD_HHMMSS}/` にステージングディレクトリが作成され、
+Kaggle に新しい Dataset が作成される。成功後にステージングディレクトリは自動削除される。
+
+#### Dataset のバージョン更新（2回目以降）
+
+```bash
+uv run python -m src usecase=update_source_dataset source_dataset.version_message="update source code"
+```
+
+コードを変更するたびに実行してバージョンを更新する。
+`version_message` は変更内容の説明を自由に記入する。
+
+#### .kaggleignore によるファイル除外
+
+プロジェクトルートの `.kaggleignore` に記載されたパターンのファイルは除外される。
+デフォルトで以下が除外済み:
+
+```
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+```
+
+#### 設定ファイルのカスタマイズ
+
+`conf/usecase/create_source_dataset.yaml` を編集することで以下を変更できる:
+
+| キー | デフォルト値 | 説明 |
+|------|-------------|------|
+| `source_dataset.src_dir` | `src` | アップロードするディレクトリ |
+| `source_dataset.dataset_slug` | `mlops-pipeline-src` | Dataset のスラッグ（URL に使われる） |
+| `source_dataset.title` | `mlops-pipeline-src` | Dataset のタイトル |
+| `source_dataset.license_name` | `CC0-1.0` | ライセンス |
+| `source_dataset.kaggleignore` | `.kaggleignore` | 除外パターンファイルのパス |
 
 ---
 
