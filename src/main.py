@@ -7,8 +7,10 @@ Kaggle 認証は ~/.kaggle/access_token に保存したトークンを使用す�
 実行例:
     uv run python -m src usecase=download_dataset downloader=kaggle
     uv run python -m src usecase=automatically_eda competition=titanic
-    uv run python -m src usecase=automatically_eda competition=titanic \\
-        "analyze.pandas.steps=[{type:basic_stats},{type:group_stats,group_by:Survived}]"
+    uv run python -m src usecase=preprocess recipe=base
+    uv run python -m src usecase=train recipe=lgbm
+    uv run python -m src usecase=inference recipe=titanic_ensemble
+    uv run python -m src usecase=pipeline recipe=all_after_download
 """
 
 import logging
@@ -95,6 +97,80 @@ def _resolve_analyzers(cfg: DictConfig) -> list[object]:
     return analyzers
 
 
+def _run_preprocess(cfg: DictConfig) -> None:
+    """前処理 UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.infrastructure.executor.factory import ExecutorFactory
+    from src.infrastructure.preprocessor.cv_splitter import CVSplitter
+    from src.infrastructure.preprocessor.input_loader import InputLoader
+    from src.infrastructure.preprocessor.visualizer import PipelineVisualizer
+    from src.infrastructure.repository.git import GitRepositoryImpl
+    from src.usecase.preprocessing.pipeline_loader import load_pipeline_cfgs
+    from src.usecase.preprocessing.preprocess import PreprocessUseCase
+
+    logger = logging.getLogger(__name__)
+    git_repo = GitRepositoryImpl()
+    pipeline_cfgs = load_pipeline_cfgs(cfg, Path(_CONF_DIR))
+    for pipeline_cfg in pipeline_cfgs:
+        executor_type = str(pipeline_cfg.get("executor", {}).get("type", "local"))
+        executor, is_fallback = ExecutorFactory.build_with_fallback(executor_type)
+        result = PreprocessUseCase(
+            pipeline_cfg,
+            executor=executor,
+            git_repo=git_repo,
+            input_loader=InputLoader(),
+            cv_splitter=CVSplitter(),
+            visualizer=PipelineVisualizer(),
+            executor_fallback=is_fallback,
+            executor_requested=executor_type if is_fallback else None,
+        ).execute()
+        logger.info(
+            f"前処理完了[{pipeline_cfg.get('job_id', '?')}]: "
+            f"output_path={result.output_path}, steps={len(result.step_results)}"
+        )
+
+
+def _run_train(cfg: DictConfig) -> None:
+    """学習 UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.infrastructure.repository.git import GitRepositoryImpl
+    from src.infrastructure.trainer.lgbm_trainer import LightGBMTrainer
+    from src.usecase.training.train import TrainUseCase
+    from src.usecase.training.trainer_loader import load_trainer_cfgs
+
+    logger = logging.getLogger(__name__)
+    git_repo = GitRepositoryImpl()
+    trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+    for trainer_cfg in trainer_cfgs:
+        trainer_type: str = trainer_cfg.trainer.type
+        if trainer_type == "lgbm":
+            trainer = LightGBMTrainer(trainer_cfg)
+        else:
+            raise ValueError(f"trainer.type='{trainer_type}' は未登録です。 登録済み: ['lgbm']")
+        train_result = TrainUseCase(trainer_cfg, trainer=trainer, git_repo=git_repo).execute()
+        logger.info(
+            f"学習完了[{train_result.job_id}]: "
+            f"CV {train_result.metric}="
+            f"{train_result.cv_mean_score:.4f} ± {train_result.cv_std_score:.4f}"
+        )
+
+
+def _run_inference(cfg: DictConfig) -> None:
+    """推論 UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.infrastructure.inference.lgbm_inferencer import LightGBMInferencer
+    from src.infrastructure.repository.git import GitRepositoryImpl
+    from src.usecase.inference.inference import InferenceUseCase
+    from src.usecase.inference.inference_loader import load_inference_cfgs
+
+    logger = logging.getLogger(__name__)
+    git_repo = GitRepositoryImpl()
+    inferencer = LightGBMInferencer()
+    inference_cfgs = load_inference_cfgs(cfg, Path(_CONF_DIR))
+    for inference_cfg in inference_cfgs:
+        submission_path = InferenceUseCase(inferencer=inferencer, git_repo=git_repo).run(
+            inference_cfg
+        )
+        logger.info(f"推論完了[{inference_cfg.get('job_id', '?')}]: {submission_path}")
+
+
 @hydra.main(config_path=_CONF_DIR, config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
     from src.infrastructure.logger.python_logger import PythonAppLogger
@@ -119,75 +195,36 @@ def main(cfg: DictConfig) -> None:
         AutomaticallyEDAUseCase(analyzers, logger).execute()  # type: ignore[arg-type]
 
     elif usecase_name == "preprocess":
-        from src.infrastructure.executor.factory import ExecutorFactory
-        from src.infrastructure.preprocessor.cv_splitter import CVSplitter
-        from src.infrastructure.preprocessor.input_loader import InputLoader
-        from src.infrastructure.preprocessor.visualizer import PipelineVisualizer
-        from src.infrastructure.repository.git import GitRepositoryImpl
-        from src.usecase.preprocessing.pipeline_loader import load_pipeline_cfgs
-        from src.usecase.preprocessing.preprocess import PreprocessUseCase
-
-        git_repo = GitRepositoryImpl()
-        pipeline_cfgs = load_pipeline_cfgs(cfg, Path(_CONF_DIR))
-        for pipeline_cfg in pipeline_cfgs:
-            executor_type = str(pipeline_cfg.get("executor", {}).get("type", "local"))
-            executor, is_fallback = ExecutorFactory.build_with_fallback(executor_type)
-            result = PreprocessUseCase(
-                pipeline_cfg,
-                executor=executor,
-                git_repo=git_repo,
-                input_loader=InputLoader(),
-                cv_splitter=CVSplitter(),
-                visualizer=PipelineVisualizer(),
-                executor_fallback=is_fallback,
-                executor_requested=executor_type if is_fallback else None,
-            ).execute()
-            logger.info(
-                f"前処理完了[{pipeline_cfg.get('job_id', '?')}]: "
-                f"output_path={result.output_path}, steps={len(result.step_results)}"
-            )
+        _run_preprocess(cfg)
 
     elif usecase_name == "train":
-        from src.infrastructure.repository.git import GitRepositoryImpl
-        from src.infrastructure.trainer.lgbm_trainer import LightGBMTrainer
-        from src.usecase.training.train import TrainUseCase
-        from src.usecase.training.trainer_loader import load_trainer_cfgs
-
-        git_repo = GitRepositoryImpl()
-        trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
-        for trainer_cfg in trainer_cfgs:
-            trainer_type: str = trainer_cfg.trainer.type
-            if trainer_type == "lgbm":
-                trainer = LightGBMTrainer(trainer_cfg)
-            else:
-                raise ValueError(f"trainer.type='{trainer_type}' は未登録です。 登録済み: ['lgbm']")
-            train_result = TrainUseCase(trainer_cfg, trainer=trainer, git_repo=git_repo).execute()
-            logger.info(
-                f"学習完了[{train_result.job_id}]: "
-                f"CV {train_result.metric}="
-                f"{train_result.cv_mean_score:.4f} ± {train_result.cv_std_score:.4f}"
-            )
+        _run_train(cfg)
 
     elif usecase_name == "inference":
-        from src.infrastructure.inference.lgbm_inferencer import LightGBMInferencer
-        from src.infrastructure.repository.git import GitRepositoryImpl
-        from src.usecase.inference.inference import InferenceUseCase
-        from src.usecase.inference.inference_loader import load_inference_cfgs
+        _run_inference(cfg)
 
-        git_repo = GitRepositoryImpl()
-        inferencer = LightGBMInferencer()
-        inference_cfgs = load_inference_cfgs(cfg, Path(_CONF_DIR))
-        for inference_cfg in inference_cfgs:
-            submission_path = InferenceUseCase(inferencer=inferencer, git_repo=git_repo).run(
-                inference_cfg
-            )
-            logger.info(f"推論完了[{inference_cfg.get('job_id', '?')}]: {submission_path}")
+    elif usecase_name == "pipeline":
+        from src.usecase.pipeline.pipeline import PipelineUseCase
+        from src.usecase.pipeline.pipeline_loader import load_pipeline_recipe_cfg
+
+        pipeline_cfg = load_pipeline_recipe_cfg(cfg, Path(_CONF_DIR))
+        PipelineUseCase(
+            run_preprocess=_run_preprocess,
+            run_train=_run_train,
+            run_inference=_run_inference,
+        ).run(pipeline_cfg)
+        logger.info(f"パイプライン完了[{pipeline_cfg.get('job_id', '?')}]")
 
     else:
-        raise ValueError(
-            f"Unknown usecase: {usecase_name!r}. "
-            "Supported: 'download_dataset', 'automatically_eda', 'preprocess', 'train', 'inference'"
-        )
+        supported = [
+            "download_dataset",
+            "automatically_eda",
+            "preprocess",
+            "train",
+            "inference",
+            "pipeline",
+        ]
+        raise ValueError(f"Unknown usecase: {usecase_name!r}. Supported: {supported}")
 
 
 if __name__ == "__main__":

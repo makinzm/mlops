@@ -27,7 +27,7 @@ paths = ["src/usecase/**"]
 allow = ["src_domain"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["datetime", "numpy", "omegaconf", "pathlib", "polars", "scipy", "typing", "yaml"]
+external_allow = ["collections", "datetime", "numpy", "omegaconf", "pathlib", "polars", "scipy", "typing", "yaml"]
 
 [[layers]]
 name = "tests_domain"

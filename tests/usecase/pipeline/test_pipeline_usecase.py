@@ -12,20 +12,17 @@ PipelineUseCase の単体テスト。
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call
-
 import pytest
 from omegaconf import DictConfig, OmegaConf
 
 from src.usecase.pipeline.pipeline import PipelineUseCase
-
 
 # ──────────────────────────────────────────────────────────────
 # ヘルパー
 # ──────────────────────────────────────────────────────────────
 
 
-def _make_pipeline_cfg(steps: list[dict]) -> DictConfig:
+def _make_pipeline_cfg(steps: list[dict[str, str]]) -> DictConfig:
     """PipelineUseCase 用の DictConfig を生成する。"""
     return OmegaConf.create(
         {
