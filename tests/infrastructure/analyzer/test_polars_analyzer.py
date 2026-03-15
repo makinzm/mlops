@@ -96,12 +96,16 @@ class TestReportDirectoryCreation:
         result = _make_analyzer(cfg).analyze()
         assert result.report_dir.name == "polars"
 
-    def test_no_local_gitignore(self, titanic_csv: Path, tmp_path: Path) -> None:
-        """ローカル .gitignore は生成しない（ルート .gitignore の competition/** で管理）。"""
+    def test_gitignore_created_at_output_dir(self, titanic_csv: Path, tmp_path: Path) -> None:
+        """analyze() 呼び出しで output_dir に .gitignore が生成される。
+
+        output_dir がどこに設定されていても PNG / parquet 等の大容量ファイルを
+        git 管理外に置き、yaml / md 等のメタ情報だけを保持するため。
+        """
         cfg = _make_cfg(tmp_path, titanic_csv)
-        result = _make_analyzer(cfg).analyze()
-        gitignore = result.report_dir / ".gitignore"
-        assert not gitignore.exists()
+        _make_analyzer(cfg).analyze()
+        gitignore = (tmp_path / "reports") / ".gitignore"
+        assert gitignore.exists()
 
 
 # ---------------------------------------------------------------------------
