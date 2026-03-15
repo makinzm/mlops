@@ -43,7 +43,8 @@ class PreprocessUseCase:
         commit_hash = self._get_commit_hash()
 
         # Executor の生成（フォールバック検出）
-        executor_type: str = str(cfg.executor.type)
+        executor_cfg = cfg.get("executor", {})
+        executor_type: str = str(executor_cfg.get("type", "local") if executor_cfg else "local")
         executor, is_fallback = ExecutorFactory.build_with_fallback(executor_type)
 
         # inputs の読み込み

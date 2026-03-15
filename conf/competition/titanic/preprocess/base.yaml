@@ -18,16 +18,10 @@ inputs:
 
 output_dir: data/processed
 
-executor:
-  type: local
-
 cv:
   strategy: stratified_kfold
   n_splits: 5
-  time_col: null
   target_col: Survived
-  group_col: null
-  input_id: null
 
 # ------------------------------------------------------------
 # DAG ステップ
