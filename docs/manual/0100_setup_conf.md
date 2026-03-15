@@ -19,8 +19,8 @@ conf/
 │           ├── lgbm.yaml          # LightGBM 用（アンサンブル時）
 │           └── nn.yaml            # NN 用（アンサンブル時）
 ├── usecase/
-│   ├── automatically_eda.yaml     # EDA usecase のデフォルト設定
-│   └── download_dataset.yaml      # ダウンロード usecase の設定
+│   ├── eda.yaml                   # EDA usecase（input_paths は ${competition.name} で補間）
+│   └── download.yaml              # ダウンロード usecase（output_dir/kaggle も ${competition.name} で補間）
 └── executor/
     ├── local.yaml
     ├── ray_local.yaml
@@ -136,11 +136,10 @@ config.yaml を変更せず CLI で一時的に別コンペを使うことも可
 
 ```bash
 # デフォルト以外のコンペでダウンロード
-uv run python -m src +usecase=download_dataset \
-  'competition=house-prices/competition'
+uv run python -m src competition=house-prices usecase=download
 
 # デフォルト以外のコンペで EDA
-uv run python -m src +competition/house-prices=eda
+uv run python -m src competition=house-prices usecase=eda
 ```
 
 ---
@@ -149,9 +148,11 @@ uv run python -m src +competition/house-prices=eda
 
 | 操作 | コマンド |
 |------|---------|
-| ダウンロード（デフォルト競技） | `uv run python -m src +usecase=download_dataset` |
-| EDA（デフォルト競技） | `uv run python -m src competition/titanic=eda` |
+| ダウンロード（デフォルト） | `uv run python -m src` |
+| ダウンロード（明示） | `uv run python -m src usecase=download` |
+| EDA | `uv run python -m src usecase=eda` |
 | 前処理（base） | `uv run python -m src '+competition/titanic/preprocess=base'` |
+| 別コンペで EDA | `uv run python -m src competition=house-prices usecase=eda` |
 
 ---
 

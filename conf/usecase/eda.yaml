@@ -4,6 +4,10 @@ seed: 42
 output_dir: "reports"
 max_plot_cols: 20
 
+# competition.name は conf/competition/{name}.yaml から補間される
+input_paths:
+  - "data/2026/Q1/raw/${competition.name}"
+
 # Infra:method 形式でアナライザーと分析ステップを指定する。
 # - 複数のアナライザーを同時に実行可能（各アナライザーは独自サブディレクトリに出力）
 # - output_format: "parquet" | "csv"（pandas アナライザーのみ有効。polars は常に parquet）

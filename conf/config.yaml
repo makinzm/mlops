@@ -1,3 +1,4 @@
 defaults:
   - competition: titanic
+  - usecase: download
   - _self_
