@@ -58,19 +58,24 @@ def load_kaggleignore_patterns(kaggleignore_path: Path | None) -> list[str]:
 def _is_ignored(rel_path: Path, patterns: list[str]) -> bool:
     """指定した相対パスが .kaggleignore パターンにマッチするか返す。
 
-    ディレクトリ名・ファイル名・拡張子に対して fnmatch でマッチングを行う。
-    `__pycache__/` のようなディレクトリパターンはパスの各コンポーネントと照合する。
+    マッチング戦略:
+    - 末尾 / があるパターン（ディレクトリ指定）: パスの各コンポーネントと照合する
+      例: `__pycache__/` → parts に `__pycache__` があれば一致
+    - 末尾 / がないパターン: ファイル名・ディレクトリ名の各コンポーネントと照合する
+      例: `*.pyc` → rel_path.name が一致すれば除外
+
+    Args:
+        rel_path: src_dir からの相対パス。
+        patterns: .kaggleignore から読み込んだパターンリスト（コメント・空行なし）。
     """
     parts = rel_path.parts
     for pattern in patterns:
-        # ディレクトリパターン（末尾 / を除去して判定）
-        dir_pattern = pattern.rstrip("/")
+        # 末尾 / を除いた実効パターン
+        effective = pattern.rstrip("/")
+        # パスの各コンポーネント（ディレクトリ名・ファイル名）と照合
         for part in parts:
-            if fnmatch.fnmatch(part, dir_pattern):
+            if fnmatch.fnmatch(part, effective):
                 return True
-        # ファイル名全体へのマッチ
-        if fnmatch.fnmatch(rel_path.name, pattern):
-            return True
     return False
 
 
