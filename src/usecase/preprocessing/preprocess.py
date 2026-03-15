@@ -24,6 +24,20 @@ from src.infrastructure.preprocessor.visualizer import PipelineVisualizer
 from src.infrastructure.repository.git import GitRepositoryImpl
 
 
+def _build_tree_lines(directory: Path, prefix: str = "") -> list[str]:
+    """directory 配下のファイル・ディレクトリを ASCII ツリー形式で返す。"""
+    entries = sorted(directory.iterdir(), key=lambda p: (p.is_file(), p.name))
+    lines: list[str] = []
+    for i, entry in enumerate(entries):
+        is_last = i == len(entries) - 1
+        connector = "└── " if is_last else "├── "
+        lines.append(f"{prefix}{connector}{entry.name}")
+        if entry.is_dir():
+            extension = "    " if is_last else "│   "
+            lines += _build_tree_lines(entry, prefix + extension)
+    return lines
+
+
 class PreprocessUseCase:
     """前処理パイプラインを実行するユースケース。"""
 
@@ -87,6 +101,9 @@ class PreprocessUseCase:
         )
         with open(output_dir / "preprocess_result.yaml", "w") as f:
             yaml.dump(manifest, f, allow_unicode=True, default_flow_style=False)
+
+        # README.md の書き出し（ツリー構造）
+        self._write_readme(output_dir=output_dir, job_id=job_id, commit_hash=commit_hash)
 
         return PreprocessResult(
             output_path=output_dir,
@@ -269,6 +286,23 @@ class PreprocessUseCase:
             ]
 
         return None
+
+    def _write_readme(self, output_dir: Path, job_id: str, commit_hash: str) -> None:
+        """output_dir に README.md を生成する。ファイルツリーを含む。"""
+        lines = [
+            f"# Preprocess Result — `{job_id}`",
+            "",
+            f"- **commit**: `{commit_hash}`",
+            f"- **output_dir**: `{output_dir}`",
+            "",
+            "## Output Tree",
+            "",
+            "```",
+            output_dir.name + "/",
+        ]
+        lines += _build_tree_lines(output_dir)
+        lines += ["```", ""]
+        (output_dir / "README.md").write_text("\n".join(lines))
 
     def _build_manifest(
         self,

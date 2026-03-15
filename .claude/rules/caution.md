@@ -4,6 +4,21 @@
 
 ---
 
+## ブランチ管理
+
+### Squash Merge 済みブランチには継続作業しない
+
+- **NG**: PR が Squash Merge されたブランチに追加コミットを積み続け、次の PR で大量のコンフリクトが発生する
+- **OK**: PR が Squash Merge されたら、次の作業は必ず `origin/main` から新しいブランチを切る
+  ```bash
+  git fetch origin
+  git checkout -b feat/next-task origin/main
+  ```
+- **Why**: Squash Merge は元ブランチのコミット履歴を持たない1コミットとして main に入る。元ブランチに追加コミットして PR を出すと、squash 前の全コミットが "新規変更" として扱われてコンフリクト地獄になる
+- **How to apply**: セッション開始時に `git log --oneline origin/main..HEAD` で確認し、作業ブランチが既に main に squash 済みなら即座に新ブランチへ移行する
+
+---
+
 ## ファイル管理
 
 ### ドキュメントのコマンドは全箇所を実際に実行して確認する
