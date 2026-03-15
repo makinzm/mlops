@@ -22,11 +22,20 @@
     "# セル 1: 環境セットアップ（編集不要）\n",
     "# mlops-pipeline-src データセットからソースコードを読み込む\n",
     "import sys\n",
+    "import types\n",
     "\n",
-    "# Notebook 環境でのパッケージインストール\n",
-    "!pip install -q polars lightgbm hydra-core omegaconf pyyaml python-dotenv\n",
+    "# requirements.txt からパッケージをインストール（uv export で自動生成済み）\n",
+    "!pip install -q -r /kaggle/input/{{ src_dataset }}/requirements.txt\n",
     "\n",
-    "sys.path.insert(0, \"/kaggle/input/{{ src_dataset }}\")"
+    "# Kaggle では src.zip の中身が /kaggle/input/{{ src_dataset }}/ に直接展開される\n",
+    "# （例: /kaggle/input/{{ src_dataset }}/domain/, /infrastructure/, ...）\n",
+    "# `from src.xxx import ...` が動くよう src を名前空間モジュールとして登録する\n",
+    "_SRC_PATH = \"/kaggle/input/{{ src_dataset }}\"\n",
+    "_src_mod = types.ModuleType(\"src\")\n",
+    "_src_mod.__path__ = [_SRC_PATH]  # type: ignore[assignment]\n",
+    "_src_mod.__package__ = \"src\"\n",
+    "sys.modules[\"src\"] = _src_mod\n",
+    "sys.path.insert(0, _SRC_PATH)"
    ]
   },
   {

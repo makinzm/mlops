@@ -71,9 +71,10 @@ class UpdateSourceDatasetUseCase:
 
         patterns = load_kaggleignore_patterns(kaggleignore_path)
         staging_dir = make_staging_dir(staging_root)
+        requirements_path = src_dir.parent / "requirements.txt"
 
         logger.info("Staging src/ to %s", staging_dir)
-        copy_src_to_staging(src_dir, staging_dir, patterns)
+        copy_src_to_staging(src_dir, staging_dir, patterns, requirements_path)
 
         logger.info("Updating Kaggle Dataset: %s (version: %s)", metadata.full_id, version_message)
         try:

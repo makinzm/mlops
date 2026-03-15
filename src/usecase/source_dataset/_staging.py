@@ -83,15 +83,18 @@ def copy_src_to_staging(
     src_dir: Path,
     staging_dir: Path,
     patterns: list[str],
+    requirements_path: Path | None = None,
 ) -> None:
     """src_dir の内容を staging_dir/{src_dir.name}/ にコピーする。
 
     .kaggleignore パターンにマッチするファイル・ディレクトリはコピーしない。
+    requirements_path が存在する場合は staging_dir/requirements.txt にもコピーする。
 
     Args:
         src_dir: コピー元ディレクトリ（例: src/）。
         staging_dir: コピー先のステージングディレクトリ。
         patterns: .kaggleignore から読み込んだ除外パターンリスト。
+        requirements_path: requirements.txt のパス（省略時はコピーしない）。
     """
     dest = staging_dir / src_dir.name
     dest.mkdir(parents=True, exist_ok=True)
@@ -108,6 +111,10 @@ def copy_src_to_staging(
         shutil.copy2(src_file, dest_file)
 
     logger.info("Copied %s -> %s", src_dir, dest)
+
+    if requirements_path is not None and requirements_path.exists():
+        shutil.copy2(requirements_path, staging_dir / "requirements.txt")
+        logger.info("Copied %s -> %s/requirements.txt", requirements_path, staging_dir)
 
 
 def cleanup_staging_dir(staging_dir: Path) -> None:
