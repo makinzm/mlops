@@ -2,7 +2,8 @@
 usecase: create_source_dataset
 
 source_dataset:
-  src_dir: src                      # アップロード対象ディレクトリ
+  src_dir: src                      # アップロード対象ソースディレクトリ
+  conf_dir: conf                    # アップロード対象設定ディレクトリ（recipe yaml を含む）
   dataset_slug: mlops-pipeline-src  # Kaggle Dataset の slug
   title: mlops-pipeline-src         # Kaggle 上での表示タイトル
   license_name: CC0-1.0

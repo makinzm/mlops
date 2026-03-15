@@ -5,7 +5,7 @@ CreateSourceDatasetUseCase / UpdateSourceDatasetUseCase の共通ロジックを
 
 ステージング戦略:
   - .staging/source_dataset_{YYYYMMDD_HHMMSS}/ を作成する
-  - src/ を .kaggleignore でフィルタしながらコピーする
+  - src/ と conf/ を .kaggleignore でフィルタしながらコピーする
   - 成功時はステージングディレクトリを削除する（失敗時は残す）
   - /tmp は使わない（プロジェクトルート直下の .staging/ のみ使用）
 """
@@ -79,30 +79,27 @@ def _is_ignored(rel_path: Path, patterns: list[str]) -> bool:
     return False
 
 
-def copy_src_to_staging(
-    src_dir: Path,
+def _copy_dir_to_staging(
+    source_dir: Path,
     staging_dir: Path,
     patterns: list[str],
-    requirements_path: Path | None = None,
 ) -> None:
-    """src_dir の内容を staging_dir/{src_dir.name}/ にコピーする。
+    """source_dir の内容を staging_dir/{source_dir.name}/ にコピーする（内部ヘルパー）。
 
     .kaggleignore パターンにマッチするファイル・ディレクトリはコピーしない。
-    requirements_path が存在する場合は staging_dir/requirements.txt にもコピーする。
 
     Args:
-        src_dir: コピー元ディレクトリ（例: src/）。
+        source_dir: コピー元ディレクトリ。
         staging_dir: コピー先のステージングディレクトリ。
         patterns: .kaggleignore から読み込んだ除外パターンリスト。
-        requirements_path: requirements.txt のパス（省略時はコピーしない）。
     """
-    dest = staging_dir / src_dir.name
+    dest = staging_dir / source_dir.name
     dest.mkdir(parents=True, exist_ok=True)
 
-    for src_file in src_dir.rglob("*"):
+    for src_file in source_dir.rglob("*"):
         if not src_file.is_file():
             continue
-        rel = src_file.relative_to(src_dir)
+        rel = src_file.relative_to(source_dir)
         if _is_ignored(rel, patterns):
             logger.debug("Ignored (kaggleignore): %s", rel)
             continue
@@ -110,7 +107,36 @@ def copy_src_to_staging(
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_file, dest_file)
 
-    logger.info("Copied %s -> %s", src_dir, dest)
+    logger.info("Copied %s -> %s", source_dir, dest)
+
+
+def copy_to_staging(
+    src_dir: Path,
+    conf_dir: Path,
+    staging_dir: Path,
+    patterns: list[str],
+    requirements_path: Path | None = None,
+) -> None:
+    """src_dir と conf_dir の内容を staging_dir にコピーする。
+
+    .kaggleignore パターンにマッチするファイル・ディレクトリはコピーしない。
+    requirements_path が存在する場合は staging_dir/requirements.txt にもコピーする。
+
+    ステージング後の構造:
+      staging_dir/
+        src/          ← src_dir の中身
+        conf/         ← conf_dir の中身
+        requirements.txt  ← requirements_path が存在する場合
+
+    Args:
+        src_dir: コピー元 src/ ディレクトリ。
+        conf_dir: コピー元 conf/ ディレクトリ。
+        staging_dir: コピー先のステージングディレクトリ。
+        patterns: .kaggleignore から読み込んだ除外パターンリスト。
+        requirements_path: requirements.txt のパス（省略時はコピーしない）。
+    """
+    _copy_dir_to_staging(src_dir, staging_dir, patterns)
+    _copy_dir_to_staging(conf_dir, staging_dir, patterns)
 
     if requirements_path is not None and requirements_path.exists():
         shutil.copy2(requirements_path, staging_dir / "requirements.txt")

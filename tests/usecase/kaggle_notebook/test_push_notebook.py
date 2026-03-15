@@ -93,15 +93,19 @@ class TestNotebookGeneration:
         cell2_source = "".join(notebook["cells"][1]["source"])
         assert "titanic" in cell2_source, "セル2に competition slug が含まれない"
 
-    def test_generated_notebook_cell3_contains_pipeline_usecase(self, tmp_path: Path) -> None:
-        """セル3に PipelineUseCase の呼び出しが含まれること（実行セル）。"""
+    def test_generated_notebook_cell3_contains_notebook_pipeline_runner(
+        self, tmp_path: Path
+    ) -> None:
+        """セル3に NotebookPipelineRunner の呼び出しが含まれること（実行セル）。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
         usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # type: ignore[arg-type]
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell3_source = "".join(notebook["cells"][2]["source"])
-        assert "PipelineUseCase" in cell3_source, "セル3に PipelineUseCase が含まれない"
+        assert "NotebookPipelineRunner" in cell3_source, (
+            "セル3に NotebookPipelineRunner が含まれない"
+        )
 
 
 class TestKernelMetadataGeneration:

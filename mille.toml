@@ -16,7 +16,7 @@ external_allow = ["dataclasses", "pathlib", "typing"]
 [[layers]]
 name = "src_infrastructure"
 paths = ["src/infrastructure/**"]
-allow = ["src_domain"]
+allow = ["src_domain", "src_usecase"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["datetime", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "polars", "seaborn", "sklearn", "subprocess", "typing", "yaml", "zipfile"]

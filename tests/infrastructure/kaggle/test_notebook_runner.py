@@ -17,10 +17,9 @@ fixture:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-from omegaconf import OmegaConf
 
 from src.infrastructure.kaggle.notebook_runner import NotebookPipelineRunner
 
@@ -66,20 +65,28 @@ class TestNotebookPipelineRunnerCallsPipelineSteps:
 
         call_order: list[str] = []
 
-        mock_preprocess = MagicMock(side_effect=lambda cfg: call_order.append("preprocess"))
-        mock_train = MagicMock(side_effect=lambda cfg: call_order.append("train"))
-        mock_inference = MagicMock(
-            side_effect=lambda cfg: call_order.append("inference") or Path("/kaggle/working/inference/submission.csv")
-        )
+        def _append_preprocess(cfg: object) -> None:
+            call_order.append("preprocess")
+
+        def _append_train(cfg: object) -> None:
+            call_order.append("train")
+
+        def _append_inference(cfg: object) -> Path:
+            call_order.append("inference")
+            return Path("/kaggle/working/inference/submission.csv")
+
+        mock_preprocess = MagicMock(side_effect=_append_preprocess)
+        mock_train = MagicMock(side_effect=_append_train)
+        mock_inference = MagicMock(side_effect=_append_inference)
 
         runner = NotebookPipelineRunner(
             competition_slug="titanic",
             recipe="base",
             conf_dir=str(conf_dir),
         )
-        runner._run_preprocess = mock_preprocess  # type: ignore[attr-defined]
-        runner._run_train = mock_train  # type: ignore[attr-defined]
-        runner._run_inference = mock_inference  # type: ignore[attr-defined]
+        runner._run_preprocess = mock_preprocess
+        runner._run_train = mock_train
+        runner._run_inference = mock_inference
 
         runner.run()
 
@@ -99,31 +106,31 @@ class TestNotebookPipelineRunnerKagglePaths:
         conf_dir = tmp_path / "conf"
         _write_recipe_yaml(conf_dir, "base")
 
-        captured_cfgs: list[object] = []
+        from omegaconf import DictConfig
 
-        def capture_preprocess(cfg: object) -> None:
+        captured_cfgs: list[DictConfig] = []
+
+        def capture_preprocess(cfg: DictConfig) -> None:
             captured_cfgs.append(cfg)
 
         mock_train = MagicMock()
-        mock_inference = MagicMock(
-            return_value=Path("/kaggle/working/inference/submission.csv")
-        )
+        mock_inference = MagicMock(return_value=Path("/kaggle/working/inference/submission.csv"))
 
         runner = NotebookPipelineRunner(
             competition_slug="titanic",
             recipe="base",
             conf_dir=str(conf_dir),
         )
-        runner._run_preprocess = capture_preprocess  # type: ignore[attr-defined]
-        runner._run_train = mock_train  # type: ignore[attr-defined]
-        runner._run_inference = mock_inference  # type: ignore[attr-defined]
+        runner._run_preprocess = capture_preprocess
+        runner._run_train = mock_train
+        runner._run_inference = mock_inference
 
         runner.run()
 
         assert len(captured_cfgs) == 1, "preprocess が1回呼ばれていない"
         preprocess_cfg = captured_cfgs[0]
         # inputs[0].path が /kaggle/input/titanic 以下に解決されていることを確認
-        input_path = str(preprocess_cfg.inputs[0].path)  # type: ignore[union-attr]
+        input_path = str(preprocess_cfg.inputs[0].path)
         assert "/kaggle/input/titanic" in input_path, (
             f"input_root が /kaggle/input/titanic に解決されていない: {input_path}"
         )
@@ -132,23 +139,21 @@ class TestNotebookPipelineRunnerKagglePaths:
 class TestNotebookPipelineRunnerOverrides:
     """OVERRIDES の値が cfg に反映されることを検証する。"""
 
-    def test_overrides_are_applied(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_overrides_are_applied(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """OVERRIDES の値が各 step の cfg に反映されること。"""
         monkeypatch.setenv("KAGGLE_KERNEL_RUN_TYPE", "Interactive")
         conf_dir = tmp_path / "conf"
         _write_recipe_yaml(conf_dir, "base")
 
-        captured_cfgs: list[object] = []
+        from omegaconf import DictConfig
 
-        def capture_train(cfg: object) -> None:
+        captured_cfgs: list[DictConfig] = []
+
+        def capture_train(cfg: DictConfig) -> None:
             captured_cfgs.append(cfg)
 
         mock_preprocess = MagicMock()
-        mock_inference = MagicMock(
-            return_value=Path("/kaggle/working/inference/submission.csv")
-        )
+        mock_inference = MagicMock(return_value=Path("/kaggle/working/inference/submission.csv"))
 
         runner = NotebookPipelineRunner(
             competition_slug="titanic",
@@ -156,17 +161,17 @@ class TestNotebookPipelineRunnerOverrides:
             conf_dir=str(conf_dir),
             overrides={"lgbm.num_leaves": 64},
         )
-        runner._run_preprocess = mock_preprocess  # type: ignore[attr-defined]
-        runner._run_train = capture_train  # type: ignore[attr-defined]
-        runner._run_inference = mock_inference  # type: ignore[attr-defined]
+        runner._run_preprocess = mock_preprocess
+        runner._run_train = capture_train
+        runner._run_inference = mock_inference
 
         runner.run()
 
         assert len(captured_cfgs) == 1, "train が1回呼ばれていない"
         train_cfg = captured_cfgs[0]
         # OVERRIDES の値が cfg に反映されていることを確認
-        assert train_cfg.lgbm.num_leaves == 64, (  # type: ignore[union-attr]
-            f"OVERRIDES が反映されていない: lgbm.num_leaves = {getattr(train_cfg, 'lgbm', None)}"
+        assert train_cfg.lgbm.num_leaves == 64, (
+            f"OVERRIDES が反映されていない: lgbm.num_leaves = {train_cfg.get('lgbm')}"
         )
 
 
@@ -192,12 +197,10 @@ class TestNotebookPipelineRunnerReturnsSubmissionPath:
             recipe="base",
             conf_dir=str(conf_dir),
         )
-        runner._run_preprocess = mock_preprocess  # type: ignore[attr-defined]
-        runner._run_train = mock_train  # type: ignore[attr-defined]
-        runner._run_inference = mock_inference  # type: ignore[attr-defined]
+        runner._run_preprocess = mock_preprocess
+        runner._run_train = mock_train
+        runner._run_inference = mock_inference
 
         result = runner.run()
 
-        assert result == expected_path, (
-            f"run() の返り値が期待値と異なる: {result}"
-        )
+        assert result == expected_path, f"run() の返り値が期待値と異なる: {result}"

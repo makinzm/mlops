@@ -20,7 +20,7 @@ from omegaconf import DictConfig
 from src.domain.repository.source_dataset import DatasetMetadata, SourceDatasetRepository
 from src.usecase.source_dataset._staging import (
     cleanup_staging_dir,
-    copy_src_to_staging,
+    copy_to_staging,
     load_kaggleignore_patterns,
     make_staging_dir,
 )
@@ -48,12 +48,14 @@ class CreateSourceDatasetUseCase:
         self._repository = repository
 
     def execute(self) -> None:
-        """src/ を Kaggle Dataset として新規作成する。
+        """src/ と conf/ を Kaggle Dataset として新規作成する。
 
         Raises:
             RuntimeError: repository.create() が失敗した場合（ステージングを残す）。
         """
         src_dir = Path(str(self._cfg.source_dataset.src_dir))
+        conf_dir_raw = self._cfg.source_dataset.get("conf_dir")
+        conf_dir = Path(str(conf_dir_raw)) if conf_dir_raw else src_dir.parent / "conf"
         staging_root = Path(str(self._cfg.staging_dir))
         kaggleignore_raw = self._cfg.source_dataset.get("kaggleignore")
         kaggleignore_path = Path(str(kaggleignore_raw)) if kaggleignore_raw else None
@@ -69,8 +71,8 @@ class CreateSourceDatasetUseCase:
         staging_dir = make_staging_dir(staging_root)
         requirements_path = src_dir.parent / "requirements.txt"
 
-        logger.info("Staging src/ to %s", staging_dir)
-        copy_src_to_staging(src_dir, staging_dir, patterns, requirements_path)
+        logger.info("Staging src/ and conf/ to %s", staging_dir)
+        copy_to_staging(src_dir, conf_dir, staging_dir, patterns, requirements_path)
 
         logger.info("Creating Kaggle Dataset: %s", metadata.full_id)
         # 失敗時はステージングを残すため try/except で囲む
