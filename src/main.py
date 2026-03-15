@@ -238,6 +238,43 @@ def main(cfg: DictConfig) -> None:
         result = PushNotebookUseCase(cfg=cfg, kaggle_api=kaggle_api).execute()
         logger.info(f"Notebook push 完了: notebook={result.notebook_path}")
 
+    elif usecase_name in ("create_source_dataset", "update_source_dataset"):
+        from src.infrastructure.kaggle.source_dataset import KaggleSourceDatasetRepository
+
+        try:
+            from kaggle.api.kaggle_api_extended import (
+                KaggleApi as KaggleApiExtended,
+            )
+        except SystemExit as e:
+            raise RuntimeError(
+                "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+            ) from e
+
+        kaggle_api = KaggleApiExtended()
+        try:
+            kaggle_api.authenticate()
+        except SystemExit as e:
+            raise RuntimeError(
+                "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+            ) from e
+
+        repository = KaggleSourceDatasetRepository(kaggle_api=kaggle_api)
+
+        if usecase_name == "create_source_dataset":
+            from src.usecase.source_dataset.create_source_dataset import (
+                CreateSourceDatasetUseCase,
+            )
+
+            CreateSourceDatasetUseCase(cfg=cfg, repository=repository).execute()
+            logger.info("create_source_dataset 完了")
+        else:
+            from src.usecase.source_dataset.update_source_dataset import (
+                UpdateSourceDatasetUseCase,
+            )
+
+            UpdateSourceDatasetUseCase(cfg=cfg, repository=repository).execute()
+            logger.info("update_source_dataset 完了")
+
     else:
         supported = [
             "download_dataset",
@@ -247,6 +284,8 @@ def main(cfg: DictConfig) -> None:
             "inference",
             "pipeline",
             "push_notebook",
+            "create_source_dataset",
+            "update_source_dataset",
         ]
         raise ValueError(f"Unknown usecase: {usecase_name!r}. Supported: {supported}")
 

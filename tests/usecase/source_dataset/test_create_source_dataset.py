@@ -61,23 +61,26 @@ class TestCreateSourceDatasetUseCaseExecute:
     """execute() メソッドの主要な振る舞いを検証する。"""
 
     def test_execute_copies_src_to_staging(self, tmp_path: Path) -> None:
-        """src/ の内容が staging dir にコピーされること。"""
+        """execute() が create() を呼ぶ際に staging_dir が渡され src のファイルが含まれること。"""
         _setup_src(tmp_path)
         cfg = _make_cfg(tmp_path)
+        captured: dict[str, Path] = {}
+
         mock_repo = MagicMock()
+
+        def capture_create(staging_dir: Path, metadata: object) -> None:
+            captured["staging_dir"] = staging_dir
+            # コピー済みのファイルを確認してから終了（成功扱い）
+            assert (staging_dir / "src" / "__init__.py").exists(), (
+                "staging 内に src/__init__.py がコピーされていない"
+            )
+
+        mock_repo.create.side_effect = capture_create
         usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
 
         usecase.execute()
 
-        # staging 直下のサブディレクトリを探す
-        staging_root = tmp_path / ".staging"
-        subdirs = list(staging_root.iterdir())
-        assert len(subdirs) == 1, "staging サブディレクトリが1つ生成されるべき"
-        # staging は成功後に削除されるので、存在しないことが正しい
-        # → MagicMock は成功するのでステージングは削除される
-        assert not staging_root.exists() or not any(staging_root.iterdir()), (
-            "成功後に staging subdir が削除されるべき"
-        )
+        assert "staging_dir" in captured, "create() が呼ばれていない"
 
     def test_execute_calls_repository_create(self, tmp_path: Path) -> None:
         """SourceDatasetRepository.create() が1回呼ばれること。"""

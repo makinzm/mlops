@@ -8,8 +8,6 @@ SourceDatasetRepository Protocol の shape テスト。
     リグレッションを防ぐ。
 """
 
-from pathlib import Path
-
 from src.domain.repository.source_dataset import DatasetMetadata, SourceDatasetRepository
 
 
