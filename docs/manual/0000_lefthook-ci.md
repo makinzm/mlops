@@ -15,6 +15,13 @@ devenv shell
 
 初回は Nix パッケージのダウンロードに数分かかります。以降はキャッシュが効くため高速になります。
 
+
+## 1.5 actionlint
+
+```
+go install github.com/rhysd/actionlint/cmd/actionlint@latest
+```
+
 ---
 
 ## 2. lefthook フックのインストール

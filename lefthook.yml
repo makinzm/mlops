@@ -11,4 +11,4 @@ pre-commit:
       run: uv run mypy tests/ src/
     actionlint:
       glob: ".github/workflows/*.yml"
-      run: uv run actionlint
+      run: actionlint
