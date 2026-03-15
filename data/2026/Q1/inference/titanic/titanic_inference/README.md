@@ -1,6 +1,6 @@
 # Inference Output — `titanic_inference`
 
-- commit: `5ffe8c50818b33db0ad83207ff8a0d6dac3f6701`
+- commit: `aab54278b40e792c3d5cdc068e667ae8f637884b`
 - ensemble: mean
 - n_models: 1
 - n_test: 418
@@ -10,6 +10,7 @@
 ```
 titanic_inference/
 ├── .gitignore
+├── README.md
 ├── metainfo.yaml
 └── submission.csv
 ```
