@@ -167,7 +167,7 @@ class TestInferenceUseCaseRun:
     def test_run_skips_submission_when_no_test_path(
         self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
     ) -> None:
-        """test_path=None のとき submission.csv をスキップし、metainfo.yaml と README.md は生成すること。
+        """test_path=None のとき submission.csv をスキップし metainfo.yaml / README.md は生成する。
 
         なぜこのテストが必要か:
           - test データなしコンペ（推論先が存在しない場合）でも usecase が crash せずに
@@ -185,7 +185,9 @@ class TestInferenceUseCaseRun:
         usecase.run(cfg)
 
         submission_path = Path(cfg.output_dir) / "submission.csv"
-        assert not submission_path.exists(), "test_path=None でも submission.csv が生成されてしまった"
+        assert not submission_path.exists(), (
+            "test_path=None でも submission.csv が生成されてしまった"
+        )
 
         metainfo_path = Path(cfg.output_dir) / "metainfo.yaml"
         assert metainfo_path.exists(), "metainfo.yaml が生成されていない"
@@ -196,7 +198,7 @@ class TestInferenceUseCaseRun:
     def test_run_skips_submission_when_test_file_missing(
         self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
     ) -> None:
-        """test_path が指定されていてもファイルが存在しない場合は submission.csv をスキップすること。
+        """test_path が指定されていてもファイル不在の場合は submission.csv をスキップすること。
 
         なぜこのテストが必要か:
           - パス設定ミスや前処理が未実行の場合に usecase が crash すると
@@ -211,7 +213,9 @@ class TestInferenceUseCaseRun:
         usecase.run(cfg)
 
         submission_path = Path(cfg.output_dir) / "submission.csv"
-        assert not submission_path.exists(), "存在しない test_path でも submission.csv が生成されてしまった"
+        assert not submission_path.exists(), (
+            "存在しない test_path でも submission.csv が生成されてしまった"
+        )
 
         metainfo_path = Path(cfg.output_dir) / "metainfo.yaml"
         assert metainfo_path.exists(), "metainfo.yaml が生成されていない"
