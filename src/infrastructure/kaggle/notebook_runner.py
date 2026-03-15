@@ -137,14 +137,13 @@ class NotebookPipelineRunner:
         input_root: Path,
         output_root: Path,
     ) -> dict[str, Any]:
-        """step_dict 内の PLACEHOLDER_* を Kaggle パスに差し替えて返す。
+        """step_dict の各パスを Kaggle 環境パスに上書きして返す。
 
-        preprocess step の inputs[].path と output_dir、
-        train step の output_dir、
-        inference step の test_path と output_dir を解決する。
-
-        実際のパスは PLACEHOLDER_* 文字列ではなく、recipe yaml で設定されたパスを使う。
-        Kaggle 環境では input_root / output_root で解決する。
+        recipe yaml のパスは無視し、KaggleEnvironment で解決したパスで上書きする。
+        - preprocess: inputs[].path → input_root/{filename}、output_dir → output_root/processed
+        - train:      output_dir → output_root/models
+        - inference:  test_path → output_root/processed/{job_id}/latest/test_out/test.parquet
+                     output_dir → output_root/inference
         """
         step_usecase = step_dict.get("usecase", "")
         patched = dict(step_dict)
@@ -172,23 +171,15 @@ class NotebookPipelineRunner:
             patched["output_dir"] = str(output_root / "models")
 
         elif step_usecase == "inference":
-            # test.parquet のパスを解決する
-            # recipe yaml で明示されていない場合は汎用パスを使う
-            original_test_path = str(step_dict.get("test_path", ""))
-            if original_test_path and not original_test_path.startswith("PLACEHOLDER"):
-                # recipe に明示的なパスがある場合はそのまま使う
-                pass
-            else:
-                # デフォルト: processed/{competition_slug}_preprocess/latest/test_out/test.parquet
-                preprocess_job_id = f"{self._competition_slug}_preprocess"
-                patched["test_path"] = str(
-                    output_root
-                    / "processed"
-                    / preprocess_job_id
-                    / "latest"
-                    / "test_out"
-                    / "test.parquet"
-                )
+            preprocess_job_id = f"{self._competition_slug}_preprocess"
+            patched["test_path"] = str(
+                output_root
+                / "processed"
+                / preprocess_job_id
+                / "latest"
+                / "test_out"
+                / "test.parquet"
+            )
             patched["output_dir"] = str(output_root / "inference")
 
         return patched
