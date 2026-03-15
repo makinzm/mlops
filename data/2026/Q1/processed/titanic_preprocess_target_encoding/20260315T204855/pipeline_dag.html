@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pipeline DAG</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad: true});</script>
+</head>
+<body>
+<h1>Pipeline DAG</h1>
+<div class="mermaid">
+graph LR
+  raw_trainraw_train([raw_train<br/>input])
+  raw_testraw_test([raw_test<br/>input])
+  train_selectedtrain_selected[train_selected<br/>polars:select_columns]
+  train_filled_agetrain_filled_age[train_filled_age<br/>sklearn:fill_na]
+  train_filled_embarkedtrain_filled_embarked[train_filled_embarked<br/>sklearn:fill_na]
+  train_familytrain_family[train_family<br/>polars:arithmetic]
+  train_target_encodedtrain_target_encoded[train_target_encoded<br/>sklearn:target_encode]
+  test_selectedtest_selected[test_selected<br/>polars:select_columns]
+  test_filled_agetest_filled_age[test_filled_age<br/>sklearn:fill_na]
+  test_filled_embarkedtest_filled_embarked[test_filled_embarked<br/>sklearn:fill_na]
+  test_familytest_family[test_family<br/>polars:arithmetic]
+  test_target_encodedtest_target_encoded[test_target_encoded<br/>from_encoder:]
+  train_outtrain_out[[train_out<br/>OUTPUT]]
+  test_outtest_out[[test_out<br/>OUTPUT]]
+  raw_train --> train_selected
+  train_selected --> train_filled_age
+  train_filled_age --> train_filled_embarked
+  train_filled_embarked --> train_family
+  train_family --> train_target_encoded
+  raw_test --> test_selected
+  test_selected --> test_filled_age
+  test_filled_age --> test_filled_embarked
+  test_filled_embarked --> test_family
+  test_family --> test_target_encoded
+  train_target_encoded --> train_out
+  test_target_encoded --> test_out
+</div>
+</body>
+</html>
