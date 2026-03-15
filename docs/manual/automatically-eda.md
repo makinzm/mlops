@@ -19,7 +19,7 @@
 
 ```bash
 # Titanic データセットの EDA を実行（デフォルト設定）
-uv run python -m src usecase=automatically_eda competition=titanic
+uv run python -m src +competition/titanic/eda=eda
 ```
 
 ---
@@ -74,19 +74,19 @@ analyze:
 
 ```bash
 # 特定のファイルを直接指定
-uv run python -m src usecase=automatically_eda competition=titanic \
-  "competition.input_paths=[data/2026/Q1/raw/train.csv]"
+uv run python -m src +competition/titanic/eda=eda \
+  "input_paths=[data/2026/Q1/raw/titanic/train.csv]"
 
 # 複数ファイルを指定
-uv run python -m src usecase=automatically_eda competition=titanic \
-  "competition.input_paths=[data/2026/Q1/raw/train.csv,data/2026/Q1/raw/test.csv]"
+uv run python -m src +competition/titanic/eda=eda \
+  "input_paths=[data/2026/Q1/raw/titanic/train.csv,data/2026/Q1/raw/titanic/test.csv]"
 ```
 
 ### 出力フォーマットの変更（pandas のみ）
 
 ```bash
 # statistics を CSV で出力（デフォルトは parquet）
-uv run python -m src usecase=automatically_eda competition=titanic \
+uv run python -m src +competition/titanic/eda=eda \
   "analyze.pandas.output_format=csv"
 ```
 
@@ -148,18 +148,35 @@ analyze:
 
 ## 新しいコンペティションを追加する方法
 
-1. `conf/competition/<name>.yaml` を作成:
+1. `conf/competition/<name>/competition.yaml` を作成:
 
 ```yaml
 name: "house-prices"
-input_paths:
-  - "data/2026/Q1/raw"
 ```
 
-2. 実行:
+2. `conf/competition/<name>/eda.yaml` を作成:
+
+```yaml
+# @package _global_
+usecase: "automatically_eda"
+seed: 42
+report_dir: "competition"
+max_plot_cols: 20
+input_paths:
+  - "data/2026/Q1/raw/house-prices"
+analyze:
+  pandas:
+    output_format: parquet
+    steps:
+      - type: basic_stats
+      - type: distributions
+      - type: missing_values
+```
+
+3. 実行:
 
 ```bash
-uv run python -m src usecase=automatically_eda competition=house-prices
+uv run python -m src +competition/house-prices/eda=eda
 ```
 
 ---

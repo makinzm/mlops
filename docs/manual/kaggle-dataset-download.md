@@ -6,30 +6,27 @@
 uv run python -m src usecase=download_dataset
 ```
 
-デフォルトで Titanic データを `data/2026/Q1/raw/` にダウンロードする。
+デフォルトで Titanic データを `data/2026/Q1/raw/titanic/` にダウンロードする。
 
 ---
 
 ## 設定ファイル
 
-| ファイル | 役割 |
-|---------|------|
-| `conf/usecase/download_dataset.yaml` | **どこに保存するか**（`output_dir`）と動作オプション |
-| `conf/downloader/kaggle.yaml` | **何をダウンロードするか**（コンペ名・データセット名） |
+`conf/usecase/download_dataset.yaml` に全ての設定が集約されている。
 
 ```yaml
 # conf/usecase/download_dataset.yaml
-output_dir: "data/2026/Q1/raw"  # ダウンロード先
+output_dir: "data/2026/Q1/raw/${competition.name}"  # ダウンロード先（competition.name を補間）
 unzip: true
 force: true
+source: kaggle
+kaggle:
+  mode: "competition"             # competition / dataset
+  competition: ${competition.name}  # conf/competition/{name}/competition.yaml の name を参照
+  dataset: null                   # mode=dataset のとき: owner/dataset-name
 ```
 
-```yaml
-# conf/downloader/kaggle.yaml
-mode: "competition"             # competition / dataset
-competition: "titanic"          # コンペ名
-dataset: null                   # mode=dataset のとき: owner/dataset-name
-```
+コンペは `conf/competition/titanic/competition.yaml` の `name` を参照する。
 
 ---
 
