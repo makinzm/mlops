@@ -53,7 +53,6 @@ _INFERENCE_OUTPUT_GITIGNORE = """\
 !.gitignore
 !*.yaml
 !*.md
-!*.csv
 !*/
 """
 
