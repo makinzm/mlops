@@ -180,6 +180,61 @@ class TestGitignoreCreation:
         assert (tmp_path / "processed" / ".gitignore").exists()
 
 
+class TestReadmeGeneration:
+    """
+    なぜこのテストが必要か:
+    - preprocess 実行後に何が生成されたか出力ディレクトリを見ても一目でわからない。
+    - README.md にツリー構造を出力することで、次のステップ（training）で
+      どのファイルを入力として使えばよいかが一目でわかる。
+    - *.md は .gitignore の保持対象のため git に残り、レビューでも確認できる。
+    """
+
+    @pytest.fixture()
+    def base_cfg(self, train_csv: Path, tmp_path: Path) -> dict[str, Any]:
+        return {
+            "usecase": "preprocess",
+            "job_id": "readme_test",
+            "inputs": [{"id": "raw_train", "path": str(train_csv), "format": "csv"}],
+            "output_dir": str(tmp_path / "processed"),
+            "executor": {"type": "local"},
+            "cv": {"strategy": "none", "n_splits": 5, "time_col": None, "target_col": None},
+            "steps": [
+                {
+                    "id": "out",
+                    "output": {"columns": ["id", "col1"], "format": "parquet", "cv": False},
+                }
+            ],
+            "targets": ["out"],
+            "seed": 42,
+        }
+
+    def test_readme_created_in_job_dir(self, base_cfg: dict[str, Any], tmp_path: Path) -> None:
+        """execute() で job/timestamp ディレクトリに README.md が生成される。"""
+        cfg = OmegaConf.create(base_cfg)
+        result = PreprocessUseCase(cfg).execute()
+        assert (result.output_path / "README.md").exists()
+
+    def test_readme_contains_tree(self, base_cfg: dict[str, Any], tmp_path: Path) -> None:
+        """README.md に出力ファイルのツリー構造が含まれる。
+
+        training など次のステップで入力ファイルを探すとき一目でわかるようにするため。
+        """
+        cfg = OmegaConf.create(base_cfg)
+        result = PreprocessUseCase(cfg).execute()
+        content = (result.output_path / "README.md").read_text()
+        # 必ず生成される成果物が列挙されていること
+        assert "preprocess_result.yaml" in content
+        assert "pipeline_dag.html" in content
+
+    def test_readme_contains_job_metadata(self, base_cfg: dict[str, Any], tmp_path: Path) -> None:
+        """README.md に job_id と commit_hash が含まれる。"""
+        cfg = OmegaConf.create(base_cfg)
+        result = PreprocessUseCase(cfg).execute()
+        content = (result.output_path / "README.md").read_text()
+        assert "readme_test" in content  # job_id
+        assert result.commit_hash in content
+
+
 class TestMetadataInOutputDir:
     """
     なぜこのテストが必要か:
