@@ -12,9 +12,7 @@ Phase 3: TrainUseCase の単体テスト。
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,7 +20,6 @@ from omegaconf import DictConfig, OmegaConf
 
 from src.domain.model.trainer import FoldResult, TrainResult
 from src.usecase.training.train import TrainUseCase
-
 
 # ──────────────────────────────────────────────────────────────
 # ヘルパー
