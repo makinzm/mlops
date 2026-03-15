@@ -215,6 +215,29 @@ def main(cfg: DictConfig) -> None:
         ).run(pipeline_cfg)
         logger.info(f"パイプライン完了[{pipeline_cfg.get('job_id', '?')}]")
 
+    elif usecase_name == "push_notebook":
+        from src.usecase.kaggle_notebook.push_notebook import PushNotebookUseCase
+
+        try:
+            from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
+                KaggleApi as KaggleApiExtended,
+            )
+        except SystemExit as e:
+            raise RuntimeError(
+                "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+            ) from e
+
+        kaggle_api = KaggleApiExtended()
+        try:
+            kaggle_api.authenticate()
+        except SystemExit as e:
+            raise RuntimeError(
+                "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+            ) from e
+
+        result = PushNotebookUseCase(cfg=cfg, kaggle_api=kaggle_api).execute()
+        logger.info(f"Notebook push 完了: notebook={result.notebook_path}")
+
     else:
         supported = [
             "download_dataset",
@@ -223,6 +246,7 @@ def main(cfg: DictConfig) -> None:
             "train",
             "inference",
             "pipeline",
+            "push_notebook",
         ]
         raise ValueError(f"Unknown usecase: {usecase_name!r}. Supported: {supported}")
 

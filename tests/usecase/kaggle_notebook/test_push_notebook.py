@@ -69,7 +69,9 @@ class TestNotebookGeneration:
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         for i, cell in enumerate(notebook["cells"]):
-            assert cell["cell_type"] == "code", f"セル{i + 1} が code タイプでない: {cell['cell_type']}"
+            assert cell["cell_type"] == "code", (
+                f"セル{i + 1} が code タイプでない: {cell['cell_type']}"
+            )
 
     def test_generated_notebook_cell1_contains_pip_install(self, tmp_path: Path) -> None:
         """セル1に pip install が含まれること（環境セットアップセル）。"""

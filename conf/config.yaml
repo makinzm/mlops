@@ -6,3 +6,8 @@ defaults:
 # recipe= で競技固有設定を選択するための共通パラメータ
 # 例: uv run python -m src usecase=preprocess recipe=base
 recipe: null
+
+# push_notebook usecase 用パラメータ（usecase=push_notebook 時に上書きされる）
+# caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
+notebook: null
+kaggle_username: null

@@ -21,7 +21,9 @@ _ENV_KEY = "KAGGLE_KERNEL_RUN_TYPE"
 class TestIsKaggleNotebook:
     """is_kaggle_notebook() の判定ロジックを検証する。"""
 
-    def test_is_kaggle_notebook_false_when_env_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_is_kaggle_notebook_false_when_env_absent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """KAGGLE_KERNEL_RUN_TYPE が未設定のときローカル環境と判定する。"""
         monkeypatch.delenv(_ENV_KEY, raising=False)
         assert KaggleEnvironment.is_kaggle_notebook() is False
