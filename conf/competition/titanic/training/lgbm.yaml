@@ -1,0 +1,63 @@
+# @package _global_
+usecase: train
+job_id: titanic_lgbm
+trainer:
+  type: lgbm
+
+# ── 入力 ──────────────────────────────────────────
+# "latest" を指定すると output_dir/job_id/ 配下の最新タイムスタンプを自動選択
+preprocess_output_dir: data/2026/Q1/processed/titanic_preprocess/latest/train_out
+target_col: Survived
+feature_cols:
+  - Pclass
+  - Age
+  - SibSp
+  - Parch
+  - Fare
+  - FamilySize
+categorical_feature:
+  - Sex
+  - Embarked
+
+# ── サンプル重み ─────────────────────────────────
+# null: 重みなし / カラム名: そのカラムをサンプル重みに使用
+sample_weight_col: null
+
+# ── 損失 / 評価 ──────────────────────────────────
+loss:
+  objective: binary
+  metric: auc
+  is_unbalance: false        # true: lgbm が自動でクラス重みを調整
+  class_weight: null         # {0: 1.0, 1: 3.0} のように手動指定
+
+# ── LightGBM ハイパーパラメータ ──────────────────
+lgbm:
+  num_leaves: 31
+  max_depth: -1
+  learning_rate: 0.05
+  n_estimators: 1000
+  feature_fraction: 0.9
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  min_child_samples: 20
+  reg_alpha: 0.0
+  reg_lambda: 0.0
+  verbose: -1
+  early_stopping_rounds: 50
+
+# ── モデルレポート ────────────────────────────────
+report:
+  n_error_samples: 50      # 当たり外れサンプリング: 各カテゴリ N 件
+
+# ── 学習環境 ──────────────────────────────────────
+environment:
+  device: cpu
+  n_jobs: -1
+
+# ── ログ ─────────────────────────────────────────
+logging:
+  eval_freq: 100
+  save_importance: true
+
+output_dir: models/${competition.name}
+seed: 42

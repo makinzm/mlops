@@ -20,6 +20,8 @@
 - [ ] 全てのコード特に、リモートへ反映されるコードは当該GitのCommitHashが記録されていること。
 - [ ] 時系列やIDをベースとする前処理や学習を行う場合は、データリークが起きないように、適切な方法でデータを分割していること。
 - [ ] 全ての変数はHydraのConfigで管理されていること。
+- [ ] 全ての output_dir には実行時に per-directory `.gitignore` を動的生成すること（ルート `.gitignore` への追記禁止）。保持対象は `*.yaml`, `*.md`, `.gitkeep`, `.gitignore`, `*/` のみ。
+- [ ] 全ての output_dir には `README.md` を生成し、出力ファイルのツリー構造を含めること。
 
 # TODO
 
