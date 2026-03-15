@@ -29,7 +29,7 @@ def _make_cfg(
     return OmegaConf.create(
         {
             "seed": 42,
-            "report_dir": str(tmp_path / "competition"),
+            "output_dir": str(tmp_path / "reports"),
             "max_plot_cols": max_plot_cols,
             "input_paths": [str(csv_path)],
         }
@@ -293,7 +293,7 @@ class TestInputPaths:
         cfg = OmegaConf.create(
             {
                 "seed": 42,
-                "report_dir": str(tmp_path / "competition"),
+                "output_dir": str(tmp_path / "reports"),
                 "max_plot_cols": 20,
                 "input_paths": [str(raw_dir)],
             }
@@ -330,3 +330,85 @@ class TestErrorHandling:
         cfg = _make_cfg(tmp_path, titanic_csv)
         with pytest.raises(ValueError, match="Unknown analysis type"):
             _make_analyzer(cfg, [{"type": "nonexistent_step"}]).analyze()
+
+
+# ---------------------------------------------------------------------------
+# input / output 分離チェック
+# （再現性保証: 入力と出力が同じディレクトリだと生成ファイルが入力を汚染する）
+# ---------------------------------------------------------------------------
+
+
+class TestInputOutputSeparation:
+    def test_raises_when_output_dir_is_same_as_input_path(
+        self, tmp_path: Path
+    ) -> None:
+        """output_dir と input_path が同一ディレクトリのとき ValueError が発生すること。
+
+        EDA の出力ファイルが入力 CSV と同じディレクトリに書き込まれると、
+        次回実行時に生成済みファイルが input として混入し再現性が壊れる。
+        """
+        shared = tmp_path / "data"
+        shared.mkdir()
+        csv_file = shared / "train.csv"
+        csv_file.write_text("a\n1\n")
+        cfg = OmegaConf.create(
+            {
+                "seed": 42,
+                "output_dir": str(shared),
+                "max_plot_cols": 20,
+                "input_paths": [str(shared)],
+            }
+        )
+        with pytest.raises(ValueError, match="output_dir"):
+            _make_analyzer(cfg).analyze()
+
+    def test_raises_when_input_path_is_inside_output_dir(
+        self, tmp_path: Path
+    ) -> None:
+        """input_path が output_dir の配下にある場合も ValueError が発生すること。
+
+        出力先がすでに入力を含んでいる状況では追記ごとに入力が変化してしまう。
+        """
+        out_dir = tmp_path / "reports"
+        in_dir = out_dir / "raw"
+        in_dir.mkdir(parents=True)
+        csv_file = in_dir / "train.csv"
+        csv_file.write_text("a\n1\n")
+        cfg = OmegaConf.create(
+            {
+                "seed": 42,
+                "output_dir": str(out_dir),
+                "max_plot_cols": 20,
+                "input_paths": [str(in_dir)],
+            }
+        )
+        with pytest.raises(ValueError, match="output_dir"):
+            _make_analyzer(cfg).analyze()
+
+    def test_raises_when_output_dir_is_inside_input_path(
+        self, tmp_path: Path
+    ) -> None:
+        """output_dir が input_path 配下にある場合も ValueError が発生すること。"""
+        in_dir = tmp_path / "data"
+        out_dir = in_dir / "reports"
+        in_dir.mkdir()
+        csv_file = in_dir / "train.csv"
+        csv_file.write_text("a\n1\n")
+        cfg = OmegaConf.create(
+            {
+                "seed": 42,
+                "output_dir": str(out_dir),
+                "max_plot_cols": 20,
+                "input_paths": [str(in_dir)],
+            }
+        )
+        with pytest.raises(ValueError, match="output_dir"):
+            _make_analyzer(cfg).analyze()
+
+    def test_passes_when_input_and_output_are_separate(
+        self, titanic_csv: Path, tmp_path: Path
+    ) -> None:
+        """input と output が完全に別ディレクトリの場合は正常に完了すること。"""
+        cfg = _make_cfg(tmp_path, titanic_csv)
+        result = _make_analyzer(cfg).analyze()
+        assert result.report_dir.exists()
