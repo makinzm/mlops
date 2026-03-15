@@ -23,6 +23,7 @@ class NotebookRenderer:
         self._env = Environment(
             loader=FileSystemLoader(str(templates_dir)),
             undefined=StrictUndefined,
+            autoescape=False,  # ipynb は JSON のため HTML エスケープ不要
         )
 
     def render(self, output_path: Path, competition: str, src_dataset: str) -> Path:
