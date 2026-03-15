@@ -9,6 +9,12 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "actionlint-py"
+version = "1.7.11.24"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6e/c7/9c673ac323c200d2e45579c15b78ddcdc140b1ad4918addcb0559ef7c90a/actionlint_py-1.7.11.24.tar.gz", hash = "sha256:5f6dffa97101d87f034e935c08eca6158cd46ed5b0d60c2fe65dcab3f6d4959e", size = 12055, upload-time = "2026-02-15T16:52:55.011Z" }
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1956,6 +1962,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "actionlint-py" },
     { name = "mille" },
     { name = "mypy" },
     { name = "pandas-stubs" },
@@ -1993,6 +2000,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "actionlint-py", specifier = ">=1.7.11.24" },
     { name = "mille", specifier = ">=0.0.12" },
     { name = "mypy", specifier = ">=1.0" },
     { name = "pandas-stubs", specifier = ">=3.0.0.260204" },

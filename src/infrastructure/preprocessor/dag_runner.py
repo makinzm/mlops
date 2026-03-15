@@ -14,9 +14,8 @@ DAG 実行エンジン。
 
 from pathlib import Path
 
-import polars as pl
-
 from src.domain.data.preprocessor import Node, StepResult
+from src.domain.data.table import DataFrame
 from src.infrastructure.preprocessor.registry import run_step
 
 
@@ -26,7 +25,7 @@ class DAGRunner:
     def __init__(
         self,
         nodes: list[Node],
-        input_dfs: dict[str, pl.DataFrame],
+        input_dfs: dict[str, DataFrame],
         output_dir: Path,
         cv_splits: list[tuple[list[int], list[int]]] | None,
     ) -> None:
@@ -38,7 +37,7 @@ class DAGRunner:
         # id → Node のインデックス
         self._node_map: dict[str, Node] = {n.id: n for n in nodes}
 
-    def run(self, targets: list[str]) -> dict[str, pl.DataFrame]:
+    def run(self, targets: list[str]) -> dict[str, DataFrame]:
         """targets を末尾として必要な Node だけを実行し、結果を返す。
 
         処理順序:
@@ -61,7 +60,7 @@ class DAGRunner:
         execution_order = self._topological_sort(required)
 
         # Input Nodes を初期化
-        cache: dict[str, pl.DataFrame] = dict(self._input_dfs)
+        cache: dict[str, DataFrame] = dict(self._input_dfs)
 
         # 変換ノードを順次実行
         for node_id in execution_order:
@@ -82,9 +81,9 @@ class DAGRunner:
             # Resolver 名と kwargs を node の resolver_cfg から取り出す
             resolver_name, method, kwargs = self._parse_resolver_cfg(node, cache)
 
-            # ステップ実行
+            # ステップ実行（infrastructure 層で pl.DataFrame にキャスト）
             result_df, step_result = run_step(
-                df=input_df,
+                df=input_df,  # type: ignore[arg-type]
                 resolver_name=resolver_name,
                 method=method,
                 kwargs=kwargs,
@@ -181,7 +180,7 @@ class DAGRunner:
     def _parse_resolver_cfg(
         self,
         node: Node,
-        cache: dict[str, pl.DataFrame],
+        cache: dict[str, DataFrame],
     ) -> tuple[str, str, dict[str, object]]:
         """Node の resolver_cfg からResolver名・Method・kwargs を取り出す。
 

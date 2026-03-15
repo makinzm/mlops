@@ -34,14 +34,21 @@ _HTML_TEMPLATE = """\
 class PipelineVisualizer:
     """Node リストから Mermaid DAG HTML を生成する。"""
 
-    def __init__(self, nodes: list[Node]) -> None:
-        self._nodes = nodes
+    def save_html(self, nodes: list[Node], path: Path) -> None:
+        """pipeline_dag.html を生成して保存する。"""
+        mermaid_src = self._to_mermaid(nodes)
+        html = _HTML_TEMPLATE.format(
+            mermaid_script=_MERMAID_SCRIPT,
+            mermaid_src=mermaid_src,
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(html, encoding="utf-8")
 
-    def to_mermaid(self) -> str:
+    def _to_mermaid(self, nodes: list[Node]) -> str:
         """Mermaid graph LR ソースを生成する。"""
         lines = ["graph LR"]
 
-        for node in self._nodes:
+        for node in nodes:
             if node.is_input:
                 label = f"{node.id}([{node.id}<br/>input])"
             elif "output" in node.resolver_cfg:
@@ -54,18 +61,8 @@ class PipelineVisualizer:
                 label = f"{node.id}[{node.id}<br/>{resolver}:{method}]"
             lines.append(f"  {node.id}{label}")
 
-        for node in self._nodes:
+        for node in nodes:
             for dep in node.from_nodes:
                 lines.append(f"  {dep} --> {node.id}")
 
         return "\n".join(lines)
-
-    def save_html(self, path: Path) -> None:
-        """pipeline_dag.html を生成して保存する。"""
-        mermaid_src = self.to_mermaid()
-        html = _HTML_TEMPLATE.format(
-            mermaid_script=_MERMAID_SCRIPT,
-            mermaid_src=mermaid_src,
-        )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(html, encoding="utf-8")

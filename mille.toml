@@ -32,6 +32,7 @@ external_allow = ["datetime", "omegaconf", "pathlib", "typing", "yaml"]
 [[layers]]
 name = "tests_domain"
 paths = ["tests/domain/**"]
+allow = ["src_domain"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["pathlib", "pytest", "src", "typing"]
@@ -39,6 +40,7 @@ external_allow = ["pathlib", "pytest", "src", "typing"]
 [[layers]]
 name = "tests_infrastructure"
 paths = ["tests/infrastructure/**"]
+allow = ["src_domain", "src_infrastructure"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["math", "numpy", "omegaconf", "pandas", "pathlib", "polars", "pytest", "src", "typing", "unittest", "yaml", "zipfile"]
@@ -46,6 +48,7 @@ external_allow = ["math", "numpy", "omegaconf", "pandas", "pathlib", "polars", "
 [[layers]]
 name = "tests_usecase"
 paths = ["tests/usecase/**"]
+allow = ["src_domain", "src_usecase", "src_infrastructure"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["omegaconf", "pathlib", "polars", "pytest", "src", "typing", "unittest", "yaml"]
