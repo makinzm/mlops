@@ -9,6 +9,14 @@ InferenceUseCase の単体テスト。
     インフラから独立してテストできる。
   - submission.csv の PassengerId 列と予測値列の存在を確認することで、
     Kaggle 提出フォーマットへの準拠を保証できる。
+
+出力ディレクトリ構造（timestamp 付き）:
+  {output_dir}/{job_id}/
+    ├── .gitignore
+    └── {YYYYMMDDTHHMMSS}/
+        ├── submission.csv
+        ├── metainfo.yaml
+        └── README.md
 """
 
 from __future__ import annotations
@@ -70,6 +78,17 @@ def _make_cfg(
     return OmegaConf.create(raw)
 
 
+def _find_ts_dir(cfg: DictConfig) -> Path:
+    """output_dir/{job_id}/{timestamp}/ を返す。テスト用ヘルパー。"""
+    job_dir = Path(cfg.output_dir) / str(cfg.job_id)
+    ts_dirs = sorted(
+        [d for d in job_dir.iterdir() if d.is_dir()],
+        key=lambda p: p.name,
+    )
+    assert ts_dirs, f"timestamp ディレクトリが見つからない: {job_dir}"
+    return ts_dirs[-1]
+
+
 @pytest.fixture
 def mock_inferencer() -> MagicMock:
     """Inferencer Protocol のモック。predict_folds は固定の ndarray を返す。"""
@@ -96,10 +115,10 @@ class TestInferenceUseCaseRun:
         _make_test_parquet(Path(cfg.test_path))
 
         usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
-        usecase.run(cfg)
+        result = usecase.run(cfg)
 
-        submission_path = Path(cfg.output_dir) / "submission.csv"
-        assert submission_path.exists(), f"submission.csv が生成されていない: {submission_path}"
+        assert result is not None
+        assert result.exists(), f"submission.csv が生成されていない: {result}"
 
     def test_run_submission_has_correct_columns(
         self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
@@ -109,9 +128,10 @@ class TestInferenceUseCaseRun:
         _make_test_parquet(Path(cfg.test_path))
 
         usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
-        usecase.run(cfg)
+        result = usecase.run(cfg)
 
-        submission = pl.read_csv(Path(cfg.output_dir) / "submission.csv")
+        assert result is not None
+        submission = pl.read_csv(result)
         assert "PassengerId" in submission.columns
         assert "Survived" in submission.columns
         assert len(submission) == 5  # _make_test_parquet の n=5
@@ -141,9 +161,10 @@ class TestInferenceUseCaseRun:
         _make_test_parquet(Path(cfg.test_path))
 
         usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
-        usecase.run(cfg)
+        result = usecase.run(cfg)
 
-        metainfo_path = Path(cfg.output_dir) / "metainfo.yaml"
+        assert result is not None
+        metainfo_path = result.parent / "metainfo.yaml"
         assert metainfo_path.exists(), f"metainfo.yaml が生成されていない: {metainfo_path}"
 
         with open(metainfo_path) as f:
@@ -154,14 +175,15 @@ class TestInferenceUseCaseRun:
     def test_run_generates_gitignore(
         self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
     ) -> None:
-        """per-directory .gitignore が output_dir に生成されること。"""
+        """per-directory .gitignore が {output_dir}/{job_id}/ に生成されること。"""
         cfg = _make_cfg(tmp_path)
         _make_test_parquet(Path(cfg.test_path))
 
         usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
         usecase.run(cfg)
 
-        gitignore_path = Path(cfg.output_dir) / ".gitignore"
+        # .gitignore は job_dir レベルに配置される
+        gitignore_path = Path(cfg.output_dir) / str(cfg.job_id) / ".gitignore"
         assert gitignore_path.exists(), f".gitignore が生成されていない: {gitignore_path}"
 
     def test_run_skips_submission_when_no_test_path(
@@ -182,18 +204,16 @@ class TestInferenceUseCaseRun:
         cfg = OmegaConf.create(raw)
 
         usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
-        usecase.run(cfg)
+        result = usecase.run(cfg)
 
-        submission_path = Path(cfg.output_dir) / "submission.csv"
-        assert not submission_path.exists(), (
+        assert result is None, "test_path=None でも run() が Path を返してしまった"
+
+        ts_dir = _find_ts_dir(cfg)
+        assert not (ts_dir / "submission.csv").exists(), (
             "test_path=None でも submission.csv が生成されてしまった"
         )
-
-        metainfo_path = Path(cfg.output_dir) / "metainfo.yaml"
-        assert metainfo_path.exists(), "metainfo.yaml が生成されていない"
-
-        readme_path = Path(cfg.output_dir) / "README.md"
-        assert readme_path.exists(), "README.md が生成されていない"
+        assert (ts_dir / "metainfo.yaml").exists(), "metainfo.yaml が生成されていない"
+        assert (ts_dir / "README.md").exists(), "README.md が生成されていない"
 
     def test_run_skips_submission_when_test_file_missing(
         self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
@@ -210,18 +230,16 @@ class TestInferenceUseCaseRun:
         # test_path は設定されているが、ファイルを作成しない
 
         usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
-        usecase.run(cfg)
+        result = usecase.run(cfg)
 
-        submission_path = Path(cfg.output_dir) / "submission.csv"
-        assert not submission_path.exists(), (
+        assert result is None, "存在しない test_path でも run() が Path を返してしまった"
+
+        ts_dir = _find_ts_dir(cfg)
+        assert not (ts_dir / "submission.csv").exists(), (
             "存在しない test_path でも submission.csv が生成されてしまった"
         )
-
-        metainfo_path = Path(cfg.output_dir) / "metainfo.yaml"
-        assert metainfo_path.exists(), "metainfo.yaml が生成されていない"
-
-        readme_path = Path(cfg.output_dir) / "README.md"
-        assert readme_path.exists(), "README.md が生成されていない"
+        assert (ts_dir / "metainfo.yaml").exists(), "metainfo.yaml が生成されていない"
+        assert (ts_dir / "README.md").exists(), "README.md が生成されていない"
 
 
 class TestInferenceUseCaseTimestamp:
@@ -237,10 +255,7 @@ class TestInferenceUseCaseTimestamp:
     def test_run_output_dir_has_timestamp_subdir(
         self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
     ) -> None:
-        """output_dir/{job_id}/{timestamp}/ サブディレクトリが生成されること。
-
-        現行実装は {output_dir}/ 直下にファイルを生成するため、このテストは FAIL する。
-        """
+        """output_dir/{job_id}/{timestamp}/ サブディレクトリが生成されること。"""
         cfg = _make_cfg(tmp_path)
         _make_test_parquet(Path(cfg.test_path))
 

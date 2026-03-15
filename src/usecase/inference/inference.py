@@ -9,22 +9,25 @@ Inferencer Protocol と GitRepository Protocol を受け取り、
 を担う。
 
 出力ディレクトリ構造:
-  {output_dir}/
+  {output_dir}/{job_id}/
     ├── .gitignore
-    ├── submission.csv     # test_path が有効な場合のみ生成
-    ├── metainfo.yaml
-    └── README.md
+    └── {YYYYMMDDTHHMMSS}/
+        ├── submission.csv     # test_path が有効な場合のみ生成
+        ├── metainfo.yaml
+        └── README.md
 
 test_path が null またはファイルが存在しない場合は submission.csv の生成をスキップし、
 metainfo.yaml と README.md のみ生成する（test データなしコンペでも実行可能）。
 
 全パスは Hydra Config で管理する。
-per-directory .gitignore は動的生成する（ルート .gitignore への追記禁止）。
+per-directory .gitignore は {output_dir}/{job_id}/ に動的生成する。
+（ルート .gitignore への追記禁止）
 """
 
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -87,15 +90,23 @@ class InferenceUseCase:
             cfg: Hydra DictConfig（test_path, feature_cols, models, output_dir 等を含む）
 
         Returns:
-            submission.csv のパス。test_path が null またはファイル不在の場合は None。
+            submission.csv のパス（{output_dir}/{job_id}/{timestamp}/submission.csv）。
+            test_path が null またはファイル不在の場合は None。
         """
-        output_dir = Path(str(cfg.output_dir))
-        output_dir.mkdir(parents=True, exist_ok=True)
+        job_id: str = str(cfg.get("job_id", "inference"))
+        timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
 
-        # per-directory .gitignore 生成
-        gitignore_path = output_dir / ".gitignore"
+        # {output_dir}/{job_id}/ に .gitignore を配置（モデル出力と同じ方式）
+        job_output_dir = Path(str(cfg.output_dir)) / job_id
+        job_output_dir.mkdir(parents=True, exist_ok=True)
+
+        gitignore_path = job_output_dir / ".gitignore"
         if not gitignore_path.exists():
             gitignore_path.write_text(_INFERENCE_OUTPUT_GITIGNORE)
+
+        # タイムスタンプ付きディレクトリに全ファイルを配置
+        ts_dir = job_output_dir / timestamp
+        ts_dir.mkdir(parents=True, exist_ok=True)
 
         # test_path の有効性チェック
         test_path_raw = cfg.get("test_path")
@@ -139,23 +150,24 @@ class InferenceUseCase:
                     "Survived": final_pred.tolist(),
                 }
             )
-            submission_path = output_dir / "submission.csv"
+            submission_path = ts_dir / "submission.csv"
             submission.write_csv(str(submission_path))
 
-        # metainfo.yaml に commit_hash を記録
+        # metainfo.yaml に commit_hash / timestamp を記録
         commit_hash = self._git_repo.get_commit_hash()
         metainfo: dict[str, Any] = {
-            "job_id": str(cfg.get("job_id", "inference")),
+            "job_id": job_id,
+            "timestamp": timestamp,
             "commit_hash": commit_hash,
             "ensemble": str(cfg.get("ensemble", "mean")),
             "n_models": len(predictions),
             "n_test": n_test,
         }
-        metainfo_path = output_dir / "metainfo.yaml"
+        metainfo_path = ts_dir / "metainfo.yaml"
         metainfo_path.write_text(yaml.dump(metainfo, allow_unicode=True, sort_keys=False))
 
         # README.md 生成
-        self._write_readme(output_dir, metainfo)
+        self._write_readme(ts_dir, metainfo)
 
         return submission_path
 
@@ -175,10 +187,11 @@ class InferenceUseCase:
         return resolved
 
     @staticmethod
-    def _write_readme(output_dir: Path, metainfo: dict[str, Any]) -> None:
+    def _write_readme(ts_dir: Path, metainfo: dict[str, Any]) -> None:
         lines: list[str] = [
             f"# Inference Output — `{metainfo['job_id']}`",
             "",
+            f"- timestamp: `{metainfo['timestamp']}`",
             f"- commit: `{metainfo['commit_hash']}`",
             f"- ensemble: {metainfo['ensemble']}",
             f"- n_models: {metainfo['n_models']}",
@@ -187,8 +200,8 @@ class InferenceUseCase:
             "## Output Files",
             "",
             "```",
-            output_dir.name + "/",
+            ts_dir.name + "/",
         ]
-        lines += build_tree_lines(output_dir)
+        lines += build_tree_lines(ts_dir)
         lines.append("```")
-        (output_dir / "README.md").write_text("\n".join(lines) + "\n")
+        (ts_dir / "README.md").write_text("\n".join(lines) + "\n")

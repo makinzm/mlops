@@ -46,14 +46,17 @@ uv run python -m src usecase=inference recipe=titanic_ensemble
 
 ## 出力先
 
-`data/2026/Q1/inference/titanic/titanic_inference/` 以下に以下のファイルが生成される：
+`data/2026/Q1/inference/titanic/` 以下に `{job_id}/{YYYYMMDDTHHMMSS}/` 形式で生成される。
+実行するたびに新しいタイムスタンプディレクトリが作られるため、過去の推論結果は上書きされない。
 
 ```
-titanic_inference/
-├── .gitignore         # 自動生成（*.csv, *.yaml, *.md のみ保持）
-├── submission.csv     # Kaggle 提出用 CSV（PassengerId, Survived）※ test_path がある場合のみ
-├── metainfo.yaml      # 実行メタ情報（commit_hash, ensemble, n_models 等）
-└── README.md          # 出力ファイルツリー
+data/2026/Q1/inference/titanic/
+└── titanic_inference/
+    ├── .gitignore                  # 自動生成（*.csv, *.yaml, *.md のみ保持）
+    └── 20260315T120000/            # 実行ごとにタイムスタンプで新規作成
+        ├── submission.csv          # Kaggle 提出用 CSV（test_path がある場合のみ）
+        ├── metainfo.yaml           # 実行メタ情報（commit_hash, timestamp, ensemble 等）
+        └── README.md               # 出力ファイルツリー
 ```
 
 ---
@@ -93,7 +96,7 @@ models/titanic/titanic_lgbm/
 
 生成された `submission.csv` を Kaggle に提出する：
 
-1. `data/2026/Q1/inference/titanic/titanic_inference/submission.csv` を確認
+1. `data/2026/Q1/inference/titanic/titanic_inference/<timestamp>/submission.csv` を確認
 2. Kaggle の Competition ページ → "Submit Predictions" から upload
 
 提出ファイルの形式：
