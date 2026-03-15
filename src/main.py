@@ -119,13 +119,16 @@ def main(cfg: DictConfig) -> None:
         AutomaticallyEDAUseCase(analyzers, logger).execute()  # type: ignore[arg-type]
 
     elif usecase_name == "preprocess":
+        from src.usecase.preprocessing.pipeline_loader import load_pipeline_cfgs
         from src.usecase.preprocessing.preprocess import PreprocessUseCase
 
-        result = PreprocessUseCase(cfg).execute()
-        logger.info(
-            f"前処理完了: output_path={result.output_path}, "
-            f"steps={len(result.step_results)}, fallback={result.executor_fallback}"
-        )
+        pipeline_cfgs = load_pipeline_cfgs(cfg, Path(_CONF_DIR))
+        for pipeline_cfg in pipeline_cfgs:
+            result = PreprocessUseCase(pipeline_cfg).execute()
+            logger.info(
+                f"前処理完了[{pipeline_cfg.get('job_id', '?')}]: "
+                f"output_path={result.output_path}, steps={len(result.step_results)}"
+            )
 
     else:
         raise ValueError(
