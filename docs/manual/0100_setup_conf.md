@@ -151,7 +151,8 @@ uv run python -m src competition=house-prices usecase=eda
 | ダウンロード（デフォルト） | `uv run python -m src` |
 | ダウンロード（明示） | `uv run python -m src usecase=download` |
 | EDA | `uv run python -m src usecase=eda` |
-| 前処理（base） | `uv run python -m src '+competition/titanic/preprocess=base'` |
+| 前処理（全パイプライン） | `uv run python -m src usecase=preprocess` |
+| 前処理（base のみ） | `uv run python -m src usecase=preprocess pipeline=base` |
 | 別コンペで EDA | `uv run python -m src competition=house-prices usecase=eda` |
 
 ---

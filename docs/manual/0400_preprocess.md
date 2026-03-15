@@ -3,8 +3,18 @@
 ## 実行
 
 ```bash
-uv run python -m src '+competition/titanic/preprocess=base'
+# デフォルト competition の全パイプラインを実行
+uv run python -m src usecase=preprocess
+
+# 特定のパイプラインだけ実行
+uv run python -m src usecase=preprocess pipeline=base
+
+# 別コンペを指定
+uv run python -m src competition=house-prices usecase=preprocess
 ```
+
+`pipeline=` を省略すると `conf/competition/{name}/preprocess/` 配下の全 yaml が実行される。
+アンサンブル時などに `base`・`lgbm`・`nn` をまとめて処理する場合に使う。
 
 ---
 
@@ -20,10 +30,11 @@ conf/competition/titanic/preprocess/
   nn.yaml        # NN 用（アンサンブル時）
 ```
 
-新しい設定を作るときは `conf/usecase/preprocess.yaml` をコピーして編集する。
+新しい設定を作るときは既存の yaml をコピーして編集する。
 
 ```bash
-cp conf/usecase/preprocess.yaml conf/competition/titanic/preprocess/lgbm.yaml
+cp conf/competition/titanic/preprocess/base.yaml \
+   conf/competition/titanic/preprocess/lgbm.yaml
 ```
 
 ---
