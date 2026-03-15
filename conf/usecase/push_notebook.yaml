@@ -8,4 +8,4 @@ notebook:
   enable_gpu: false
   enable_internet: true
 
-output_dir: outputs/push_notebook
+output_dir: notebooks

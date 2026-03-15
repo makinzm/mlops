@@ -179,6 +179,12 @@ def main(cfg: DictConfig) -> None:
     logger = PythonAppLogger(__name__)
     usecase_name: str = cfg.get("usecase", "download_dataset")
 
+    # presentation 層で KAGGLE_USERNAME を解決して cfg に注入する
+    # usecase 層は os に依存できないため、ここで一括処理する（caution.md: struct mode 回避）
+    if not cfg.get("kaggle_username"):
+        cfg = cast(DictConfig, OmegaConf.create(OmegaConf.to_container(cfg, resolve=True)))
+        cfg.kaggle_username = os.environ.get("KAGGLE_USERNAME", "")
+
     if usecase_name == "download_dataset":
         from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
 
@@ -240,13 +246,6 @@ def main(cfg: DictConfig) -> None:
         logger.info(f"Notebook push 完了: notebook={result.notebook_path}")
 
     elif usecase_name in ("create_source_dataset", "update_source_dataset"):
-        # presentation 層で KAGGLE_USERNAME を解決して cfg に注入する
-        # （usecase 層は os に依存できないため、main.py で環境変数を読む）
-        if not cfg.get("kaggle_username"):
-            base = cast(DictConfig, OmegaConf.create(OmegaConf.to_container(cfg, resolve=True)))
-            base.kaggle_username = os.environ.get("KAGGLE_USERNAME", "")
-            cfg = base
-
         from src.infrastructure.kaggle.source_dataset import KaggleSourceDatasetRepository
 
         try:
