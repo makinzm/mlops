@@ -21,10 +21,10 @@
    "source": [
     "# セル 1: 環境セットアップ（編集不要）\n",
     "import importlib.metadata\n",
+    "import os\n",
     "import re\n",
     "import subprocess\n",
     "import sys\n",
-    "import types\n",
     "\n",
     "# 未インストールのパッケージだけを pip install する。\n",
     "# すでにインストール済みの場合はスキップ。\n",
@@ -51,13 +51,14 @@
     "_smart_install('/kaggle/input/{{ src_dataset }}/requirements.txt')\n",
     "\n",
     "# Kaggle では src.zip の中身が /kaggle/input/{{ src_dataset }}/ に直接展開される\n",
-    "# `from src.xxx import ...` が動くよう src を名前空間モジュールとして登録する\n",
-    "_SRC_PATH = '/kaggle/input/{{ src_dataset }}'\n",
-    "_src_mod = types.ModuleType('src')\n",
-    "_src_mod.__path__ = [_SRC_PATH]  # type: ignore[assignment]\n",
-    "_src_mod.__package__ = 'src'\n",
-    "sys.modules['src'] = _src_mod\n",
-    "sys.path.insert(0, _SRC_PATH)"
+    "# (例: /kaggle/input/{{ src_dataset }}/domain/, /infrastructure/, ...)\n",
+    "# /kaggle/working/src -> /kaggle/input/{{ src_dataset }}/ のシンボリックリンクを張ることで\n",
+    "# `from src.xxx import ...` を自然に動かす\n",
+    "_SRC_DATASET_PATH = '/kaggle/input/{{ src_dataset }}'\n",
+    "_SRC_LINK = '/kaggle/working/src'\n",
+    "if not os.path.exists(_SRC_LINK):\n",
+    "    os.symlink(_SRC_DATASET_PATH, _SRC_LINK)\n",
+    "sys.path.insert(0, '/kaggle/working')"
    ]
   },
   {
