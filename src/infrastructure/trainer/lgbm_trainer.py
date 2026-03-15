@@ -78,10 +78,12 @@ class LightGBMTrainer:
             train_weights = _build_weights(train_df, y_train, weight_col, dcfg)
 
             # categorical feature のエンコード（lgbm は category dtype を使う）
-            for col in cat_features:
-                if col in X_train.columns:
-                    X_train = X_train.copy()
-                    X_valid = X_valid.copy()
+            # feature_cols に含まれるものだけを対象にする
+            active_cat_features = [c for c in cat_features if c in X_train.columns]
+            if active_cat_features:
+                X_train = X_train.copy()
+                X_valid = X_valid.copy()
+                for col in active_cat_features:
                     X_train[col] = X_train[col].astype("category")
                     X_valid[col] = X_valid[col].astype("category")
 
@@ -89,7 +91,7 @@ class LightGBMTrainer:
                 X_train,
                 label=y_train,
                 weight=train_weights,
-                categorical_feature=cat_features if cat_features else "auto",
+                categorical_feature=active_cat_features if active_cat_features else "auto",
             )
             dvalid = lgb.Dataset(X_valid, label=y_valid, reference=dtrain)
 
