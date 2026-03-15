@@ -48,7 +48,9 @@ class KaggleSourceDatasetRepository:
         """
         self._write_metadata_json(staging_dir, metadata)
         try:
-            self._api.dataset_create_new(str(staging_dir), public=False, quiet=False)
+            self._api.dataset_create_new(
+                str(staging_dir), public=False, quiet=False, dir_mode="zip"
+            )
             logger.info("Kaggle Dataset created: %s", metadata.full_id)
         except SystemExit as e:
             raise RuntimeError(
@@ -78,6 +80,7 @@ class KaggleSourceDatasetRepository:
                 version_notes=version_message,
                 quiet=False,
                 convert_to_csv=False,
+                dir_mode="zip",
             )
             logger.info(
                 "Kaggle Dataset version created: %s (%s)", metadata.full_id, version_message

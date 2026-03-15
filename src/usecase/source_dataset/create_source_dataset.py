@@ -60,7 +60,7 @@ class CreateSourceDatasetUseCase:
 
         metadata = DatasetMetadata(
             title=str(self._cfg.source_dataset.title),
-            owner_slug=str(self._cfg.get("kaggle_username", "")),
+            owner_slug=str(self._cfg.get("kaggle_username") or ""),
             dataset_slug=str(self._cfg.source_dataset.dataset_slug),
             license_name=str(self._cfg.source_dataset.get("license_name", "CC0-1.0")),
         )

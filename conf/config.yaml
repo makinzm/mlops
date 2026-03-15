@@ -1,7 +1,7 @@
 defaults:
+  - _self_
   - competition: titanic
   - usecase: download
-  - _self_
 
 # recipe= で競技固有設定を選択するための共通パラメータ
 # 例: uv run python -m src usecase=preprocess recipe=base

@@ -14,8 +14,9 @@ Kaggle 認証は ~/.kaggle/access_token に保存したトークンを使用す�
 """
 
 import logging
+import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import hydra
 from dotenv import load_dotenv
@@ -239,6 +240,13 @@ def main(cfg: DictConfig) -> None:
         logger.info(f"Notebook push 完了: notebook={result.notebook_path}")
 
     elif usecase_name in ("create_source_dataset", "update_source_dataset"):
+        # presentation 層で KAGGLE_USERNAME を解決して cfg に注入する
+        # （usecase 層は os に依存できないため、main.py で環境変数を読む）
+        if not cfg.get("kaggle_username"):
+            base = cast(DictConfig, OmegaConf.create(OmegaConf.to_container(cfg, resolve=True)))
+            base.kaggle_username = os.environ.get("KAGGLE_USERNAME", "")
+            cfg = base
+
         from src.infrastructure.kaggle.source_dataset import KaggleSourceDatasetRepository
 
         try:
