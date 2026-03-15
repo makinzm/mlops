@@ -15,6 +15,7 @@ Phase 4: LightGBMTrainer の統合テスト。
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -23,7 +24,6 @@ from omegaconf import OmegaConf
 
 from src.domain.model.trainer import TrainResult
 from src.infrastructure.trainer.lgbm_trainer import LightGBMTrainer
-
 
 # ──────────────────────────────────────────────────────────────
 # フィクスチャ
@@ -69,7 +69,7 @@ def fold_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def base_cfg(tmp_path: Path) -> dict:
+def base_cfg(tmp_path: Path) -> dict[str, Any]:
     return {
         "job_id": "test_lgbm",
         "target_col": "Survived",
@@ -102,7 +102,7 @@ def base_cfg(tmp_path: Path) -> dict:
 
 
 class TestLightGBMTrainerFitFolds:
-    def _run(self, fold_dir: Path, tmp_path: Path, cfg_dict: dict) -> TrainResult:
+    def _run(self, fold_dir: Path, tmp_path: Path, cfg_dict: dict[str, Any]) -> TrainResult:
         output_dir = tmp_path / "models" / "test_lgbm"
         cfg = OmegaConf.create(cfg_dict)
         trainer = LightGBMTrainer(cfg)
@@ -113,7 +113,7 @@ class TestLightGBMTrainerFitFolds:
         )
 
     def test_returns_train_result(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """fit_folds は TrainResult を返すこと。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
@@ -122,7 +122,7 @@ class TestLightGBMTrainerFitFolds:
         assert result.metric == "auc"
 
     def test_fold_results_count_matches_folds(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """fold_results の数が実際の fold 数と一致すること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
@@ -131,7 +131,7 @@ class TestLightGBMTrainerFitFolds:
         assert result.fold_results[0].fold_idx == 0
 
     def test_cv_scores_are_computed(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """cv_mean_score / cv_std_score が計算されていること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
@@ -139,38 +139,44 @@ class TestLightGBMTrainerFitFolds:
         assert result.cv_std_score >= 0.0
 
     def test_model_file_saved(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """model.txt が fold ディレクトリに保存されること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
         assert result.fold_results[0].model_path.exists()
 
     def test_oof_parquet_saved(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """oof_train.parquet が保存されること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
         assert result.fold_results[0].oof_path.exists()
 
     def test_error_analysis_parquet_saved(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """error_analysis.parquet が保存されること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
         assert result.fold_results[0].error_analysis_path.exists()
 
     def test_error_analysis_has_required_columns(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """error_analysis.parquet に必要なカラムが含まれること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
         df = pd.read_parquet(result.fold_results[0].error_analysis_path)
-        for col in ["target", "predicted_proba", "predicted_label", "is_correct",
-                    "error_magnitude", "sample_type"]:
+        for col in [
+            "target",
+            "predicted_proba",
+            "predicted_label",
+            "is_correct",
+            "error_magnitude",
+            "sample_type",
+        ]:
             assert col in df.columns, f"カラム '{col}' が error_analysis に存在しません"
 
     def test_error_analysis_sample_types(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """sample_type は TP/TN/FP/FN の 4 種のいずれかであること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
@@ -179,7 +185,7 @@ class TestLightGBMTrainerFitFolds:
         assert set(df["sample_type"].unique()).issubset(valid_types)
 
     def test_feature_importance_saved_when_enabled(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """save_importance=True のとき feature_importance.parquet が保存されること。"""
         result = self._run(fold_dir, tmp_path, base_cfg)
@@ -188,7 +194,7 @@ class TestLightGBMTrainerFitFolds:
         assert fi_path.exists()
 
     def test_output_dir_differs_from_input_dir(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """output_dir と preprocess_output_dir が異なること（再現性保証）。"""
         output_dir = tmp_path / "models" / "test_lgbm"
@@ -202,7 +208,7 @@ class TestLightGBMTrainerFitFolds:
         assert fold_dir.resolve() != output_dir.resolve()
 
     def test_seed_reproducibility(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """同じシードで2回実行したとき CV スコアが一致すること。"""
         result1 = self._run(fold_dir, tmp_path / "run1", base_cfg)
@@ -212,7 +218,7 @@ class TestLightGBMTrainerFitFolds:
 
 class TestSampleWeights:
     def test_sample_weight_col_used_when_specified(
-        self, fold_dir: Path, tmp_path: Path, base_cfg: dict
+        self, fold_dir: Path, tmp_path: Path, base_cfg: dict[str, Any]
     ) -> None:
         """sample_weight_col を指定したとき学習が正常に完了すること。"""
         cfg_dict = dict(base_cfg)
