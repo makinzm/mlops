@@ -4,12 +4,11 @@ root = "."
 languages = ["python"]
 
 [resolve.python]
-package_names = ["domain", "infrastructure", "usecase"]
+package_names = ["src"]
 
 [[layers]]
 name = "src_domain"
 paths = ["src/domain/**"]
-allow = ["src_domain"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["dataclasses", "pathlib", "typing"]
