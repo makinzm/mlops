@@ -1,0 +1,3 @@
+# @package _global_
+usecase: train
+# trainer_name: lgbm  # 省略すると competition/titanic/training/ 配下の全 yaml を実行
