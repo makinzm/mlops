@@ -44,6 +44,7 @@ terraform apply
 > | `No credentials loaded` | `gcloud auth application-default login` を実行 |
 > | `requires a quota project` | `gcloud auth application-default set-quota-project YOUR_PROJECT_ID` を実行 |
 > | `Inconsistent dependency lock file` | `terraform init -upgrade` を実行（`.tf` ファイル変更後に必要） |
+> | `API has not been used ... or it is disabled` | [1000_gcp-initial-setup.md](./1000_gcp-initial-setup.md) セクション 7 の API 有効化を再確認。`gcloud services enable <api名>` で個別に有効化 |
 >
 > `terraform destroy` → `terraform apply` でやり直す場合も、先に `terraform init -upgrade` を実行してください。
 

@@ -114,6 +114,8 @@ gcloud config set project YOUR_PROJECT_ID
 - Cloud Functions API
 - Pub/Sub API
 - Cloud Billing API
+- **Identity and Access Management (IAM) API** — サービスアカウント作成に必要
+- Cloud Build API — Cloud Functions のデプロイに必要
 
 ### gcloud コマンドで一括有効化する場合
 
@@ -124,7 +126,9 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   cloudfunctions.googleapis.com \
   pubsub.googleapis.com \
-  billingbudgets.googleapis.com
+  billingbudgets.googleapis.com \
+  iam.googleapis.com \
+  cloudbuild.googleapis.com
 ```
 
 ---
