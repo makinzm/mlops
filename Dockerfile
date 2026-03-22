@@ -13,10 +13,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 
 # 依存関係ファイルを先にコピー（レイヤーキャッシュ活用）
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
-# 本番依存のみインストール
-RUN uv sync --no-dev
+# 本番依存のみインストール（--no-install-project: 自パッケージのビルドをスキップ）
+RUN uv sync --no-dev --no-install-project
 
 # アプリケーションコードをコピー
 COPY src/ ./src/
