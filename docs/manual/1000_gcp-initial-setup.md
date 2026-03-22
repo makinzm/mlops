@@ -108,14 +108,20 @@ gcloud config set project YOUR_PROJECT_ID
 コンソール左上のハンバーガーメニュー → 「APIとサービス」→「ライブラリ」で各 API を検索して「有効にする」をクリック。
 
 有効化が必要な API:
-- Vertex AI API
-- Cloud Storage API
-- Artifact Registry API
-- Cloud Functions API
-- Pub/Sub API
-- Cloud Billing API
-- **Identity and Access Management (IAM) API** — サービスアカウント作成に必要
-- Cloud Build API — Cloud Functions のデプロイに必要
+
+| API | 用途 |
+|-----|------|
+| Vertex AI API | モデル学習ジョブ |
+| Cloud Storage API | データ・モデルのステージング |
+| Artifact Registry API | Docker イメージ保管 |
+| Cloud Functions API | 予算超過時のジョブ停止 |
+| Cloud Build API | Cloud Functions のビルド |
+| Pub/Sub API | 予算アラート通知 |
+| Cloud Billing Budget API | 予算アラート設定 |
+| IAM API | サービスアカウント作成 |
+| Cloud Resource Manager API | IAM ポリシーの読み書き |
+| Cloud Logging API | 学習ジョブのログ出力 |
+| Compute Engine API | Vertex AI のマシン割り当て |
 
 ### gcloud コマンドで一括有効化する場合
 
@@ -125,11 +131,17 @@ gcloud services enable \
   storage.googleapis.com \
   artifactregistry.googleapis.com \
   cloudfunctions.googleapis.com \
+  cloudbuild.googleapis.com \
   pubsub.googleapis.com \
   billingbudgets.googleapis.com \
   iam.googleapis.com \
-  cloudbuild.googleapis.com
+  cloudresourcemanager.googleapis.com \
+  logging.googleapis.com \
+  compute.googleapis.com
 ```
+
+> **重要**: 全ての API を有効化してから `terraform apply` に進んでください。
+> API が1つでも漏れると `terraform apply` でエラーになります。
 
 ---
 
