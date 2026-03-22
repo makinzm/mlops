@@ -12,13 +12,12 @@ import logging
 import os
 
 import functions_framework
-from google.cloud import aiplatform
 
 logger = logging.getLogger(__name__)
 
 
 @functions_framework.cloud_event
-def handle_budget_alert(cloud_event: object) -> None:
+def handle_budget_alert(cloud_event):  # type: ignore[no-untyped-def]
     """Pub/Sub 予算アラートを処理する。"""
     budget_action = os.environ.get("BUDGET_ACTION", "warn")
     project = os.environ.get("GCP_PROJECT", "")
@@ -32,17 +31,23 @@ def handle_budget_alert(cloud_event: object) -> None:
         cost_amount = budget_info.get("costAmount", 0)
         budget_amount = budget_info.get("budgetAmount", 0)
         logger.warning(
-            f"Budget alert: {budget_name} — cost=${cost_amount:.2f} / budget=${budget_amount:.2f}"
+            "Budget alert: %s — cost=$%.2f / budget=$%.2f",
+            budget_name,
+            float(cost_amount),
+            float(budget_amount),
         )
     except Exception as e:
-        logger.error(f"Failed to parse budget alert: {e}")
+        logger.error("Failed to parse budget alert: %s", e)
         return
 
     if budget_action != "stop":
-        logger.info(f"budget_action={budget_action}: logging only, no job cancellation")
+        logger.info("budget_action=%s: logging only, no job cancellation", budget_action)
         return
 
     # budget_action = "stop": 実行中ジョブを全停止
+    # aiplatform は重いため stop 時のみ lazy import
+    from google.cloud import aiplatform  # type: ignore[import-untyped]
+
     logger.warning("budget_action=stop: cancelling all running Vertex AI jobs")
     aiplatform.init(project=project, location=region)
     running_jobs = aiplatform.CustomJob.list(
@@ -51,6 +56,6 @@ def handle_budget_alert(cloud_event: object) -> None:
     for job in running_jobs:
         try:
             job.cancel()
-            logger.warning(f"Cancelled job: {job.resource_name}")
+            logger.warning("Cancelled job: %s", job.resource_name)
         except Exception as e:
-            logger.error(f"Failed to cancel job {job.resource_name}: {e}")
+            logger.error("Failed to cancel job %s: %s", job.resource_name, e)

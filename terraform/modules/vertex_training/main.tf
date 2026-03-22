@@ -97,10 +97,6 @@ resource "google_billing_budget" "monthly_budget" {
   billing_account = data.google_billing_account.account.id
   display_name    = "MLOps Monthly Budget"
 
-  budget_filter {
-    projects = ["projects/${data.google_project.current.number}"]
-  }
-
   amount {
     specified_amount {
       currency_code = "USD"
@@ -108,27 +104,21 @@ resource "google_billing_budget" "monthly_budget" {
     }
   }
 
-  # 50% / 80% / 100% / 120% で通知
   threshold_rules {
     threshold_percent = 0.5
-    spend_basis       = "CURRENT_SPEND"
   }
   threshold_rules {
     threshold_percent = 0.8
-    spend_basis       = "CURRENT_SPEND"
   }
   threshold_rules {
     threshold_percent = 1.0
-    spend_basis       = "CURRENT_SPEND"
-  }
-  threshold_rules {
-    threshold_percent = 1.2
-    spend_basis       = "CURRENT_SPEND"
   }
 
-  # NOTE: 空の all_updates_rule {} は API が 400 を返す既知の問題
-  # Pub/Sub 連携は Budget 作成後にコンソールから設定する
-  # ref: https://github.com/hashicorp/terraform-provider-google/issues/9375
+  # NOTE:
+  # - budget_filter を省略するとこの billing account の全支出を監視する
+  # - Pub/Sub 連携は Budget 作成後にコンソールから設定する
+  #   (空の all_updates_rule {} は 400 エラーになる既知の問題)
+  #   ref: https://github.com/hashicorp/terraform-provider-google/issues/9375
 }
 
 # ───────────────────────────────────────────────
