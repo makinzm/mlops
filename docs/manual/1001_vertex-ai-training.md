@@ -37,6 +37,18 @@ terraform plan
 terraform apply
 ```
 
+> **`terraform plan` で認証エラーが出た場合:**
+>
+> ```
+> Error: No credentials loaded. To use your gcloud credentials, run 'gcloud auth application-default login'
+> ```
+>
+> [1000_gcp-initial-setup.md](./1000_gcp-initial-setup.md) セクション 6 の認証が済んでいない可能性があります。以下を実行してください:
+>
+> ```bash
+> gcloud auth application-default login
+> ```
+
 ### 出力値の確認
 
 `terraform apply` 完了後、以下の出力値が表示されます:
