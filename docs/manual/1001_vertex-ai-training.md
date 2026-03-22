@@ -8,21 +8,22 @@
 
 ### terraform.tfvars の作成
 
+`.env` にメモした値（[1000_gcp-initial-setup.md](./1000_gcp-initial-setup.md) セクション 10）を使って
+`terraform/terraform.tfvars` を作成します:
+
 ```bash
-cd terraform
-cp terraform.tfvars.example terraform.tfvars  # ファイルがない場合は新規作成
-```
-
-`terraform/terraform.tfvars` を以下の内容で作成:
-
-```hcl
-project_id         = "your-project-id"          # GCP プロジェクト ID
-region             = "asia-northeast1"           # 東京リージョン
+cat > terraform/terraform.tfvars << 'EOF'
+project_id         = "your-project-id"           # .env の GCP_PROJECT
+region             = "asia-northeast1"           # .env の GCP_REGION
 bucket_name        = "your-project-mlops-staging" # グローバルで一意なバケット名
 budget_amount      = 10                          # 月間予算上限（USD）
-budget_alert_email = "your@email.com"            # 予算アラート通知先
-billing_account_id = "012345-ABCDEF-789012"      # 請求アカウント ID
+budget_alert_email = "your@email.com"            # .env の GCP_BUDGET_ALERT_EMAIL
+billing_account_id = "012345-ABCDEF-789012"      # .env の GCP_BILLING_ACCOUNT
+EOF
 ```
+
+上の `"..."` 部分を `.env` の値に置き換えてください。
+`terraform.tfvars` は `.gitignore` 済みのため Git にコミットされません。
 
 ### Terraform の実行
 
