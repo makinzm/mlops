@@ -1,0 +1,43 @@
+# 秘密情報
+.env
+terraform/terraform.tfvars
+
+# Git
+.git
+.gitignore
+
+# データ・モデル（GCS 経由で渡すため不要）
+data/
+models/
+reports/
+notebooks/
+
+# 開発ツール
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+outputs/
+mlruns/
+__pycache__/
+
+# IDE
+.idea/
+.vscode/
+
+# Nix/devenv
+.devenv*
+devenv.local.nix
+.direnv/
+
+# Terraform
+terraform/
+.terraform/
+
+# ドキュメント・タスク（実行に不要）
+docs/
+tests/
+.claude/
+.staging/
