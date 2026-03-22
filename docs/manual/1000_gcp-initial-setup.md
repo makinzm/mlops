@@ -35,6 +35,17 @@ GCP ではすべてのリソースが「プロジェクト」単位で管理さ�
 
 プロジェクト ID は後の設定で必要になります。
 
+> **プロジェクト ID は秘密情報か？**
+>
+> **いいえ。** プロジェクト ID を知られただけではリソースにアクセスできません（IAM で保護されています）。
+> ただし Google は プロジェクト ID を **PII（個人識別情報）** に分類しており、
+> 公開すると偵察（バケット名の推測等）の起点にされるリスクがあります。
+> そのため、本プロジェクトでは `terraform.tfvars`（`.gitignore` 済み）で管理し、Git にコミットしません。
+>
+> 参考:
+> - [AIP-2510: Project identifiers](https://google.aip.dev/cloud/2510) — Google 内部 API 設計標準。プロジェクト ID を PII と明記。
+> - [Creating and managing projects | Resource Manager](https://cloud.google.com/resource-manager/docs/creating-managing-projects) — 「プロジェクト名や ID に PII やセキュリティデータを含めないこと」と記載。
+
 ---
 
 ## 4. 請求アカウントの有効化
@@ -48,6 +59,15 @@ Vertex AI の学習は無料枠の範囲内で十分試せます。
 4. 請求アカウント ID をメモしておく（例: `012345-ABCDEF-789012`）
 
 請求アカウント ID は `terraform/terraform.tfvars` で必要になります。
+
+> **請求アカウント ID は秘密情報か？**
+>
+> **いいえ。** 請求アカウント ID を知られただけでは課金操作はできません（IAM ロール `Billing Account Administrator` 等が必要）。
+> ただし、公開する理由もないため `terraform.tfvars`（`.gitignore` 済み）で管理します。
+>
+> 参考:
+> - [Cloud Billing access control](https://cloud.google.com/billing/docs/how-to/billing-access) — 請求操作は IAM で保護されており、ID の秘匿ではなくロールで制御される。
+> - [Find a Cloud Billing account ID](https://cloud.google.com/billing/docs/how-to/find-billing-account-id) — ID はシステム生成の識別子。`billing.accounts.get` 権限を持つユーザーのみ閲覧可能。
 
 ---
 
