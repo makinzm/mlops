@@ -117,6 +117,7 @@ gcloud config set project YOUR_PROJECT_ID
 | Cloud Functions API | 予算超過時のジョブ停止 |
 | Cloud Build API | Cloud Functions のビルド |
 | Pub/Sub API | 予算アラート通知 |
+| Cloud Billing API | 請求アカウント情報の読み取り |
 | Cloud Billing Budget API | 予算アラート設定 |
 | IAM API | サービスアカウント作成 |
 | Cloud Resource Manager API | IAM ポリシーの読み書き |
@@ -135,6 +136,7 @@ gcloud services enable \
   cloudfunctions.googleapis.com \
   cloudbuild.googleapis.com \
   pubsub.googleapis.com \
+  cloudbilling.googleapis.com \
   billingbudgets.googleapis.com \
   iam.googleapis.com \
   cloudresourcemanager.googleapis.com \
