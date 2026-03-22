@@ -39,3 +39,9 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+# Staging directory for Kaggle Dataset uploads (auto-created by create/update_source_dataset)
+.staging/
+
+# Generated Kaggle Notebooks (reproducible from push_notebook + template + conf/)
+notebooks/

@@ -1,6 +1,9 @@
 pre-commit:
   parallel: true
   commands:
+    requirements-sync:
+      glob: "{pyproject.toml,uv.lock}"
+      run: uv export --no-hashes --no-dev --no-editable 2>/dev/null | grep -v "^\." > requirements.txt && git add requirements.txt
     mille-check:
       run: uv run mille check
     ruff-check:

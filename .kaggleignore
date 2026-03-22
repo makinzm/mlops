@@ -1,0 +1,14 @@
+# .kaggleignore — Kaggle Dataset アップロード時に除外するファイル・ディレクトリ
+# fnmatch パターンで記述する。ディレクトリは末尾に / をつける。
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+*.coverage

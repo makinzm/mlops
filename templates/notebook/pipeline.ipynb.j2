@@ -1,0 +1,103 @@
+{
+ "nbformat": 4,
+ "nbformat_minor": 5,
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.12.0"
+  }
+ },
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# セル 1: 環境セットアップ（編集不要）\n",
+    "import os\n",
+    "import sys\n",
+    {% if enable_internet %}
+    "\n",
+    "import importlib.metadata\n",
+    "import re\n",
+    "import subprocess\n",
+    "\n",
+    "# 未インストールのパッケージだけを pip install する。\n",
+    "# すでにインストール済みの場合はスキップ。\n",
+    "# メジャーバージョンが異なる場合は WARNING を出すがインストールはしない。\n",
+    "def _smart_install(req_path: str) -> None:\n",
+    "    with open(req_path) as f:\n",
+    "        lines = [l.strip() for l in f if l.strip() and not l.strip().startswith('#')]\n",
+    "    to_install = []\n",
+    "    for line in lines:\n",
+    "        m = re.match(r'^([A-Za-z0-9_\\-\\.]+)==(.+)$', line)\n",
+    "        if m:\n",
+    "            pkg, req_ver = m.group(1), m.group(2)\n",
+    "            try:\n",
+    "                inst_ver = importlib.metadata.version(pkg)\n",
+    "                if inst_ver.split('.')[0] != req_ver.split('.')[0]:\n",
+    "                    print(f'WARNING: {pkg} installed={inst_ver} required={req_ver} (major version differs, skipping)')\n",
+    "            except importlib.metadata.PackageNotFoundError:\n",
+    "                to_install.append(line)\n",
+    "        else:\n",
+    "            to_install.append(line)\n",
+    "    if to_install:\n",
+    "        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q'] + to_install)\n",
+    "\n",
+    "_smart_install('/kaggle/input/{{ src_dataset }}/requirements.txt')\n",
+    {% endif %}
+    "\n",
+    "# staging では src/ と conf/ がサブディレクトリとして zip 化される\n",
+    "# Kaggle 展開後: /kaggle/input/{{ src_dataset }}/src/  (domain/ infrastructure/ ...)\n",
+    "#                /kaggle/input/{{ src_dataset }}/conf/  (recipe/ ...)\n",
+    "# /kaggle/working/src -> /kaggle/input/{{ src_dataset }}/src のシンボリックリンクで\n",
+    "# `from src.xxx import ...` を自然に動かす\n",
+    "_SRC_DATASET_PATH = '/kaggle/input/{{ src_dataset }}/src'\n",
+    "_SRC_LINK = '/kaggle/working/src'\n",
+    "if os.path.lexists(_SRC_LINK):\n",
+    "    os.remove(_SRC_LINK)\n",
+    "os.symlink(_SRC_DATASET_PATH, _SRC_LINK)\n",
+    "sys.path.insert(0, '/kaggle/working')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# セル 2: 設定（ここだけ編集する）\n",
+    "COMPETITION_SLUG = \"{{ competition }}\"\n",
+    "RECIPE = \"all_after_download\"   # conf/competition/{slug}/pipeline/ 以下のファイル名\n",
+    "\n",
+    "# Kaggle Notebook 上での設定上書き（不要なら空のまま）\n",
+    "# 例: {\"lgbm.num_leaves\": 64, \"preprocess.cv\": False}\n",
+    "OVERRIDES: dict = {}"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# セル 3: パイプライン実行（編集不要）\n",
+    "from src.infrastructure.kaggle.notebook_runner import NotebookPipelineRunner\n",
+    "\n",
+    "runner = NotebookPipelineRunner(\n",
+    "    competition_slug=COMPETITION_SLUG,\n",
+    "    recipe=RECIPE,\n",
+    "    overrides=OVERRIDES,\n",
+    ")\n",
+    "submission_path = runner.run()\n",
+    "print(f\"[INFO] submission: {submission_path}\")"
+   ]
+  }
+ ]
+}

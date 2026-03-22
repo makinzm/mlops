@@ -1,0 +1,11 @@
+# @package _global_
+usecase: push_notebook
+
+notebook:
+  competition: titanic            # Kaggle competition slug（input として追加）
+  kernel_slug: titanic-pipeline   # Kaggle Kernel の URL slug
+  src_dataset: mlops-pipeline-src # src/ を格納する Kaggle Dataset slug
+  enable_gpu: false
+  enable_internet: false
+
+output_dir: notebooks

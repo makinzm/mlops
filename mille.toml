@@ -16,10 +16,10 @@ external_allow = ["dataclasses", "pathlib", "typing"]
 [[layers]]
 name = "src_infrastructure"
 paths = ["src/infrastructure/**"]
-allow = ["src_domain"]
+allow = ["src_domain", "src_usecase"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["datetime", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "pandas", "pathlib", "polars", "seaborn", "sklearn", "subprocess", "typing", "yaml", "zipfile"]
+external_allow = ["datetime", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "polars", "seaborn", "sklearn", "subprocess", "typing", "yaml", "zipfile"]
 
 [[layers]]
 name = "src_usecase"
@@ -27,7 +27,7 @@ paths = ["src/usecase/**"]
 allow = ["src_domain"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["collections", "datetime", "logging", "numpy", "omegaconf", "pathlib", "polars", "scipy", "typing", "yaml"]
+external_allow = ["collections", "dataclasses", "datetime", "fnmatch", "jinja2", "json", "logging", "numpy", "omegaconf", "pathlib", "polars", "scipy", "shutil", "typing", "yaml"]
 
 [[layers]]
 name = "tests_domain"
@@ -43,7 +43,7 @@ paths = ["tests/infrastructure/**"]
 allow = ["src_domain", "src_infrastructure"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["lightgbm", "math", "numpy", "omegaconf", "pandas", "pathlib", "polars", "pytest", "src", "typing", "unittest", "yaml", "zipfile"]
+external_allow = ["json", "lightgbm", "math", "numpy", "omegaconf", "pandas", "pathlib", "polars", "pytest", "src", "typing", "unittest", "yaml", "zipfile"]
 
 [[layers]]
 name = "tests_usecase"
@@ -51,4 +51,4 @@ paths = ["tests/usecase/**"]
 allow = ["src_domain", "src_usecase", "src_infrastructure"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["numpy", "omegaconf", "pathlib", "polars", "pytest", "src", "typing", "unittest", "yaml"]
+external_allow = ["json", "numpy", "omegaconf", "pathlib", "polars", "pytest", "re", "src", "typing", "unittest", "yaml"]

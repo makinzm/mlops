@@ -317,3 +317,112 @@ class TestInferenceUseCaseTimestamp:
         assert len(meta["timestamp"]) == 15, (
             f"timestamp が YYYYMMDDTHHMMSS 形式でない: {meta['timestamp']}"
         )
+
+
+class TestBinarySubmission:
+    """submission.threshold が設定された場合の二値化出力テスト。
+
+    なぜこのテストが必要か:
+      - Titanic など 0/1 ラベルを要求するコンペでは確率をそのまま提出できない。
+      - threshold が設定されているとき submission.csv は 0/1 整数値になること、
+        かつ確率値は submission_proba.csv に保存されることを保証する。
+      - threshold 未設定のときは既存の動作（確率を submission.csv に書く）と後方互換。
+    """
+
+    def test_submission_csv_is_binary_when_threshold_is_set(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """threshold=0.5 のとき submission.csv の Survived 列が 0 または 1 のみであること。"""
+        raw = OmegaConf.to_container(_make_cfg(tmp_path), resolve=True)
+        assert isinstance(raw, dict)
+        raw["submission"] = {"threshold": 0.5}
+        cfg = OmegaConf.create(raw)
+        _make_test_parquet(Path(cfg.test_path))
+
+        # predict_folds は確率を返す（0.1〜0.9）
+        mock_inferencer.predict_folds.return_value = np.array([0.1, 0.8, 0.3, 0.9, 0.5])
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        result = usecase.run(cfg)
+
+        assert result is not None
+        submission = pl.read_csv(result)
+        values = submission["Survived"].to_list()
+        assert all(v in (0, 1) for v in values), (
+            f"threshold 設定時の submission.csv に 0/1 以外の値が含まれる: {values}"
+        )
+
+    def test_submission_proba_csv_is_generated_when_threshold_is_set(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """threshold 設定時に submission_proba.csv が同ディレクトリに生成されること。"""
+        raw = OmegaConf.to_container(_make_cfg(tmp_path), resolve=True)
+        assert isinstance(raw, dict)
+        raw["submission"] = {"threshold": 0.5}
+        cfg = OmegaConf.create(raw)
+        _make_test_parquet(Path(cfg.test_path))
+
+        mock_inferencer.predict_folds.return_value = np.array([0.1, 0.8, 0.3, 0.9, 0.5])
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        result = usecase.run(cfg)
+
+        assert result is not None
+        proba_path = result.parent / "submission_proba.csv"
+        assert proba_path.exists(), "threshold 設定時に submission_proba.csv が生成されていない"
+
+    def test_submission_proba_csv_contains_probabilities(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """submission_proba.csv の Survived 列が確率値（float）を含むこと。"""
+        raw = OmegaConf.to_container(_make_cfg(tmp_path), resolve=True)
+        assert isinstance(raw, dict)
+        raw["submission"] = {"threshold": 0.5}
+        cfg = OmegaConf.create(raw)
+        _make_test_parquet(Path(cfg.test_path))
+
+        mock_inferencer.predict_folds.return_value = np.array([0.1, 0.8, 0.3, 0.9, 0.5])
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        result = usecase.run(cfg)
+
+        assert result is not None
+        proba_path = result.parent / "submission_proba.csv"
+        proba_df = pl.read_csv(proba_path)
+        values = proba_df["Survived"].to_list()
+        assert not all(v in (0, 1) for v in values), (
+            "submission_proba.csv が確率ではなく 0/1 になっている"
+        )
+
+    def test_submission_csv_is_probability_when_threshold_not_set(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """threshold 未設定（後方互換）のとき submission.csv は確率値を含むこと。"""
+        cfg = _make_cfg(tmp_path)  # submission キーなし
+        _make_test_parquet(Path(cfg.test_path))
+
+        mock_inferencer.predict_folds.return_value = np.array([0.1, 0.8, 0.3, 0.9, 0.5])
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        result = usecase.run(cfg)
+
+        assert result is not None
+        submission = pl.read_csv(result)
+        values = submission["Survived"].to_list()
+        assert not all(v in (0, 1) for v in values), (
+            "threshold 未設定なのに submission.csv が 0/1 二値化されている"
+        )
+
+    def test_submission_proba_csv_not_generated_without_threshold(
+        self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
+    ) -> None:
+        """threshold 未設定のとき submission_proba.csv は生成されないこと。"""
+        cfg = _make_cfg(tmp_path)
+        _make_test_parquet(Path(cfg.test_path))
+
+        usecase = InferenceUseCase(inferencer=mock_inferencer, git_repo=mock_git_repo)
+        result = usecase.run(cfg)
+
+        assert result is not None
+        proba_path = result.parent / "submission_proba.csv"
+        assert not proba_path.exists(), "threshold 未設定なのに submission_proba.csv が生成された"
