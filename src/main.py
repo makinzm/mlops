@@ -154,6 +154,89 @@ def _run_train(cfg: DictConfig) -> None:
         )
 
 
+def _run_vertex_train(cfg: DictConfig) -> None:
+    """Vertex AI 学習 UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.infrastructure.gcp.storage import GCSRepositoryImpl
+    from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
+    from src.infrastructure.repository.git import GitRepositoryImpl
+    from src.usecase.training.trainer_loader import load_trainer_cfgs
+    from src.usecase.training.vertex_train import VertexAITrainUseCase
+
+    logger = logging.getLogger(__name__)
+    git_repo = GitRepositoryImpl()
+    trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+    # vertex_train は一度に 1 レシピを実行する（最初の設定を使用）
+    trainer_cfg = trainer_cfgs[0]
+    gcs = GCSRepositoryImpl(project=str(trainer_cfg.gcp.project))
+    vertex = VertexAIRepositoryImpl(
+        project=str(trainer_cfg.gcp.project),
+        region=str(trainer_cfg.gcp.region),
+    )
+    result = VertexAITrainUseCase(
+        cfg=trainer_cfg,
+        gcs=gcs,
+        vertex=vertex,
+        git_repo=git_repo,
+    ).execute()
+    logger.info(
+        f"Vertex AI 学習完了[{result.job_id}]: "
+        f"job={result.vertex_job_name}, "
+        f"local_model_dir={result.local_model_dir}"
+    )
+
+
+def _run_update_source_dataset_pipeline(cfg: DictConfig) -> None:
+    """update_source_dataset UseCase を Pipeline から実行する。"""
+    from src.infrastructure.kaggle.source_dataset import KaggleSourceDatasetRepository
+    from src.usecase.source_dataset.update_source_dataset import UpdateSourceDatasetUseCase
+
+    try:
+        from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
+            KaggleApi as KaggleApiExtended,
+        )
+    except SystemExit as e:
+        raise RuntimeError(
+            "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+        ) from e
+
+    kaggle_api = KaggleApiExtended()
+    try:
+        kaggle_api.authenticate()
+    except SystemExit as e:
+        raise RuntimeError(
+            "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+        ) from e
+
+    repository = KaggleSourceDatasetRepository(kaggle_api=kaggle_api)
+    UpdateSourceDatasetUseCase(cfg=cfg, repository=repository).execute()
+    logging.getLogger(__name__).info("update_source_dataset 完了")
+
+
+def _run_push_notebook_pipeline(cfg: DictConfig) -> None:
+    """push_notebook UseCase を Pipeline から実行する。"""
+    from src.usecase.kaggle_notebook.push_notebook import PushNotebookUseCase
+
+    try:
+        from kaggle.api.kaggle_api_extended import (
+            KaggleApi as KaggleApiExtended,
+        )
+    except SystemExit as e:
+        raise RuntimeError(
+            "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+        ) from e
+
+    kaggle_api = KaggleApiExtended()
+    try:
+        kaggle_api.authenticate()
+    except SystemExit as e:
+        raise RuntimeError(
+            "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
+        ) from e
+
+    result = PushNotebookUseCase(cfg=cfg, kaggle_api=kaggle_api).execute()
+    logging.getLogger(__name__).info(f"Notebook push 完了: notebook={result.notebook_path}")
+
+
 def _run_inference(cfg: DictConfig) -> None:
     """推論 UseCase を実行する（Pipeline から呼ばれる）。"""
     from src.infrastructure.inference.lgbm_inferencer import LightGBMInferencer
@@ -210,6 +293,9 @@ def main(cfg: DictConfig) -> None:
     elif usecase_name == "inference":
         _run_inference(cfg)
 
+    elif usecase_name == "vertex_train":
+        _run_vertex_train(cfg)
+
     elif usecase_name == "pipeline":
         from src.usecase.pipeline.pipeline import PipelineUseCase
         from src.usecase.pipeline.pipeline_loader import load_pipeline_recipe_cfg
@@ -219,6 +305,9 @@ def main(cfg: DictConfig) -> None:
             run_preprocess=_run_preprocess,
             run_train=_run_train,
             run_inference=_run_inference,
+            run_vertex_train=_run_vertex_train,
+            run_update_source_dataset=_run_update_source_dataset_pipeline,
+            run_push_notebook=_run_push_notebook_pipeline,
         ).run(pipeline_cfg)
         logger.info(f"パイプライン完了[{pipeline_cfg.get('job_id', '?')}]")
 
@@ -226,7 +315,7 @@ def main(cfg: DictConfig) -> None:
         from src.usecase.kaggle_notebook.push_notebook import PushNotebookUseCase
 
         try:
-            from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
+            from kaggle.api.kaggle_api_extended import (
                 KaggleApi as KaggleApiExtended,
             )
         except SystemExit as e:
@@ -289,6 +378,7 @@ def main(cfg: DictConfig) -> None:
             "preprocess",
             "train",
             "inference",
+            "vertex_train",
             "pipeline",
             "push_notebook",
             "create_source_dataset",

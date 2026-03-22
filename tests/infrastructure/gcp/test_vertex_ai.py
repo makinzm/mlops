@@ -10,11 +10,9 @@ VertexAIRepositoryImpl の単体テスト。
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from src.domain.repository.vertex_ai import VertexJobStatus
 from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
 
 
@@ -45,9 +43,9 @@ class TestVertexAIRepositoryImplSubmitJob:
         """環境変数がコンテナスペックに含まれること。"""
         mock_job_instance = MagicMock()
         mock_job_instance.resource_name = "projects/123/locations/x/customJobs/1"
-        created_specs: list[dict] = []
+        created_specs: list[dict[str, Any]] = []
 
-        def capture_job(**kwargs: object) -> MagicMock:
+        def capture_job(**kwargs: Any) -> MagicMock:
             created_specs.append(dict(kwargs))
             return mock_job_instance
 

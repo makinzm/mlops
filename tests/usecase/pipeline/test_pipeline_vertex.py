@@ -15,7 +15,7 @@ from omegaconf import DictConfig, OmegaConf
 from src.usecase.pipeline.pipeline import PipelineUseCase
 
 
-def _make_pipeline_cfg(steps: list[dict]) -> DictConfig:
+def _make_pipeline_cfg(steps: list[dict[str, object]]) -> DictConfig:
     return OmegaConf.create(
         {
             "usecase": "pipeline",
@@ -43,7 +43,7 @@ class TestPipelineVertexTrainStep:
         assert call_log == ["vertex_train"]
 
     def test_full_vertex_to_kaggle_pipeline(self) -> None:
-        """preprocess → vertex_train → inference → update_source_dataset → push_notebook の順で実行されること。"""
+        """full pipeline の全ステップが順に実行されること。"""
         call_log: list[str] = []
 
         cfg = _make_pipeline_cfg(

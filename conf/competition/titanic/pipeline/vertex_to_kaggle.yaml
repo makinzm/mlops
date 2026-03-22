@@ -1,0 +1,29 @@
+# @package _global_
+# Titanic Vertex AI パイプライン設定 — Vertex AI 学習から Kaggle Notebook 更新まで
+#
+# 実行例:
+#   uv run python -m src usecase=pipeline recipe=vertex_to_kaggle
+usecase: pipeline
+job_id: titanic_vertex_to_kaggle
+
+steps:
+  # ① 前処理
+  - usecase: preprocess
+    recipe: base
+
+  # ② Vertex AI で学習
+  - usecase: vertex_train
+    recipe: lgbm
+
+  # ③ 推論（submission.csv 生成）
+  - usecase: inference
+    recipe: titanic_ensemble
+
+  # ④ モデル + コードを Kaggle Dataset に push
+  - usecase: update_source_dataset
+    source_dataset:
+      version_message: "auto update: vertex training"
+
+  # ⑤ Kaggle Notebook を最新モデルで更新
+  - usecase: push_notebook
+    notebook: titanic

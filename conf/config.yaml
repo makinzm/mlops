@@ -15,3 +15,8 @@ kaggle_username: null
 # create/update_source_dataset usecase 用パラメータ
 source_dataset: null
 staging_dir: null
+
+# vertex_train usecase 用パラメータ
+# caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
+gcp: null
+job_id: null
