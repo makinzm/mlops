@@ -37,12 +37,15 @@ terraform plan
 terraform apply
 ```
 
-> **`terraform plan/apply` でエラーが出た場合:**
+> **`terraform init/plan/apply` でエラーが出た場合:**
 >
 > | エラーメッセージ | 対処 |
 > |---|---|
 > | `No credentials loaded` | `gcloud auth application-default login` を実行 |
 > | `requires a quota project` | `gcloud auth application-default set-quota-project YOUR_PROJECT_ID` を実行 |
+> | `Inconsistent dependency lock file` | `terraform init -upgrade` を実行（`.tf` ファイル変更後に必要） |
+>
+> `terraform destroy` → `terraform apply` でやり直す場合も、先に `terraform init -upgrade` を実行してください。
 
 ### 出力値の確認
 
