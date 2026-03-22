@@ -26,19 +26,30 @@ class NotebookRenderer:
             autoescape=False,  # ipynb は JSON のため HTML エスケープ不要
         )
 
-    def render(self, output_path: Path, competition: str, src_dataset: str) -> Path:
+    def render(
+        self,
+        output_path: Path,
+        competition: str,
+        src_dataset: str,
+        enable_internet: bool = True,
+    ) -> Path:
         """テンプレートを描画して ipynb ファイルを書き出す。
 
         Args:
             output_path: 出力先ファイルパス（例: outputs/push_notebook/titanic/notebook.ipynb）
             competition: Kaggle competition の slug（例: "titanic"）
             src_dataset: コードを格納する Kaggle Dataset の slug（例: "mlops-pipeline-src"）
+            enable_internet: False のとき pip install をスキップする（オフラインコンペ用）
 
         Returns:
             書き出した ipynb ファイルのパス。
         """
         template = self._env.get_template(_TEMPLATE_NAME)
-        rendered = template.render(competition=competition, src_dataset=src_dataset)
+        rendered = template.render(
+            competition=competition,
+            src_dataset=src_dataset,
+            enable_internet=enable_internet,
+        )
 
         # JSON として parse してから再 dump することで整形済みファイルを生成する
         notebook = json.loads(rendered)

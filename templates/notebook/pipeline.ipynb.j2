@@ -20,11 +20,13 @@
    "outputs": [],
    "source": [
     "# セル 1: 環境セットアップ（編集不要）\n",
-    "import importlib.metadata\n",
     "import os\n",
+    "import sys\n",
+    {% if enable_internet %}
+    "\n",
+    "import importlib.metadata\n",
     "import re\n",
     "import subprocess\n",
-    "import sys\n",
     "\n",
     "# 未インストールのパッケージだけを pip install する。\n",
     "# すでにインストール済みの場合はスキップ。\n",
@@ -49,6 +51,7 @@
     "        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q'] + to_install)\n",
     "\n",
     "_smart_install('/kaggle/input/{{ src_dataset }}/requirements.txt')\n",
+    {% endif %}
     "\n",
     "# staging では src/ と conf/ がサブディレクトリとして zip 化される\n",
     "# Kaggle 展開後: /kaggle/input/{{ src_dataset }}/src/  (domain/ infrastructure/ ...)\n",
@@ -71,7 +74,7 @@
    "source": [
     "# セル 2: 設定（ここだけ編集する）\n",
     "COMPETITION_SLUG = \"{{ competition }}\"\n",
-    "RECIPE = \"base\"   # conf/recipe/ 以下のファイル名\n",
+    "RECIPE = \"all_after_download\"   # conf/competition/{slug}/pipeline/ 以下のファイル名\n",
     "\n",
     "# Kaggle Notebook 上での設定上書き（不要なら空のまま）\n",
     "# 例: {\"lgbm.num_leaves\": 64, \"preprocess.cv\": False}\n",

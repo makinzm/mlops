@@ -104,11 +104,13 @@ class PushNotebookUseCase:
     def _render_notebook(self, output_dir: Path, competition: str) -> Path:
         """Jinja2 テンプレートから notebook.ipynb を生成する。"""
         src_dataset: str = str(self._cfg.notebook.src_dataset)
+        enable_internet: bool = bool(self._cfg.notebook.enable_internet)
         notebook_path = output_dir / "notebook.ipynb"
         self._renderer.render(
             output_path=notebook_path,
             competition=competition,
             src_dataset=src_dataset,
+            enable_internet=enable_internet,
         )
         logger.info("Notebook generated: %s", notebook_path)
         return notebook_path

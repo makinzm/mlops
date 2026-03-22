@@ -369,9 +369,7 @@ class TestBinarySubmission:
 
         assert result is not None
         proba_path = result.parent / "submission_proba.csv"
-        assert proba_path.exists(), (
-            "threshold 設定時に submission_proba.csv が生成されていない"
-        )
+        assert proba_path.exists(), "threshold 設定時に submission_proba.csv が生成されていない"
 
     def test_submission_proba_csv_contains_probabilities(
         self, tmp_path: Path, mock_inferencer: MagicMock, mock_git_repo: MagicMock
@@ -427,6 +425,4 @@ class TestBinarySubmission:
 
         assert result is not None
         proba_path = result.parent / "submission_proba.csv"
-        assert not proba_path.exists(), (
-            "threshold 未設定なのに submission_proba.csv が生成された"
-        )
+        assert not proba_path.exists(), "threshold 未設定なのに submission_proba.csv が生成された"

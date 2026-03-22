@@ -141,16 +141,30 @@ class InferenceUseCase:
 
             final_pred = strategy.aggregate(predictions)
 
-            # submission.csv 生成（Kaggle フォーマット）
+            # submission 生成（Kaggle フォーマット）
             passenger_ids = test_df[passenger_id_col].to_list()
-            submission = pl.DataFrame(
-                {
-                    passenger_id_col: passenger_ids,
-                    "Survived": final_pred.tolist(),
-                }
+            threshold_raw = cfg.get("submission", {})
+            threshold: float | None = (
+                float(threshold_raw.get("threshold"))
+                if threshold_raw and threshold_raw.get("threshold") is not None
+                else None
             )
+
+            if threshold is not None:
+                # binary: submission.csv = 0/1、submission_proba.csv = 確率
+                binary_pred = (final_pred >= threshold).astype(int)
+                pl.DataFrame(
+                    {passenger_id_col: passenger_ids, "Survived": final_pred.tolist()}
+                ).write_csv(str(ts_dir / "submission_proba.csv"))
+                pl.DataFrame(
+                    {passenger_id_col: passenger_ids, "Survived": binary_pred.tolist()}
+                ).write_csv(str(ts_dir / "submission.csv"))
+            else:
+                # 後方互換: submission.csv = 確率
+                pl.DataFrame(
+                    {passenger_id_col: passenger_ids, "Survived": final_pred.tolist()}
+                ).write_csv(str(ts_dir / "submission.csv"))
             submission_path = ts_dir / "submission.csv"
-            submission.write_csv(str(submission_path))
 
         # metainfo.yaml に commit_hash / timestamp を記録
         commit_hash = self._git_repo.get_commit_hash()

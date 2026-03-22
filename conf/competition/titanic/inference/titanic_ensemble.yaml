@@ -41,4 +41,11 @@ ensemble: mean
 # ── 出力 ─────────────────────────────────────────
 output_dir: data/2026/Q1/inference/${competition.name}/${job_id}
 
+# ── 提出フォーマット ──────────────────────────────
+# threshold を設定すると submission.csv = 0/1 の二値ラベル（Kaggle 提出用）
+# 同時に submission_proba.csv = 確率値（モデル評価用）も生成する。
+# threshold: null のとき submission.csv = 確率値（後方互換）
+submission:
+  threshold: 0.5
+
 seed: 42

@@ -254,7 +254,7 @@ class TestNoPipNotebook:
         }
         cfg = OmegaConf.create(raw)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # type: ignore[arg-type]
+        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell1_source = "".join(notebook["cells"][0]["source"])
