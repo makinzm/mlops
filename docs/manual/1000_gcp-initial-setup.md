@@ -186,13 +186,33 @@ cp .env.example .env
 ```dotenv
 # GCP 設定（セクション 3, 4 でメモした値）
 GCP_PROJECT=your-project-id           # セクション 3 で取得したプロジェクト ID
-GCP_REGION=asia-northeast1
+GCP_REGION=asia-northeast1            # リージョン（下記の選び方を参照）
 GCP_BILLING_ACCOUNT=012345-ABCDEF-789012  # セクション 4 で取得した請求アカウント ID
 GCP_BUDGET_ALERT_EMAIL=your@email.com     # 予算アラート通知先
 ```
 
 `.env` は `.gitignore` 済みのため Git にコミットされません。
 これらの値は次の手順（[1001_vertex-ai-training.md](./1001_vertex-ai-training.md)）で `terraform/terraform.tfvars` に転記します。
+
+### GCP_REGION の選び方
+
+リージョンは「どこのデータセンターを使うか」です。以下の基準で選んでください:
+
+| 基準 | 説明 |
+|------|------|
+| **レイテンシ** | 自分に近いリージョンほどデータ転送が速い |
+| **料金** | リージョンによって同じマシンでも料金が異なる |
+| **Vertex AI の対応** | 全リージョンで Vertex AI が使えるわけではない |
+
+**日本から使う場合の推奨:**
+
+| リージョン | 場所 | 特徴 |
+|-----------|------|------|
+| `asia-northeast1` | 東京 | 最も低レイテンシ。**迷ったらこれ** |
+| `us-central1` | アイオワ | Vertex AI の全機能が最初に利用可能になる。料金も安め |
+
+Vertex AI の対応リージョン一覧:
+[Vertex AI locations](https://cloud.google.com/vertex-ai/docs/general/locations)
 
 ---
 
