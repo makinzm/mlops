@@ -123,8 +123,9 @@ resource "google_billing_budget" "monthly_budget" {
   }
 
   all_updates_rule {
-    monitoring_notification_channels = []
-    pubsub_topic                     = google_pubsub_topic.budget_alerts.id
+    # Pub/Sub 連携は Budget 作成後にコンソールで設定する
+    # (Terraform の Budget API で invalid argument エラーが発生するケースへの対処)
+    # pubsub_topic = google_pubsub_topic.budget_alerts.id
   }
 }
 
