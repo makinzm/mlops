@@ -50,5 +50,6 @@ notebooks/
 *.tfstate
 *.tfstate.backup
 .terraform/
+.terraform.tfstate.lock.info
 terraform.tfvars
 **/budget_enforcer.zip
