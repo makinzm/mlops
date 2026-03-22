@@ -144,7 +144,8 @@ class TestNotebookPipelineRunnerKagglePaths:
     def test_preprocess_input_path_resolved_to_kaggle_input(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """preprocess の inputs[0].path が /kaggle/input/titanic 以下に解決されること。"""
+        """preprocess の inputs[0].path が /kaggle/input/competitions/titanic
+        以下に解決されること。"""
         monkeypatch.setenv("KAGGLE_KERNEL_RUN_TYPE", "Interactive")
         conf_dir = tmp_path / "conf"
         _write_test_conf(conf_dir)
@@ -171,8 +172,8 @@ class TestNotebookPipelineRunnerKagglePaths:
 
         assert len(captured_cfgs) == 1, "preprocess が1回呼ばれていない"
         input_path = str(captured_cfgs[0].inputs[0].path)
-        assert "/kaggle/input/titanic" in input_path, (
-            f"input_root が /kaggle/input/titanic に解決されていない: {input_path}"
+        assert "/kaggle/input/competitions/titanic" in input_path, (
+            f"input_root が /kaggle/input/competitions/titanic に解決されていない: {input_path}"
         )
 
     def test_train_preprocess_output_dir_resolved_to_kaggle_working(

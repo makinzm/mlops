@@ -51,10 +51,10 @@ class TestResolveInputRoot:
         assert result == Path("titanic")
 
     def test_resolve_input_root_kaggle(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Kaggle 環境では /kaggle/input/{slug} を返す。"""
+        """Kaggle 環境では /kaggle/input/competitions/{slug} を返す。"""
         monkeypatch.setenv(_ENV_KEY, "Interactive")
         result = KaggleEnvironment.resolve_input_root("titanic")
-        assert result == Path("/kaggle/input/titanic")
+        assert result == Path("/kaggle/input/competitions/titanic")
 
 
 class TestResolveOutputRoot:

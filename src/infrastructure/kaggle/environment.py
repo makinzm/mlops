@@ -5,7 +5,7 @@ Kaggle Notebook では input/output のルートパスが固定されており�
 ローカル環境とパスの規則が異なる。このモジュールはその差異を吸収する薄いアダプター層。
 
 パス対応:
-  input:  ローカル Path(slug)           → Kaggle /kaggle/input/{slug}
+  input:  ローカル Path(slug)           → Kaggle /kaggle/input/competitions/{slug}
   output: ローカル Path(".")            → Kaggle /kaggle/working
 
 環境判定:
@@ -19,7 +19,7 @@ import os
 from pathlib import Path
 
 _ENV_KEY = "KAGGLE_KERNEL_RUN_TYPE"
-_KAGGLE_INPUT_ROOT = Path("/kaggle/input")
+_KAGGLE_COMPETITION_ROOT = Path("/kaggle/input/competitions")
 _KAGGLE_OUTPUT_ROOT = Path("/kaggle/working")
 
 
@@ -51,11 +51,11 @@ class KaggleEnvironment:
                           例: "titanic", "house-prices-advanced-regression-techniques"
 
         Returns:
-            Kaggle 環境なら /kaggle/input/{slug}、
+            Kaggle 環境なら /kaggle/input/competitions/{slug}、
             ローカル環境なら Path(dataset_slug)。
         """
         if KaggleEnvironment.is_kaggle_notebook():
-            return _KAGGLE_INPUT_ROOT / dataset_slug
+            return _KAGGLE_COMPETITION_ROOT / dataset_slug
         return Path(dataset_slug)
 
     @staticmethod
