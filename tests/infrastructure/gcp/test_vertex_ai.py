@@ -30,6 +30,7 @@ class TestVertexAIRepositoryImplSubmitJob:
             job_name = repo.submit_custom_job(
                 display_name="test-job",
                 container_uri="gcr.io/test/training:latest",
+                command=["bash", "-c", "echo hello"],
                 args=["usecase=train", "recipe=lgbm"],
                 machine_type="n1-standard-4",
                 env_vars={"GCS_DATA_URI": "gs://bucket/data"},
@@ -55,6 +56,7 @@ class TestVertexAIRepositoryImplSubmitJob:
             repo.submit_custom_job(
                 display_name="test-job",
                 container_uri="gcr.io/test/training:latest",
+                command=[],
                 args=[],
                 machine_type="n1-standard-4",
                 env_vars={"KEY": "VALUE"},

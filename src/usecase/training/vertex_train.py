@@ -108,29 +108,40 @@ class VertexAITrainUseCase:
         gcs_data_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/data"
         gcs_model_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/models"
 
-        # 3. src/ + conf/ を GCS にアップロード
+        # 3. src/ + conf/ + scripts/ を GCS にアップロード
         #    Docker イメージにはコードを含めず、GCS 経由で渡す
         logger.info(f"Uploading code to {gcs_code_uri}")
         self._gcs.upload_dir(_PROJECT_ROOT / "src", f"{gcs_code_uri}/src")
         self._gcs.upload_dir(_PROJECT_ROOT / "conf", f"{gcs_code_uri}/conf")
+        self._gcs.upload_dir(_PROJECT_ROOT / "scripts", f"{gcs_code_uri}/scripts")
 
         # 4. GCS にデータをアップロード
         logger.info(f"Uploading preprocessed data to {gcs_data_uri}")
         self._gcs.upload_dir(preprocess_dir, gcs_data_uri)
 
         # 5. Vertex AI ジョブを送信
+        #    Kaggle プリビルトイメージを使う場合、command で:
+        #    - gsutil でコードを /app にダウンロード
+        #    - 不足 deps を pip install
+        #    - entrypoint を実行
         env_vars: dict[str, str] = {
-            "GCS_CODE_URI": gcs_code_uri,
             "GCS_DATA_URI": gcs_data_uri,
             "GCS_MODEL_URI": gcs_model_uri,
             "MLOPS_JOB_ID": job_id,
             "MLOPS_RECIPE": recipe,
             "MLOPS_COMPETITION": competition,
             "MLOPS_COMMIT_HASH": commit_hash,
+            "PYTHONPATH": "/app",
         }
+        bootstrap = (
+            f"gsutil -m cp -r {gcs_code_uri}/* /app/"
+            " && pip install -q hydra-core omegaconf python-dotenv pydantic jinja2 mlflow"
+            " && python /app/scripts/vertex_entrypoint.py"
+        )
         vertex_job_name = self._vertex.submit_custom_job(
             display_name=f"{job_id}-{timestamp}",
             container_uri=str(cfg.gcp.container_uri),
+            command=["bash", "-c", bootstrap],
             args=[],
             machine_type=str(cfg.gcp.machine_type),
             env_vars=env_vars,

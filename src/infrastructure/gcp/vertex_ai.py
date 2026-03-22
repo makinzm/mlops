@@ -43,21 +43,26 @@ class VertexAIRepositoryImpl:
         self,
         display_name: str,
         container_uri: str,
+        command: list[str],
         args: list[str],
         machine_type: str,
         env_vars: dict[str, str],
         service_account: str,
     ) -> str:
         """カスタムトレーニングジョブを送信し、ジョブリソース名を返す。"""
+        container_spec: dict[str, object] = {
+            "image_uri": container_uri,
+            "env": [{"name": k, "value": v} for k, v in env_vars.items()],
+        }
+        if command:
+            container_spec["command"] = command
+        if args:
+            container_spec["args"] = args
         worker_pool_specs = [
             {
                 "machine_spec": {"machine_type": machine_type},
                 "replica_count": 1,
-                "container_spec": {
-                    "image_uri": container_uri,
-                    "args": args,
-                    "env": [{"name": k, "value": v} for k, v in env_vars.items()],
-                },
+                "container_spec": container_spec,
             }
         ]
         job = aiplatform.CustomJob(

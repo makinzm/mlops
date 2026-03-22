@@ -87,7 +87,7 @@ class TestVertexAITrainUseCaseExecute:
         assert isinstance(result, VertexTrainResult)
 
     def test_uploads_code_and_data_to_gcs(self, tmp_path: Path) -> None:
-        """src/ + conf/ + preprocessed data が GCS にアップロードされること。"""
+        """src/ + conf/ + scripts/ + preprocessed data が GCS にアップロードされること。"""
         cfg = _make_cfg(tmp_path)
         mock_gcs = _make_mock_gcs()
         usecase = VertexAITrainUseCase(
@@ -95,11 +95,12 @@ class TestVertexAITrainUseCaseExecute:
         )
         usecase.execute()
 
-        # upload_dir が 3 回呼ばれていること（src, conf, data）
-        assert mock_gcs.upload_dir.call_count == 3
+        # upload_dir が 4 回呼ばれていること（src, conf, scripts, data）
+        assert mock_gcs.upload_dir.call_count == 4
         upload_uris = [call.args[1] for call in mock_gcs.upload_dir.call_args_list]
         assert any("/code/src" in uri for uri in upload_uris)
         assert any("/code/conf" in uri for uri in upload_uris)
+        assert any("/code/scripts" in uri for uri in upload_uris)
         assert any("/data" in uri for uri in upload_uris)
 
     def test_submits_vertex_job_with_correct_params(self, tmp_path: Path) -> None:
@@ -196,8 +197,26 @@ class TestVertexAITrainUseCaseExecute:
         assert result.gcs_data_uri.startswith("gs://")
         assert result.gcs_model_uri.startswith("gs://")
 
-    def test_env_vars_contain_gcs_code_uri(self, tmp_path: Path) -> None:
-        """Vertex AI ジョブの env_vars に GCS_CODE_URI が含まれること。"""
+    def test_command_contains_bootstrap(self, tmp_path: Path) -> None:
+        """command に gsutil + pip install + entrypoint の bootstrap が含まれること。"""
+        cfg = _make_cfg(tmp_path)
+        mock_vertex = _make_mock_vertex()
+        usecase = VertexAITrainUseCase(
+            cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
+        )
+        usecase.execute()
+
+        submit_call = mock_vertex.submit_custom_job.call_args
+        command: list[str] = submit_call.kwargs["command"]
+        assert command[0] == "bash"
+        assert command[1] == "-c"
+        bootstrap = command[2]
+        assert "gsutil" in bootstrap
+        assert "pip install" in bootstrap
+        assert "vertex_entrypoint.py" in bootstrap
+
+    def test_env_vars_contain_gcs_uris(self, tmp_path: Path) -> None:
+        """Vertex AI ジョブの env_vars に GCS_DATA_URI と GCS_MODEL_URI が含まれること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
         usecase = VertexAITrainUseCase(
@@ -207,7 +226,6 @@ class TestVertexAITrainUseCaseExecute:
 
         submit_call = mock_vertex.submit_custom_job.call_args
         env_vars: dict[str, str] = submit_call.kwargs["env_vars"]
-        assert "GCS_CODE_URI" in env_vars
         assert "GCS_DATA_URI" in env_vars
         assert "GCS_MODEL_URI" in env_vars
-        assert env_vars["GCS_CODE_URI"].startswith("gs://")
+        assert "PYTHONPATH" in env_vars

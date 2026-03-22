@@ -30,6 +30,7 @@ class VertexAIRepository(Protocol):
         self,
         display_name: str,
         container_uri: str,
+        command: list[str],
         args: list[str],
         machine_type: str,
         env_vars: dict[str, str],
