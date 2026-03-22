@@ -37,17 +37,12 @@ terraform plan
 terraform apply
 ```
 
-> **`terraform plan` で認証エラーが出た場合:**
+> **`terraform plan/apply` でエラーが出た場合:**
 >
-> ```
-> Error: No credentials loaded. To use your gcloud credentials, run 'gcloud auth application-default login'
-> ```
->
-> [1000_gcp-initial-setup.md](./1000_gcp-initial-setup.md) セクション 6 の認証が済んでいない可能性があります。以下を実行してください:
->
-> ```bash
-> gcloud auth application-default login
-> ```
+> | エラーメッセージ | 対処 |
+> |---|---|
+> | `No credentials loaded` | `gcloud auth application-default login` を実行 |
+> | `requires a quota project` | `gcloud auth application-default set-quota-project YOUR_PROJECT_ID` を実行 |
 
 ### 出力値の確認
 

@@ -81,13 +81,6 @@ resource "google_pubsub_topic" "budget_alerts" {
   name = "budget-alerts"
 }
 
-# Cloud Billing が Pub/Sub に publish できるよう IAM を付与
-resource "google_pubsub_topic_iam_member" "billing_pubsub" {
-  topic  = google_pubsub_topic.budget_alerts.name
-  role   = "roles/pubsub.publisher"
-  member = "serviceAccount:billing-export@system.gserviceaccount.com"
-}
-
 # ───────────────────────────────────────────────
 # 予算アラート
 # ───────────────────────────────────────────────
@@ -141,10 +134,16 @@ resource "google_billing_budget" "monthly_budget" {
 # budget_action = "stop" の場合のみ実際に停止する
 # budget_action = "warn" の場合は通知のみ（停止なし）
 # ───────────────────────────────────────────────
+data "archive_file" "budget_enforcer" {
+  type        = "zip"
+  source_dir  = "${path.module}/budget_enforcer"
+  output_path = "${path.module}/budget_enforcer.zip"
+}
+
 resource "google_storage_bucket_object" "budget_enforcer_zip" {
   name   = "functions/budget_enforcer.zip"
   bucket = google_storage_bucket.staging.name
-  source = "${path.module}/budget_enforcer.zip"
+  source = data.archive_file.budget_enforcer.output_path
 }
 
 resource "google_cloudfunctions2_function" "budget_enforcer" {
