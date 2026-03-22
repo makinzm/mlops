@@ -59,19 +59,8 @@ training_service_account_email = "training-sa@your-project.iam.gserviceaccount.c
 reader_service_account_email = "reader-sa@your-project.iam.gserviceaccount.com"
 ```
 
-### conf/gcp/vertex.yaml の更新
-
-`conf/gcp/vertex.yaml` を開き、出力値で以下の項目を更新:
-
-```yaml
-gcp:
-  project: your-project-id                         # ← GCP プロジェクト ID
-  region: asia-northeast1
-  staging_bucket: gs://your-project-mlops-staging  # ← staging_bucket_uri
-  container_uri: asia-northeast1-docker.pkg.dev/your-project/mlops/training:latest  # ← container_registry_uri + タグ
-  machine_type: n1-standard-4
-  service_account: training-sa@your-project.iam.gserviceaccount.com  # ← training_service_account_email
-```
+> `conf/gcp/vertex.yaml` の手動更新は不要です。
+> `.env` の `GCP_PROJECT` / `GCP_REGION` から `${oc.env:...}` で自動的に値が解決されます。
 
 ---
 
