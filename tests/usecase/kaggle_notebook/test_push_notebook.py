@@ -212,3 +212,52 @@ class TestOutputFiles:
         result = usecase.execute()
         readme = result.notebook_path.parent / "README.md"
         assert readme.exists(), "README.md が生成されていない"
+
+
+class TestNoPipNotebook:
+    """enable_internet=False のとき pip install がスキップされることを検証する。
+
+    なぜこのテストが必要か:
+      - インターネットオフのコンペでは pip install が実行できないため、
+        Cell 1 に _smart_install 呼び出しが含まれてはならない。
+      - enable_internet フラグをテンプレートに渡すことで対応し、
+        自動テストで退行を防ぐ。
+    """
+
+    def test_cell1_has_smart_install_when_internet_enabled(self, tmp_path: Path) -> None:
+        """enable_internet=True（デフォルト）のとき Cell 1 に _smart_install が含まれること。"""
+        cfg = _make_cfg(tmp_path)
+        mock_api = MagicMock()
+        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # type: ignore[arg-type]
+        result = usecase.execute()
+        notebook = json.loads(result.notebook_path.read_text())
+        cell1_source = "".join(notebook["cells"][0]["source"])
+        assert "_smart_install(" in cell1_source, (
+            "enable_internet=True なのに Cell 1 に _smart_install 呼び出しがない"
+        )
+
+    def test_cell1_skips_smart_install_when_internet_disabled(self, tmp_path: Path) -> None:
+        """enable_internet=False のとき Cell 1 に _smart_install 呼び出しがないこと。"""
+        from omegaconf import OmegaConf
+
+        raw = {
+            "usecase": "push_notebook",
+            "notebook": {
+                "competition": "titanic",
+                "kernel_slug": "titanic-pipeline",
+                "src_dataset": "mlops-pipeline-src",
+                "enable_gpu": False,
+                "enable_internet": False,  # ← オフライン
+            },
+            "output_dir": str(tmp_path / "push_notebook"),
+            "kaggle_username": "testuser",
+        }
+        cfg = OmegaConf.create(raw)
+        mock_api = MagicMock()
+        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # type: ignore[arg-type]
+        result = usecase.execute()
+        notebook = json.loads(result.notebook_path.read_text())
+        cell1_source = "".join(notebook["cells"][0]["source"])
+        assert "_smart_install(" not in cell1_source, (
+            "enable_internet=False なのに Cell 1 に _smart_install 呼び出しが含まれている"
+        )
