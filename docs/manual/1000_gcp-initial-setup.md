@@ -31,16 +31,14 @@ GCP ではすべてのリソースが「プロジェクト」単位で管理さ�
 2. 「新しいプロジェクト」をクリック
 3. プロジェクト名を入力（例: `mlops-titanic`）
 4. 「作成」をクリック
-5. 作成後、プロジェクト ID をメモしておく（例: `mlops-titanic-123456`）
+5. 作成後、プロジェクト ID を `terraform/terraform.tfvars` の `project_id` にメモする（例: `mlops-titanic-123456`）
 
-プロジェクト ID は後の設定で必要になります。
-
-> **プロジェクト ID は秘密情報か？**
+> **機密性: 低リスク（ただし Git にはコミットしない）**
 >
-> **いいえ。** プロジェクト ID を知られただけではリソースにアクセスできません（IAM で保護されています）。
-> ただし Google は プロジェクト ID を **PII（個人識別情報）** に分類しており、
+> プロジェクト ID を知られただけではリソースにアクセスできません（IAM で保護）。
+> ただし Google はプロジェクト ID を **PII（個人識別情報）** に分類しており、
 > 公開すると偵察（バケット名の推測等）の起点にされるリスクがあります。
-> そのため、本プロジェクトでは `terraform.tfvars`（`.gitignore` 済み）で管理し、Git にコミットしません。
+> `terraform.tfvars` は `.gitignore` 済みのため Git にコミットされません。
 >
 > 参考:
 > - [AIP-2510: Project identifiers](https://google.aip.dev/cloud/2510) — Google 内部 API 設計標準。プロジェクト ID を PII と明記。
@@ -56,14 +54,12 @@ Vertex AI の学習は無料枠の範囲内で十分試せます。
 1. コンソール左上のハンバーガーメニュー → 「お支払い」
 2. 「請求先アカウントをリンク」または「請求先アカウントを作成」をクリック
 3. クレジットカード情報を入力（無料枠内は請求されません）
-4. 請求アカウント ID をメモしておく（例: `012345-ABCDEF-789012`）
+4. 請求アカウント ID を `terraform/terraform.tfvars` の `billing_account_id` にメモする（例: `012345-ABCDEF-789012`）
 
-請求アカウント ID は `terraform/terraform.tfvars` で必要になります。
-
-> **請求アカウント ID は秘密情報か？**
+> **機密性: 低リスク（ただし Git にはコミットしない）**
 >
-> **いいえ。** 請求アカウント ID を知られただけでは課金操作はできません（IAM ロール `Billing Account Administrator` 等が必要）。
-> ただし、公開する理由もないため `terraform.tfvars`（`.gitignore` 済み）で管理します。
+> 請求アカウント ID を知られただけでは課金操作はできません（IAM ロール `Billing Account Administrator` 等が必要）。
+> 公開する理由もないため `terraform.tfvars`（`.gitignore` 済み）で管理します。
 >
 > 参考:
 > - [Cloud Billing access control](https://cloud.google.com/billing/docs/how-to/billing-access) — 請求操作は IAM で保護されており、ID の秘匿ではなくロールで制御される。
