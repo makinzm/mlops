@@ -89,8 +89,12 @@ data "google_project" "current" {
   project_id = var.project_id
 }
 
-resource "google_billing_budget" "monthly_budget" {
+data "google_billing_account" "account" {
   billing_account = var.billing_account_id
+}
+
+resource "google_billing_budget" "monthly_budget" {
+  billing_account = data.google_billing_account.account.id
   display_name    = "MLOps Monthly Budget"
 
   budget_filter {
@@ -122,11 +126,9 @@ resource "google_billing_budget" "monthly_budget" {
     spend_basis       = "CURRENT_SPEND"
   }
 
-  all_updates_rule {
-    # Pub/Sub 連携は Budget 作成後にコンソールで設定する
-    # (Terraform の Budget API で invalid argument エラーが発生するケースへの対処)
-    # pubsub_topic = google_pubsub_topic.budget_alerts.id
-  }
+  # NOTE: 空の all_updates_rule {} は API が 400 を返す既知の問題
+  # Pub/Sub 連携は Budget 作成後にコンソールから設定する
+  # ref: https://github.com/hashicorp/terraform-provider-google/issues/9375
 }
 
 # ───────────────────────────────────────────────
