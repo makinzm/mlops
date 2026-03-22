@@ -9,5 +9,4 @@ gcp:
   accelerator_type: null                              # GPU使用時: NVIDIA_TESLA_T4
   accelerator_count: 0
   service_account: training-sa@${oc.env:GCP_PROJECT}.iam.gserviceaccount.com
-  budget_action: ${oc.env:GCP_BUDGET_ACTION,warn}     # "warn": 通知のみ / "stop": ジョブ停止
 

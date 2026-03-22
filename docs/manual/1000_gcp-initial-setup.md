@@ -55,17 +55,9 @@ Vertex AI の学習は無料枠の範囲内で十分試せます。
 1. コンソール左上のハンバーガーメニュー → 「請求」→「請求アカウントを管理」
 2. 「請求先アカウントをリンク」または「請求先アカウントを作成」をクリック
 3. クレジットカード情報を入力（無料枠内は請求されません）
-4. 請求アカウント ID をメモしておく（例: `012345-ABCDEF-789012`）
-   → **メモ先: `.env` の `GCP_BILLING_ACCOUNT`**（セクション 10 で作成）
+4. 請求アカウントがプロジェクトにリンクされていることを確認
 
-> **機密性: 低リスク（ただし Git にはコミットしない）**
->
-> 請求アカウント ID を知られただけでは課金操作はできません（IAM ロール `Billing Account Administrator` 等が必要）。
-> 公開する理由もないため `.env`（`.gitignore` 済み）で管理します。
->
-> 参考:
-> - [Cloud Billing access control](https://cloud.google.com/billing/docs/how-to/billing-access) — 請求操作は IAM で保護されており、ID の秘匿ではなくロールで制御される。
-> - [Find a Cloud Billing account ID](https://cloud.google.com/billing/docs/how-to/find-billing-account-id) — ID はシステム生成の識別子。`billing.accounts.get` 権限を持つユーザーのみ閲覧可能。
+予算アラートの設定方法は [1002_cost-monitoring.md](./1002_cost-monitoring.md) を参照してください。
 
 ---
 
@@ -114,17 +106,9 @@ gcloud config set project YOUR_PROJECT_ID
 | Vertex AI API | モデル学習ジョブ |
 | Cloud Storage API | データ・モデルのステージング |
 | Artifact Registry API | Docker イメージ保管 |
-| Cloud Functions API | 予算超過時のジョブ停止 |
-| Cloud Build API | Cloud Functions のビルド |
-| Pub/Sub API | 予算アラート通知 |
-| Cloud Billing API | 請求アカウント情報の読み取り |
-| Cloud Billing Budget API | 予算アラート設定 |
 | IAM API | サービスアカウント作成 |
 | Cloud Resource Manager API | IAM ポリシーの読み書き |
-| Cloud Logging API | 学習ジョブのログ出力 |
 | Compute Engine API | Vertex AI のマシン割り当て |
-| Eventarc API | Cloud Functions Gen2 のイベントトリガー |
-| Cloud Run API | Cloud Functions Gen2 の実行基盤 |
 
 ### gcloud コマンドで一括有効化する場合
 
@@ -133,16 +117,8 @@ gcloud services enable \
   aiplatform.googleapis.com \
   storage.googleapis.com \
   artifactregistry.googleapis.com \
-  cloudfunctions.googleapis.com \
-  cloudbuild.googleapis.com \
-  pubsub.googleapis.com \
-  cloudbilling.googleapis.com \
-  billingbudgets.googleapis.com \
   iam.googleapis.com \
   cloudresourcemanager.googleapis.com \
-  logging.googleapis.com \
-  eventarc.googleapis.com \
-  run.googleapis.com \
   compute.googleapis.com
 ```
 
@@ -203,19 +179,13 @@ https://www.docker.com/products/docker-desktop から Docker Desktop をダウ�
 cp .env.example .env
 ```
 
-`.env` に追記（セクション 3〜4 でメモした値をここに記入する）:
+`.env` に追記（セクション 3 でメモしたプロジェクト ID をここに記入する）:
 
 ```dotenv
-# GCP 設定（セクション 3, 4 でメモした値）
+# GCP 設定（セクション 3 でメモした値）
 GCP_PROJECT=your-project-id                # 【必須】セクション 3 で取得したプロジェクト ID
 GCP_REGION=asia-northeast1                 # リージョン（下記の選び方を参照）
-GCP_BILLING_ACCOUNT=012345-ABCDEF-789012   # 【必須】セクション 4 で取得した請求アカウント ID
-GCP_BUDGET_ALERT_EMAIL=your@email.com      # 【必須】予算アラート通知先
-
-# 以下はオプション（デフォルト値あり）
 # GCP_BUCKET_NAME=my-custom-bucket-name    # 未設定なら {GCP_PROJECT}-mlops-staging
-# GCP_BUDGET_AMOUNT=10                     # 月間予算上限（USD）
-# GCP_BUDGET_ACTION=warn                   # warn: 通知のみ / stop: ジョブ自動停止
 ```
 
 `.env` は `.gitignore` 済みのため Git にコミットされません。

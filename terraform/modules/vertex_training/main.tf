@@ -75,99 +75,13 @@ resource "google_project_iam_member" "reader_sa_storage" {
 }
 
 # ───────────────────────────────────────────────
-# Pub/Sub トピック — 予算アラート通知用
+# 予算アラート — Terraform 管理外
 # ───────────────────────────────────────────────
-resource "google_pubsub_topic" "budget_alerts" {
-  name = "budget-alerts"
-}
-
-# ───────────────────────────────────────────────
-# 予算アラート
-# ───────────────────────────────────────────────
-# プロジェクト番号を取得（Budget API は projects/NUMBER 形式が必要）
-data "google_project" "current" {
-  project_id = var.project_id
-}
-
-data "google_billing_account" "account" {
-  count           = var.enable_budget ? 1 : 0
-  billing_account = var.billing_account_id
-}
-
-resource "google_billing_budget" "monthly_budget" {
-  count           = var.enable_budget ? 1 : 0
-  billing_account = data.google_billing_account.account[0].id
-  display_name    = "MLOps Monthly Budget"
-
-  amount {
-    specified_amount {
-      currency_code = "USD"
-      units         = tostring(var.budget_amount)
-    }
-  }
-
-  threshold_rules {
-    threshold_percent = 0.5
-  }
-  threshold_rules {
-    threshold_percent = 0.8
-  }
-  threshold_rules {
-    threshold_percent = 1.0
-  }
-
-  # NOTE:
-  # - budget_filter を省略するとこの billing account の全支出を監視する
-  # - Pub/Sub 連携は Budget 作成後にコンソールから設定する
-  #   (空の all_updates_rule {} は 400 エラーになる既知の問題)
-  #   ref: https://github.com/hashicorp/terraform-provider-google/issues/9375
-}
-
-# ───────────────────────────────────────────────
-# Cloud Function (Gen2) — 予算超過時ジョブ停止
-# budget_action = "stop" の場合のみ実際に停止する
-# budget_action = "warn" の場合は通知のみ（停止なし）
-# ───────────────────────────────────────────────
-data "archive_file" "budget_enforcer" {
-  type        = "zip"
-  source_dir  = "${path.module}/budget_enforcer"
-  output_path = "${path.module}/budget_enforcer.zip"
-}
-
-resource "google_storage_bucket_object" "budget_enforcer_zip" {
-  name   = "functions/budget_enforcer.zip"
-  bucket = google_storage_bucket.staging.name
-  source = data.archive_file.budget_enforcer.output_path
-}
-
-resource "google_cloudfunctions2_function" "budget_enforcer" {
-  name        = "budget-enforcer"
-  location    = var.region
-  description = "予算超過時に Vertex AI ジョブを停止する（budget_action=stop の場合のみ）"
-
-  build_config {
-    runtime     = "python312"
-    entry_point = "handle_budget_alert"
-    source {
-      storage_source {
-        bucket = google_storage_bucket.staging.name
-        object = google_storage_bucket_object.budget_enforcer_zip.name
-      }
-    }
-  }
-
-  service_config {
-    environment_variables = {
-      BUDGET_ACTION = var.budget_action
-      GCP_PROJECT   = var.project_id
-      GCP_REGION    = var.region
-    }
-    service_account_email = google_service_account.training_sa.email
-  }
-
-  event_trigger {
-    trigger_region = var.region
-    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
-    pubsub_topic   = google_pubsub_topic.budget_alerts.id
-  }
-}
+# Billing Budget の Terraform 作成には billing account レベルの
+# roles/billing.budgets.admin が必要だが、個人プロジェクトでは
+# 付与が困難（API が 400 invalid argument を返す既知の問題）。
+#
+# 代わりに GCP コンソールから手動で設定する:
+#   コンソール → お支払い → 予算とアラート → 予算を作成
+#
+# 手順の詳細: docs/manual/1002_cost-monitoring.md

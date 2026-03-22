@@ -18,45 +18,35 @@ Vertex AI は実行時間に応じてコストが発生します。
 1. コンソール → 「お支払い」
 2. 「概要」の「今月の費用」にリアルタイムの費用が表示されます
 
-### Vertex AI 固有のコスト確認
+---
 
-1. コンソール → 「Vertex AI」
-2. 「請求」ページまたは「使用状況」でサービス別の使用量を確認
+## 2. 予算アラートの設定（コンソールから手動）
+
+> **なぜ Terraform で管理しないのか？**
+>
+> Billing Budget の Terraform 作成には billing account レベルの
+> `roles/billing.budgets.admin` 権限が必要ですが、個人プロジェクトでは
+> この権限の付与が困難です（API が 400 を返す既知の問題）。
+> そのため、予算アラートは GCP コンソールから手動で設定します。
+>
+> 参考: [hashicorp/terraform-provider-google #9375](https://github.com/hashicorp/terraform-provider-google/issues/9375)
+
+### 手順
+
+1. GCP コンソール → 「お支払い」→「予算とアラート」
+2. 「予算を作成」をクリック
+3. 以下を設定:
+   - **名前**: `MLOps Monthly Budget`
+   - **プロジェクト**: 自分のプロジェクトを選択
+   - **金額**: 月間上限（例: $10）
+   - **アラートのしきい値**: 50%, 80%, 100%
+4. 「保存」をクリック
+
+設定したメールアドレスに、しきい値到達時にアラートメールが届きます。
 
 ---
 
-## 2. 予算アラートメールの確認
-
-Terraform で設定した `budget_alert_email` に対して、予算の 50% / 80% / 100% / 120% 到達時に
-メールが送信されます。
-
-メールの件名例:
-```
-Budget alert: MLOps Monthly Budget - You've reached 80% of your budget
-```
-
----
-
-## 3. budget_action の切り替え方法
-
-`conf/gcp/vertex.yaml` の `budget_action` を変更することで動作を切り替えられます。
-
-```yaml
-gcp:
-  budget_action: warn   # "warn": 通知のみ（デフォルト）
-  # budget_action: stop  # "stop": 予算超過時にジョブを自動停止
-```
-
-変更後は Terraform を再適用:
-
-```bash
-cd terraform
-terraform apply
-```
-
----
-
-## 4. Vertex AI ジョブの手動停止（緊急時）
+## 3. Vertex AI ジョブの手動停止（緊急時）
 
 ### GCP コンソールから停止
 
@@ -81,7 +71,7 @@ gcloud ai custom-jobs cancel JOB_ID \
 
 ---
 
-## 5. 使い終わったリソースの削除
+## 4. 使い終わったリソースの削除
 
 ### 全リソースの削除（terraform destroy）
 
@@ -91,12 +81,9 @@ terraform destroy
 ```
 
 この操作で以下が削除されます:
-- GCS バケット（バケット内のファイルも削除）
+- GCS バケット
 - Artifact Registry リポジトリ（コンテナイメージも削除）
 - サービスアカウント
-- Pub/Sub トピック
-- Cloud Functions
-- 予算アラート
 
 **注意**: `force_destroy = false` に設定されているため、バケットに中身がある場合は削除が失敗します。
 先にバケットの中身を削除してから実行してください:
@@ -115,7 +102,7 @@ gcloud artifacts docker images delete \
 
 ---
 
-## 6. コスト削減のヒント
+## 5. コスト削減のヒント
 
 ### マシンタイプの選択
 

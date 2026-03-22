@@ -27,8 +27,6 @@ set +a
 # 必須変数のチェック
 missing=()
 [ -z "${GCP_PROJECT:-}" ] && missing+=("GCP_PROJECT")
-[ -z "${GCP_BILLING_ACCOUNT:-}" ] && missing+=("GCP_BILLING_ACCOUNT")
-[ -z "${GCP_BUDGET_ALERT_EMAIL:-}" ] && missing+=("GCP_BUDGET_ALERT_EMAIL")
 
 if [ ${#missing[@]} -gt 0 ]; then
   echo "ERROR: .env に以下の変数が未設定です:" >&2
@@ -45,14 +43,9 @@ cat > "$TFVARS_FILE" << EOF
 #
 # 再生成: ./scripts/gen_tfvars.sh
 
-project_id         = "${GCP_PROJECT}"
-region             = "${GCP_REGION:-asia-northeast1}"
-bucket_name        = "${BUCKET_NAME}"
-enable_budget      = ${GCP_ENABLE_BUDGET:-false}
-budget_amount      = ${GCP_BUDGET_AMOUNT:-10}
-budget_alert_email = "${GCP_BUDGET_ALERT_EMAIL}"
-budget_action      = "${GCP_BUDGET_ACTION:-warn}"
-billing_account_id = "${GCP_BILLING_ACCOUNT}"
+project_id  = "${GCP_PROJECT}"
+region      = "${GCP_REGION:-asia-northeast1}"
+bucket_name = "${BUCKET_NAME}"
 EOF
 
 echo "生成完了: $TFVARS_FILE"
