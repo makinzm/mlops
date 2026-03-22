@@ -122,6 +122,8 @@ gcloud config set project YOUR_PROJECT_ID
 | Cloud Resource Manager API | IAM ポリシーの読み書き |
 | Cloud Logging API | 学習ジョブのログ出力 |
 | Compute Engine API | Vertex AI のマシン割り当て |
+| Eventarc API | Cloud Functions Gen2 のイベントトリガー |
+| Cloud Run API | Cloud Functions Gen2 の実行基盤 |
 
 ### gcloud コマンドで一括有効化する場合
 
@@ -137,6 +139,8 @@ gcloud services enable \
   iam.googleapis.com \
   cloudresourcemanager.googleapis.com \
   logging.googleapis.com \
+  eventarc.googleapis.com \
+  run.googleapis.com \
   compute.googleapis.com
 ```
 

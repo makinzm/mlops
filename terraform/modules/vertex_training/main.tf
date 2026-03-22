@@ -90,17 +90,13 @@ resource "google_billing_budget" "monthly_budget" {
 
   budget_filter {
     projects = ["projects/${var.project_id}"]
-    services = [
-      "services/aiplatform.googleapis.com",   # Vertex AI
-      "services/storage.googleapis.com",       # GCS
-      "services/artifactregistry.googleapis.com",
-    ]
+    # プロジェクト内の全サービスを監視（サービス個別指定は ID 形式が不安定なため省略）
   }
 
   amount {
     specified_amount {
       currency_code = "USD"
-      units         = tostring(floor(var.budget_amount))
+      units         = var.budget_amount
     }
   }
 
