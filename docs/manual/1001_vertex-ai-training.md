@@ -66,25 +66,19 @@ reader_service_account_email = "reader-sa@your-project.iam.gserviceaccount.com"
 
 ## 2. Docker イメージのビルドとプッシュ
 
-### Docker の認証設定
+Docker イメージには **依存パッケージのみ** を含み、コード（`src/`, `conf/`）は含みません。
+コードは実行時に GCS 経由でコンテナに渡されます。
+
+→ **`pyproject.toml` や `uv.lock` を変更したときだけ再ビルドが必要** です。
+   コードを変更しただけなら再ビルド不要。
+
+### ビルド + プッシュ（1コマンド）
 
 ```bash
-gcloud auth configure-docker asia-northeast1-docker.pkg.dev
+./scripts/docker_push.sh
 ```
 
-### イメージのビルド
-
-```bash
-cd /path/to/mlops  # プロジェクトルート
-
-docker build -t asia-northeast1-docker.pkg.dev/your-project/mlops/training:latest .
-```
-
-### イメージのプッシュ
-
-```bash
-docker push asia-northeast1-docker.pkg.dev/your-project/mlops/training:latest
-```
+`.env` から `GCP_PROJECT` / `GCP_REGION` を読み取り、ビルド・認証・push を全て行います。
 
 ---
 

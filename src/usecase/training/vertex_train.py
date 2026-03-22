@@ -3,12 +3,13 @@ VertexAITrainUseCase — GCP Vertex AI でモデル学習を実行するユー�
 
 処理フロー:
 1. preprocess_output_dir を解決（"latest" → 最新タイムスタンプ）
-2. preprocessed data を GCS にアップロード
-3. Vertex AI CustomJob を送信（コンテナに GCS_DATA_URI / GCS_MODEL_URI を渡す）
-4. ジョブ完了をポーリング（失敗時は RuntimeError を送出）
-5. GCS からモデル成果物をローカルにダウンロード
-6. per-job .gitignore を配置
-7. VertexTrainResult を返す
+2. src/ + conf/ を GCS にアップロード（コードはイメージに含めず GCS 経由で渡す）
+3. preprocessed data を GCS にアップロード
+4. Vertex AI CustomJob を送信（コンテナに GCS_CODE_URI / GCS_DATA_URI / GCS_MODEL_URI を渡す）
+5. ジョブ完了をポーリング（失敗時は RuntimeError を送出）
+6. GCS からモデル成果物をローカルにダウンロード
+7. per-job .gitignore を配置
+8. VertexTrainResult を返す
 
 出力ディレクトリ構造:
   models/{competition}/{job_id}/
@@ -41,6 +42,9 @@ _MODELS_DIR_GITIGNORE = """\
 !*.md
 !*/
 """
+
+# プロジェクトルート（src/ の親ディレクトリ）
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
 @dataclass
@@ -100,15 +104,23 @@ class VertexAITrainUseCase:
 
         # 2. GCS URI を確定
         bucket_base = str(cfg.gcp.staging_bucket).rstrip("/")
+        gcs_code_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/code"
         gcs_data_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/data"
         gcs_model_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/models"
 
-        # 3. GCS にデータをアップロード
+        # 3. src/ + conf/ を GCS にアップロード
+        #    Docker イメージにはコードを含めず、GCS 経由で渡す
+        logger.info(f"Uploading code to {gcs_code_uri}")
+        self._gcs.upload_dir(_PROJECT_ROOT / "src", f"{gcs_code_uri}/src")
+        self._gcs.upload_dir(_PROJECT_ROOT / "conf", f"{gcs_code_uri}/conf")
+
+        # 4. GCS にデータをアップロード
         logger.info(f"Uploading preprocessed data to {gcs_data_uri}")
         self._gcs.upload_dir(preprocess_dir, gcs_data_uri)
 
-        # 4. Vertex AI ジョブを送信
+        # 5. Vertex AI ジョブを送信
         env_vars: dict[str, str] = {
+            "GCS_CODE_URI": gcs_code_uri,
             "GCS_DATA_URI": gcs_data_uri,
             "GCS_MODEL_URI": gcs_model_uri,
             "MLOPS_JOB_ID": job_id,
@@ -126,7 +138,7 @@ class VertexAITrainUseCase:
         )
         logger.info(f"Submitted Vertex AI job: {vertex_job_name}")
 
-        # 5. ジョブ完了を待機
+        # 6. ジョブ完了を待機
         status = self._vertex.wait_for_job(vertex_job_name)
         if not status.is_succeeded:
             raise RuntimeError(
@@ -134,14 +146,14 @@ class VertexAITrainUseCase:
                 f"state={status.state}, error={status.error_message}"
             )
 
-        # 6. ローカルにモデル成果物をダウンロード
+        # 7. ローカルにモデル成果物をダウンロード
         job_dir = Path(str(cfg.output_dir)) / job_id
         local_model_dir = job_dir / timestamp
         local_model_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Downloading model artifacts from {gcs_model_uri} to {local_model_dir}")
         self._gcs.download_dir(gcs_model_uri, local_model_dir)
 
-        # 7. per-job .gitignore を配置
+        # 8. per-job .gitignore を配置
         gitignore_path = job_dir / ".gitignore"
         if not gitignore_path.exists():
             gitignore_path.write_text(_MODELS_DIR_GITIGNORE)

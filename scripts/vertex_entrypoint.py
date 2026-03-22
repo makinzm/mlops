@@ -2,12 +2,14 @@
 Vertex AI カスタムトレーニングコンテナのエントリーポイント。
 
 処理フロー:
-1. GCS_DATA_URI から /tmp/mlops/data/ にデータをダウンロード
-2. 環境変数 MLOPS_DATA_DIR / MLOPS_MODEL_DIR を設定
-3. uv run python -m src usecase=train を実行
-4. /tmp/mlops/models/ を GCS_MODEL_URI にアップロード
+1. GCS_CODE_URI から /app/src/, /app/conf/ にコードをダウンロード
+2. GCS_DATA_URI から /tmp/mlops/data/ にデータをダウンロード
+3. 環境変数 MLOPS_DATA_DIR / MLOPS_MODEL_DIR を設定
+4. uv run python -m src usecase=train を実行
+5. /tmp/mlops/models/ を GCS_MODEL_URI にアップロード
 
 環境変数（Vertex AI ジョブから注入）:
+  GCS_CODE_URI     : src/ + conf/ の GCS URI
   GCS_DATA_URI     : 前処理済みデータの GCS URI
   GCS_MODEL_URI    : モデル出力先の GCS URI
   MLOPS_JOB_ID     : ジョブ識別子
@@ -24,7 +26,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from google.cloud import storage  # type: ignore[import-untyped]
+from google.cloud import storage  # type: ignore[import-untyped,unused-ignore]
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,28 +75,31 @@ def upload_to_gcs(local_dir: Path, gcs_uri: str) -> None:
 
 def main() -> None:
     # 環境変数から設定を取得
+    gcs_code_uri = os.environ["GCS_CODE_URI"]
     gcs_data_uri = os.environ["GCS_DATA_URI"]
     gcs_model_uri = os.environ["GCS_MODEL_URI"]
     job_id = os.environ.get("MLOPS_JOB_ID", "vertex_job")
     recipe = os.environ.get("MLOPS_RECIPE", "lgbm")
     competition = os.environ.get("MLOPS_COMPETITION", "titanic")
 
-    # 作業ディレクトリ
+    # 1. GCS からコードをダウンロード（src/ + conf/ → /app/）
+    logger.info("=== Step 1: Downloading code from GCS ===")
+    download_from_gcs(gcs_code_uri, Path("/app"))
+
+    # 2. GCS からデータをダウンロード
+    logger.info("=== Step 2: Downloading data from GCS ===")
     data_dir = Path("/tmp/mlops/data")
     model_dir = Path("/tmp/mlops/models")
     data_dir.mkdir(parents=True, exist_ok=True)
     model_dir.mkdir(parents=True, exist_ok=True)
-
-    # 1. GCS からデータをダウンロード
-    logger.info("=== Step 1: Downloading data from GCS ===")
     download_from_gcs(gcs_data_uri, data_dir)
 
-    # 2. 環境変数を設定（Hydra の ${oc.env:...} で読まれる）
+    # 3. 環境変数を設定（Hydra の ${oc.env:...} で読まれる）
     os.environ["MLOPS_DATA_DIR"] = str(data_dir)
     os.environ["MLOPS_MODEL_DIR"] = str(model_dir)
 
-    # 3. 学習を実行
-    logger.info("=== Step 2: Running training ===")
+    # 4. 学習を実行
+    logger.info("=== Step 3: Running training ===")
     cmd = [
         "uv",
         "run",
@@ -112,8 +117,8 @@ def main() -> None:
         logger.error(f"Training failed with return code {result.returncode}")
         sys.exit(result.returncode)
 
-    # 4. GCS にモデルをアップロード
-    logger.info("=== Step 3: Uploading models to GCS ===")
+    # 5. GCS にモデルをアップロード
+    logger.info("=== Step 4: Uploading models to GCS ===")
     upload_to_gcs(model_dir, gcs_model_uri)
     logger.info("=== Training pipeline complete ===")
 
