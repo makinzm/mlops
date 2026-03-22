@@ -84,19 +84,23 @@ resource "google_pubsub_topic" "budget_alerts" {
 # ───────────────────────────────────────────────
 # 予算アラート
 # ───────────────────────────────────────────────
+# プロジェクト番号を取得（Budget API は projects/NUMBER 形式が必要）
+data "google_project" "current" {
+  project_id = var.project_id
+}
+
 resource "google_billing_budget" "monthly_budget" {
   billing_account = var.billing_account_id
   display_name    = "MLOps Monthly Budget"
 
   budget_filter {
-    projects = ["projects/${var.project_id}"]
-    # プロジェクト内の全サービスを監視（サービス個別指定は ID 形式が不安定なため省略）
+    projects = ["projects/${data.google_project.current.number}"]
   }
 
   amount {
     specified_amount {
       currency_code = "USD"
-      units         = var.budget_amount
+      units         = tostring(var.budget_amount)
     }
   }
 
@@ -121,7 +125,6 @@ resource "google_billing_budget" "monthly_budget" {
   all_updates_rule {
     monitoring_notification_channels = []
     pubsub_topic                     = google_pubsub_topic.budget_alerts.id
-    # メール通知はコンソールの請求設定で追加（Terraform 管理外）
   }
 }
 
