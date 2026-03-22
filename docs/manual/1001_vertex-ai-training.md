@@ -64,27 +64,14 @@ reader_service_account_email = "reader-sa@your-project.iam.gserviceaccount.com"
 
 ---
 
-## 2. Docker イメージのビルドとプッシュ
+## 2. 学習の実行
 
-Docker イメージには **依存パッケージのみ** を含み、コード（`src/`, `conf/`）は含みません。
-コードは実行時に GCS 経由でコンテナに渡されます。
+**Docker のビルドや push は不要です。**
+Kaggle が公開しているプリビルトイメージ（ML ライブラリが全部入り）をそのまま使います。
+コード（`src/`, `conf/`, `scripts/`）は実行時に自動で GCS にアップロードされ、
+コンテナ内で取得されます。
 
-→ **`pyproject.toml` や `uv.lock` を変更したときだけ再ビルドが必要** です。
-   コードを変更しただけなら再ビルド不要。
-
-### ビルド + プッシュ（1コマンド）
-
-```bash
-./scripts/docker_push.sh
-```
-
-`.env` から `GCP_PROJECT` / `GCP_REGION` を読み取り、ビルド・認証・push を全て行います。
-
----
-
-## 3. 初回動作確認
-
-### 前処理を実行（データが必要）
+### 前処理を実行（初回のみ、またはデータ変更時）
 
 ```bash
 uv run python -m src usecase=preprocess recipe=base
@@ -96,18 +83,65 @@ uv run python -m src usecase=preprocess recipe=base
 uv run python -m src usecase=vertex_train recipe=lgbm
 ```
 
-このコマンドは以下の処理を行います:
-1. 前処理済みデータを GCS にアップロード
-2. Vertex AI CustomJob を送信
-3. ジョブの完了を待機（数分〜数十分）
-4. 学習済みモデルを GCS からローカルにダウンロード
-5. モデルを `models/titanic/titanic_lgbm/` に保存
+このコマンドの内部処理:
+
+```
+[ローカル]
+1. src/ + conf/ + scripts/ を GCS にアップロード（数秒）
+2. 前処理済みデータを GCS にアップロード
+3. Vertex AI に CustomJob を送信
+        ↓
+[Vertex AI コンテナ（Kaggle イメージ）]
+4. gsutil でコードを /app/ にダウンロード
+5. pip install で不足 deps をインストール（hydra-core, omegaconf 等）
+6. 学習を実行
+7. モデルを GCS にアップロード
+        ↓
+[ローカル]
+8. GCS からモデルをダウンロード → models/titanic/titanic_lgbm/ に保存
+```
 
 ### ジョブの確認方法（GCP コンソール）
 
 1. GCP コンソール → 左上メニュー → 「Vertex AI」
 2. 「トレーニング」→「カスタムジョブ」
-3. ジョブのステータスや logs を確認できます
+3. ジョブのステータスやログを確認できます
+
+---
+
+## 3. CPU / GPU の切り替え
+
+`conf/gcp/vertex.yaml` の `container_uri` と `machine_type` を変更します。
+
+### CPU（デフォルト）
+
+```yaml
+gcp:
+  container_uri: gcr.io/kaggle-images/python:latest
+  machine_type: n1-standard-4    # vCPU 4 / RAM 15GB
+  accelerator_type: null
+  accelerator_count: 0
+```
+
+### GPU
+
+```yaml
+gcp:
+  container_uri: gcr.io/kaggle-gpu-images/python:latest
+  machine_type: n1-standard-4
+  accelerator_type: NVIDIA_TESLA_T4
+  accelerator_count: 1
+```
+
+> **GPU の料金目安:**
+>
+> | GPU | 目安コスト/時間 |
+> |-----|----------------|
+> | NVIDIA_TESLA_T4 | 約 $0.35 |
+> | NVIDIA_TESLA_V100 | 約 $2.48 |
+> | NVIDIA_TESLA_A100 | 約 $3.67 |
+>
+> LightGBM は CPU で十分高速です。GPU は PyTorch / TensorFlow の学習時に使ってください。
 
 ---
 
@@ -123,9 +157,30 @@ uv run python -m src usecase=pipeline recipe=vertex_to_kaggle
 
 ---
 
+## 5. カスタム Docker イメージを使う場合（上級者向け）
+
+Kaggle プリビルトイメージで不足するパッケージがある場合、
+自前のイメージをビルド・push できます。
+
+```bash
+# ビルド + push（.env から GCP_PROJECT / GCP_REGION を読む）
+./scripts/docker_push.sh
+```
+
+push 後、`conf/gcp/vertex.yaml` の `container_uri` を変更:
+
+```yaml
+gcp:
+  container_uri: ${oc.env:GCP_REGION,asia-northeast1}-docker.pkg.dev/${oc.env:GCP_PROJECT}/mlops/training:latest
+```
+
+> カスタムイメージの再ビルドが必要なのは `pyproject.toml` / `uv.lock` を変更したときだけです。
+> コード変更時は再ビルド不要（GCS 経由で渡されるため）。
+
+---
+
 ## 注意事項
 
-- `terraform.tfvars` には請求アカウント ID が含まれるため、絶対に Git にコミットしないこと
-  （`.gitignore` で除外されています）
-- 学習ジョブの実行中はコストが発生します。コスト確認方法は
+- 学習ジョブの実行中はコストが発生します。コスト確認・予算アラートの設定方法は
   [docs/manual/1002_cost-monitoring.md](./1002_cost-monitoring.md) を参照してください
+- `terraform.tfvars` は `.gitignore` で除外されています。Git にコミットしないこと
