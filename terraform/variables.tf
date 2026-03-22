@@ -14,6 +14,12 @@ variable "bucket_name" {
   type        = string
 }
 
+variable "enable_budget" {
+  description = "Budget アラートを有効にするか（Billing Budget API の 400 エラーが出る場合は false にする）"
+  type        = bool
+  default     = false
+}
+
 variable "budget_amount" {
   description = "月間予算上限（USD）"
   type        = number

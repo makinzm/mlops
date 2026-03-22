@@ -7,6 +7,10 @@ variable "region" {
 variable "bucket_name" {
   type = string
 }
+variable "enable_budget" {
+  type    = bool
+  default = false
+}
 variable "budget_amount" {
   type = number
 }

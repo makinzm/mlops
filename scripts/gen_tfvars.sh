@@ -48,6 +48,7 @@ cat > "$TFVARS_FILE" << EOF
 project_id         = "${GCP_PROJECT}"
 region             = "${GCP_REGION:-asia-northeast1}"
 bucket_name        = "${BUCKET_NAME}"
+enable_budget      = ${GCP_ENABLE_BUDGET:-false}
 budget_amount      = ${GCP_BUDGET_AMOUNT:-10}
 budget_alert_email = "${GCP_BUDGET_ALERT_EMAIL}"
 budget_action      = "${GCP_BUDGET_ACTION:-warn}"

@@ -90,11 +90,13 @@ data "google_project" "current" {
 }
 
 data "google_billing_account" "account" {
+  count           = var.enable_budget ? 1 : 0
   billing_account = var.billing_account_id
 }
 
 resource "google_billing_budget" "monthly_budget" {
-  billing_account = data.google_billing_account.account.id
+  count           = var.enable_budget ? 1 : 0
+  billing_account = data.google_billing_account.account[0].id
   display_name    = "MLOps Monthly Budget"
 
   amount {

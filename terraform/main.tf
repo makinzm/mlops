@@ -21,6 +21,7 @@ module "vertex_training" {
   project_id         = var.project_id
   region             = var.region
   bucket_name        = var.bucket_name
+  enable_budget      = var.enable_budget
   budget_amount      = var.budget_amount
   budget_alert_email = var.budget_alert_email
   budget_action      = var.budget_action
