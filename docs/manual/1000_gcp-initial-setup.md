@@ -185,14 +185,19 @@ cp .env.example .env
 
 ```dotenv
 # GCP 設定（セクション 3, 4 でメモした値）
-GCP_PROJECT=your-project-id           # セクション 3 で取得したプロジェクト ID
-GCP_REGION=asia-northeast1            # リージョン（下記の選び方を参照）
-GCP_BILLING_ACCOUNT=012345-ABCDEF-789012  # セクション 4 で取得した請求アカウント ID
-GCP_BUDGET_ALERT_EMAIL=your@email.com     # 予算アラート通知先
+GCP_PROJECT=your-project-id                # 【必須】セクション 3 で取得したプロジェクト ID
+GCP_REGION=asia-northeast1                 # リージョン（下記の選び方を参照）
+GCP_BILLING_ACCOUNT=012345-ABCDEF-789012   # 【必須】セクション 4 で取得した請求アカウント ID
+GCP_BUDGET_ALERT_EMAIL=your@email.com      # 【必須】予算アラート通知先
+
+# 以下はオプション（デフォルト値あり）
+# GCP_BUCKET_NAME=my-custom-bucket-name    # 未設定なら {GCP_PROJECT}-mlops-staging
+# GCP_BUDGET_AMOUNT=10                     # 月間予算上限（USD）
+# GCP_BUDGET_ACTION=warn                   # warn: 通知のみ / stop: ジョブ自動停止
 ```
 
 `.env` は `.gitignore` 済みのため Git にコミットされません。
-これらの値は次の手順（[1001_vertex-ai-training.md](./1001_vertex-ai-training.md)）で `terraform/terraform.tfvars` に転記します。
+次の手順（[1001_vertex-ai-training.md](./1001_vertex-ai-training.md)）でスクリプトが `.env` から `terraform.tfvars` を自動生成します。
 
 ### GCP_REGION の選び方
 

@@ -6,24 +6,21 @@
 
 ## 1. Terraform でリソースを作成する
 
-### terraform.tfvars の作成
+### terraform.tfvars の生成
 
-`.env` にメモした値（[1000_gcp-initial-setup.md](./1000_gcp-initial-setup.md) セクション 10）を使って
-`terraform/terraform.tfvars` を作成します:
+`.env` から自動生成します（手動編集は不要）:
 
 ```bash
-cat > terraform/terraform.tfvars << 'EOF'
-project_id         = "your-project-id"           # .env の GCP_PROJECT
-region             = "asia-northeast1"           # .env の GCP_REGION
-bucket_name        = "your-project-mlops-staging" # グローバルで一意なバケット名
-budget_amount      = 10                          # 月間予算上限（USD）
-budget_alert_email = "your@email.com"            # .env の GCP_BUDGET_ALERT_EMAIL
-billing_account_id = "012345-ABCDEF-789012"      # .env の GCP_BILLING_ACCOUNT
-EOF
+./scripts/gen_tfvars.sh
 ```
 
-上の `"..."` 部分を `.env` の値に置き換えてください。
-`terraform.tfvars` は `.gitignore` 済みのため Git にコミットされません。
+生成された `terraform/terraform.tfvars` の内容を確認:
+
+```bash
+cat terraform/terraform.tfvars
+```
+
+> `.env` が single source of truth です。値を変えたいときは `.env` を編集して再度 `./scripts/gen_tfvars.sh` を実行してください。
 
 ### Terraform の実行
 
