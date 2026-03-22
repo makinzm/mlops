@@ -52,7 +52,7 @@ GCP ではすべてのリソースが「プロジェクト」単位で管理さ�
 GCP の多くのサービスは有料です。ただし、新規アカウントには **$300 の無料クレジット**（90日間有効）が付与されます。
 Vertex AI の学習は無料枠の範囲内で十分試せます。
 
-1. コンソール左上のハンバーガーメニュー → 「お支払い」
+1. コンソール左上のハンバーガーメニュー → 「請求」→「請求アカウントを管理」
 2. 「請求先アカウントをリンク」または「請求先アカウントを作成」をクリック
 3. クレジットカード情報を入力（無料枠内は請求されません）
 4. 請求アカウント ID をメモしておく（例: `012345-ABCDEF-789012`）
@@ -69,7 +69,37 @@ Vertex AI の学習は無料枠の範囲内で十分試せます。
 
 ---
 
-## 5. 必要な API の有効化
+## 5. gcloud CLI のインストール
+
+[クイックスタート: Google Cloud CLI をインストールする  |  Google Cloud SDK  |  Google Cloud Documentation](https://docs.cloud.google.com/sdk/docs/install-sdk?hl=ja#deb)
+
+## 6. gcloud の認証設定
+
+### ユーザー認証
+
+```bash
+gcloud auth login
+```
+
+ブラウザが開くので Google アカウントでサインイン。
+
+### アプリケーション認証（コード実行用）
+
+Python SDK（google-cloud-storage 等）が使う認証情報を設定します。
+
+```bash
+gcloud auth application-default login
+```
+
+### プロジェクトの設定
+
+```bash
+gcloud config set project YOUR_PROJECT_ID
+```
+
+---
+
+## 7. 必要な API の有効化
 
 以下の API を有効にします。**コンソールから有効化する方法**と **gcloud コマンド**の両方を記載します。
 
@@ -94,55 +124,7 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   cloudfunctions.googleapis.com \
   pubsub.googleapis.com \
-  billingbudgets.googleapis.com \
-  --project YOUR_PROJECT_ID
-```
-
----
-
-## 6. gcloud CLI のインストール
-
-### Linux（推奨）
-
-```bash
-curl https://sdk.cloud.google.com | bash
-exec -l $SHELL
-```
-
-### macOS
-
-```bash
-brew install --cask google-cloud-sdk
-```
-
-### Windows
-
-https://cloud.google.com/sdk/docs/install の指示に従いインストーラーをダウンロード。
-
----
-
-## 7. gcloud の認証設定
-
-### ユーザー認証
-
-```bash
-gcloud auth login
-```
-
-ブラウザが開くので Google アカウントでサインイン。
-
-### アプリケーション認証（コード実行用）
-
-Python SDK（google-cloud-storage 等）が使う認証情報を設定します。
-
-```bash
-gcloud auth application-default login
-```
-
-### プロジェクトの設定
-
-```bash
-gcloud config set project YOUR_PROJECT_ID
+  billingbudgets.googleapis.com
 ```
 
 ---
