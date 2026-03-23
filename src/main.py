@@ -171,6 +171,7 @@ def _run_vertex_train(cfg: DictConfig) -> None:
     vertex = VertexAIRepositoryImpl(
         project=str(trainer_cfg.gcp.project),
         region=str(trainer_cfg.gcp.region),
+        staging_bucket=str(trainer_cfg.gcp.staging_bucket),
     )
     result = VertexAITrainUseCase(
         cfg=trainer_cfg,

@@ -34,8 +34,8 @@ _RUNNING_STATES: set[str] = {
 class VertexAIRepositoryImpl:
     """VertexAIRepository の google-cloud-aiplatform による実装。"""
 
-    def __init__(self, project: str, region: str) -> None:
-        aiplatform.init(project=project, location=region)
+    def __init__(self, project: str, region: str, staging_bucket: str) -> None:
+        aiplatform.init(project=project, location=region, staging_bucket=staging_bucket)
         self._project = project
         self._region = region
 

@@ -44,7 +44,8 @@ _MODELS_DIR_GITIGNORE = """\
 """
 
 # プロジェクトルート（src/ の親ディレクトリ）
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
+# src/usecase/training/vertex_train.py → .parent x4 → プロジェクトルート
+_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 @dataclass

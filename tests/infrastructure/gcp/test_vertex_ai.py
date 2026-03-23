@@ -26,7 +26,9 @@ class TestVertexAIRepositoryImplSubmitJob:
 
         with patch("src.infrastructure.gcp.vertex_ai.aiplatform") as mock_aiplatform:
             mock_aiplatform.CustomJob.return_value = mock_job_instance
-            repo = VertexAIRepositoryImpl(project="test-project", region="asia-northeast1")
+            repo = VertexAIRepositoryImpl(
+                project="test-project", region="asia-northeast1", staging_bucket="gs://test-bucket"
+            )
             job_name = repo.submit_custom_job(
                 display_name="test-job",
                 container_uri="gcr.io/test/training:latest",
@@ -52,7 +54,9 @@ class TestVertexAIRepositoryImplSubmitJob:
 
         with patch("src.infrastructure.gcp.vertex_ai.aiplatform") as mock_aiplatform:
             mock_aiplatform.CustomJob.side_effect = capture_job
-            repo = VertexAIRepositoryImpl(project="test-project", region="asia-northeast1")
+            repo = VertexAIRepositoryImpl(
+                project="test-project", region="asia-northeast1", staging_bucket="gs://test-bucket"
+            )
             repo.submit_custom_job(
                 display_name="test-job",
                 container_uri="gcr.io/test/training:latest",
@@ -80,7 +84,9 @@ class TestVertexAIRepositoryImplWaitForJob:
 
         with patch("src.infrastructure.gcp.vertex_ai.aiplatform") as mock_aiplatform:
             mock_aiplatform.CustomJob.get.return_value = mock_job_instance
-            repo = VertexAIRepositoryImpl(project="test-project", region="asia-northeast1")
+            repo = VertexAIRepositoryImpl(
+                project="test-project", region="asia-northeast1", staging_bucket="gs://test-bucket"
+            )
             status = repo.wait_for_job("projects/123/locations/x/customJobs/1")
 
         assert status.state == "SUCCEEDED"
@@ -94,7 +100,9 @@ class TestVertexAIRepositoryImplWaitForJob:
 
         with patch("src.infrastructure.gcp.vertex_ai.aiplatform") as mock_aiplatform:
             mock_aiplatform.CustomJob.get.return_value = mock_job_instance
-            repo = VertexAIRepositoryImpl(project="test-project", region="asia-northeast1")
+            repo = VertexAIRepositoryImpl(
+                project="test-project", region="asia-northeast1", staging_bucket="gs://test-bucket"
+            )
             status = repo.wait_for_job("projects/123/locations/x/customJobs/1")
 
         assert status.state == "FAILED"
@@ -111,7 +119,9 @@ class TestVertexAIRepositoryImplCancelJob:
 
         with patch("src.infrastructure.gcp.vertex_ai.aiplatform") as mock_aiplatform:
             mock_aiplatform.CustomJob.get.return_value = mock_job_instance
-            repo = VertexAIRepositoryImpl(project="test-project", region="asia-northeast1")
+            repo = VertexAIRepositoryImpl(
+                project="test-project", region="asia-northeast1", staging_bucket="gs://test-bucket"
+            )
             repo.cancel_job("projects/123/locations/x/customJobs/1")
 
         mock_job_instance.cancel.assert_called_once()
@@ -129,7 +139,9 @@ class TestVertexAIRepositoryImplListRunningJobs:
 
         with patch("src.infrastructure.gcp.vertex_ai.aiplatform") as mock_aiplatform:
             mock_aiplatform.CustomJob.list.return_value = [mock_job1, mock_job2]
-            repo = VertexAIRepositoryImpl(project="test-project", region="asia-northeast1")
+            repo = VertexAIRepositoryImpl(
+                project="test-project", region="asia-northeast1", staging_bucket="gs://test-bucket"
+            )
             job_names = repo.list_running_jobs()
 
         assert len(job_names) == 2
