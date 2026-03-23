@@ -81,7 +81,7 @@ class TestCreateSourceDatasetUseCaseExecute:
             )
 
         mock_repo.create.side_effect = capture_create
-        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -92,7 +92,7 @@ class TestCreateSourceDatasetUseCaseExecute:
         _setup_src(tmp_path)
         cfg = _make_cfg(tmp_path)
         mock_repo = MagicMock()
-        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -103,7 +103,7 @@ class TestCreateSourceDatasetUseCaseExecute:
         _setup_src(tmp_path)
         cfg = _make_cfg(tmp_path)
         mock_repo = MagicMock()
-        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -118,7 +118,7 @@ class TestCreateSourceDatasetUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         mock_repo = MagicMock()
         mock_repo.create.side_effect = RuntimeError("upload failed")
-        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         with pytest.raises(RuntimeError, match="upload failed"):
             usecase.execute()
@@ -150,7 +150,7 @@ class TestCreateSourceDatasetUseCaseExecute:
             captured["staging_dir"] = staging_dir
 
         mock_repo.create.side_effect = capture_create
-        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -171,7 +171,7 @@ class TestCreateSourceDatasetUseCaseExecute:
             captured["staging_dir"] = staging_dir
 
         mock_repo.create.side_effect = capture_create
-        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -211,7 +211,7 @@ class TestCreateSourceDatasetUseCaseExecute:
             )
 
         mock_repo.create.side_effect = capture_create
-        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = CreateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 

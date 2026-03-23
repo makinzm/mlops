@@ -43,7 +43,7 @@ class TestLinearFlow:
             ),
         ]
         input_dfs = {"raw_train": raw_df}
-        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # type: ignore[arg-type]
+        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # ty:ignore[invalid-argument-type]
         results = runner.run(targets=["selected"])
 
         assert "selected" in results
@@ -60,7 +60,7 @@ class TestLinearFlow:
             ),
         ]
         input_dfs = {"raw_train": raw_df}
-        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # type: ignore[arg-type]
+        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # ty:ignore[invalid-argument-type]
         runner.run(targets=["selected"])
 
         step_results = runner.get_step_results()
@@ -88,7 +88,7 @@ class TestBranchFrom:
             ),
         ]
         input_dfs = {"raw_train": raw_df}
-        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # type: ignore[arg-type]
+        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # ty:ignore[invalid-argument-type]
         results = runner.run(targets=["selected", "branch_from_raw"])
 
         # selected は col1 を持ち col2 を持たない
@@ -120,7 +120,7 @@ class TestTargetsPartialExecution:
             ),
         ]
         input_dfs = {"raw_train": raw_df}
-        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # type: ignore[arg-type]
+        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # ty:ignore[invalid-argument-type]
         # targets に expensive_node を含めない
         results = runner.run(targets=["selected"])
 
@@ -147,7 +147,7 @@ class TestTargetsPartialExecution:
             ),
         ]
         input_dfs = {"raw_train": raw_df}
-        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # type: ignore[arg-type]
+        runner = DAGRunner(nodes=nodes, input_dfs=input_dfs, output_dir=tmp_path, cv_splits=None)  # ty:ignore[invalid-argument-type]
         results = runner.run(targets=["selected"])
 
         # unknown_step はスキップされるが selected は実行される

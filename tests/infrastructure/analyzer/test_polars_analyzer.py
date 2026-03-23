@@ -34,7 +34,7 @@ def _make_cfg(
     )
 
 
-def _make_steps(raw: list[dict]) -> list[AnalysisStep]:  # type: ignore[type-arg]
+def _make_steps(raw: list[dict]) -> list[AnalysisStep]:
     return [
         AnalysisStep(
             type=d["type"],
@@ -67,12 +67,12 @@ def titanic_csv(tmp_path: Path) -> Path:
 
 def _make_analyzer(
     cfg: object,
-    steps_raw: list[dict] | None = None,  # type: ignore[type-arg]
+    steps_raw: list[dict] | None = None,
 ) -> PolarsAnalyzer:
     if steps_raw is None:
         steps_raw = [{"type": "basic_stats"}]
     return PolarsAnalyzer(
-        cfg,  # type: ignore[arg-type]
+        cfg,  # ty:ignore[invalid-argument-type]
         commit_hash="deadbeef",
         analyses=_make_steps(steps_raw),
     )

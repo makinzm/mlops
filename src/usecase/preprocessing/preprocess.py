@@ -78,7 +78,7 @@ class PreprocessUseCase:
         # CV splits の生成
         cv_cfg_raw = cfg.get("cv", {})
         cv_cfg_dict: dict[str, object] = (
-            dict(OmegaConf.to_container(cv_cfg_raw, resolve=True))  # type: ignore[arg-type]
+            dict(OmegaConf.to_container(cv_cfg_raw, resolve=True))  # ty:ignore[no-matching-overload]
             if cv_cfg_raw
             else {}
         )
@@ -86,7 +86,7 @@ class PreprocessUseCase:
 
         # targets の取得
         targets_raw = cfg.get("targets", [])
-        targets: list[str] = list(OmegaConf.to_container(targets_raw))  # type: ignore[arg-type]
+        targets: list[str] = list(OmegaConf.to_container(targets_raw))  # ty:ignore[invalid-argument-type]
 
         # パイプライン実行
         _, step_results = self._executor.run(
@@ -132,7 +132,7 @@ class PreprocessUseCase:
 
     def _load_inputs(self, cfg: DictConfig) -> dict[str, DataFrame]:
         """inputs: 設定から DataFrame を読み込む。"""
-        inputs_raw = list(OmegaConf.to_container(cfg.inputs, resolve=True))  # type: ignore[arg-type]
+        inputs_raw = list(OmegaConf.to_container(cfg.inputs, resolve=True))  # ty:ignore[invalid-argument-type]
         return self._input_loader.load(inputs_raw)
 
     def _build_nodes(self, cfg: DictConfig, input_dfs: dict[str, DataFrame]) -> list[Node]:
@@ -145,8 +145,8 @@ class PreprocessUseCase:
 
         # Transform Nodes
         steps_raw = OmegaConf.to_container(cfg.steps, resolve=True)
-        for step in steps_raw:  # type: ignore[union-attr]
-            step_dict = dict(step)  # type: ignore[arg-type]
+        for step in steps_raw:  # ty:ignore[not-iterable]
+            step_dict = dict(step)  # ty:ignore[no-matching-overload]
             node_id = str(step_dict.pop("id", ""))
             from_raw = step_dict.pop("from", None)
             from_nodes: list[str] = []

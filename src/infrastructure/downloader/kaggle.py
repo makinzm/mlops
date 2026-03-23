@@ -25,7 +25,7 @@ class KaggleDownloader:
         # kaggle/__init__.py が import 時に api.authenticate() を実行するため、
         # SystemExit はここで捕捉する必要がある。
         try:
-            from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
+            from kaggle.api.kaggle_api_extended import (
                 KaggleApi as KaggleApiExtended,
             )
         except SystemExit as e:
@@ -80,7 +80,7 @@ class KaggleDownloader:
         self._check_force(output_dir)
         self.api.competition_download_files(
             competition=self.cfg.kaggle.competition,
-            path=output_dir,
+            path=output_dir,  # ty:ignore[invalid-argument-type]
             force=self.cfg.force,
         )
         if self.cfg.unzip:

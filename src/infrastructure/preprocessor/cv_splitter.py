@@ -41,7 +41,7 @@ class CVSplitter:
             target_df = next(iter(input_dfs.values()))
 
         n = len(target_df)
-        n_splits = int(cv_cfg.get("n_splits", 5))  # type: ignore[call-overload]
+        n_splits = int(cv_cfg.get("n_splits", 5))  # ty:ignore[invalid-argument-type]
 
         if strategy == "kfold":
             from sklearn.model_selection import KFold
@@ -69,7 +69,7 @@ class CVSplitter:
             skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
             return [
                 (list(map(int, train_idx)), list(map(int, test_idx)))
-                for train_idx, test_idx in skf.split(range(n), y)  # type: ignore[arg-type]
+                for train_idx, test_idx in skf.split(range(n), y)
             ]
 
         if strategy == "group_kfold":
@@ -80,7 +80,7 @@ class CVSplitter:
             gkf = GroupKFold(n_splits=n_splits)
             return [
                 (list(map(int, train_idx)), list(map(int, test_idx)))
-                for train_idx, test_idx in gkf.split(range(n), groups=groups)  # type: ignore[arg-type]
+                for train_idx, test_idx in gkf.split(range(n), groups=groups)
             ]
 
         if strategy == "stratified_group_kfold":
@@ -93,7 +93,7 @@ class CVSplitter:
             sgkf = StratifiedGroupKFold(n_splits=n_splits)
             return [
                 (list(map(int, train_idx)), list(map(int, test_idx)))
-                for train_idx, test_idx in sgkf.split(range(n), y, groups=groups)  # type: ignore[arg-type]
+                for train_idx, test_idx in sgkf.split(range(n), y, groups=groups)
             ]
 
         if strategy == "leave_one_group_out":
@@ -104,7 +104,7 @@ class CVSplitter:
             logo = LeaveOneGroupOut()
             return [
                 (list(map(int, train_idx)), list(map(int, test_idx)))
-                for train_idx, test_idx in logo.split(range(n), groups=groups)  # type: ignore[arg-type]
+                for train_idx, test_idx in logo.split(range(n), groups=groups)
             ]
 
         return None

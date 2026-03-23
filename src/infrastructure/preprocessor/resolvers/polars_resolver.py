@@ -25,7 +25,7 @@ class PolarsResolver:
             columns = kwargs.get("columns")
             if not isinstance(columns, list):
                 raise ValueError("select_columns requires 'columns' as list[str]")
-            return self.select_columns(df, columns=columns)
+            return self.select_columns(df, columns=columns)  # ty:ignore[invalid-argument-type]
 
         if method == "arithmetic":
             operation = str(kwargs.get("operation", ""))
@@ -42,7 +42,7 @@ class PolarsResolver:
 
         if method == "exp_weight":
             time_col = str(kwargs.get("time_col", ""))
-            decay = float(kwargs.get("decay", 0.95))  # type: ignore[arg-type]
+            decay = float(kwargs.get("decay", 0.95))  # ty:ignore[invalid-argument-type]
             weight_col = str(kwargs.get("weight_col", "__weight__"))
             return self.exp_weight(df, time_col=time_col, decay=decay, weight_col=weight_col)
 
@@ -52,7 +52,7 @@ class PolarsResolver:
                 raise ValueError("join requires 'dfs' as list[pl.DataFrame]")
             on = str(kwargs.get("on", ""))
             how = str(kwargs.get("how", "left"))
-            return self.join(dfs, on=on, how=how)
+            return self.join(dfs, on=on, how=how)  # ty:ignore[invalid-argument-type]
 
         raise ValueError(f"Unknown method: {method!r}")
 
@@ -145,5 +145,5 @@ class PolarsResolver:
             raise ValueError("join requires at least 2 DataFrames")
         result = dfs[0]
         for right in dfs[1:]:
-            result = result.join(right, on=on, how=how)  # type: ignore[arg-type]
+            result = result.join(right, on=on, how=how)  # ty:ignore[invalid-argument-type]
         return result

@@ -10,8 +10,8 @@ pre-commit:
       run: uv run ruff check .
     ruff-format:
       run: uv run ruff format --check .
-    mypy:
-      run: rm -rf .mypy_cache && uv run mypy tests/ src/
+    ty:
+      run: uv run ty check src/ tests/ --python .venv
     actionlint:
       glob: ".github/workflows/*.yml"
       run: actionlint

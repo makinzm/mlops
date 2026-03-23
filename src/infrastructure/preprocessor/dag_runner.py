@@ -83,7 +83,7 @@ class DAGRunner:
 
             # ステップ実行（infrastructure 層で pl.DataFrame にキャスト）
             result_df, step_result = run_step(
-                df=input_df,  # type: ignore[arg-type]
+                df=input_df,  # ty:ignore[invalid-argument-type]
                 resolver_name=resolver_name,
                 method=method,
                 kwargs=kwargs,

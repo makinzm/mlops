@@ -118,7 +118,7 @@ class LightGBMTrainer:
                 num_boost_round=int(dcfg.lgbm.n_estimators),
                 valid_sets=[dtrain, dvalid],
                 valid_names=["train", "valid"],
-                callbacks=callbacks,  # type: ignore[arg-type]
+                callbacks=callbacks,  # ty:ignore[invalid-argument-type]
             )
 
             # スコア取得

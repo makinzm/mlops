@@ -262,7 +262,7 @@
 
 ### RED フェーズのコミットは --no-verify をつける
 
-- **NG**: `git commit -m "test(RED): ..."` （pre-commit フックが mypy / ruff で失敗する）
+- **NG**: `git commit -m "test(RED): ..."` （pre-commit フックが ty / ruff で失敗する）
 - **OK**: `git commit --no-verify -m "test(RED): ..."` （意図的に失敗している状態をコミットする）
 - RED フェーズは `src/` が存在しないため import エラーが必然。フックをスキップして問題ない。
 - GREEN フェーズ以降は通常通り `--no-verify` をつけない。
@@ -276,7 +276,7 @@
 - **NG**: `uv run --extra dev pytest` / `uv run --extra kaggle python -m src.main`
 - **OK**: `uv add pytest --dev` / `uv add kaggle --group kaggle` でインストール後、`uv run pytest` のみ
 - `pyproject.toml` の `[project.optional-dependencies]` は使わず、`[dependency-groups]` で管理する
-- CI でも `--extra` フラグなしで `uv run pytest` / `uv run mypy` を実行する
+- CI でも `--extra` フラグなしで `uv run pytest` / `uv run ty check` を実行する
 
 ### python を直接実行しない。常に uv run python を使う
 
@@ -327,3 +327,25 @@
 - **NG**: Kaggle 上で Dataset を削除して同じ slug で再作成 → `[Dataset no longer available]`
 - **OK**: 新しい slug 名を使って作成する
 - **How to apply**: Dataset slug を変更する場合は config ファイル（`conf/usecase/` 以下）も更新する
+
+---
+
+## 一時ファイル
+
+### `/tmp` を使わない。カレントディレクトリに一時ファイルを置く
+
+- **NG**: `/tmp/req_check.txt` のようにシステムの一時ディレクトリにファイルを書く
+- **OK**: カレントディレクトリ（プロジェクトルート）に一時ファイルを置き、不要になったら削除する
+- **Why**: `/tmp` はプロジェクトの外であり、管理が行き届かない。カレントディレクトリなら `.gitignore` や目視で管理できる
+- **How to apply**: 一時ファイルが必要な場合はカレントディレクトリに作成し、使い終わったら削除する
+
+---
+
+## caution.md 運用
+
+### 指摘を受けたルールは caution.md とプロジェクトルートの両方に追記する
+
+- **NG**: `caution.md` だけ更新して、プロジェクトルート（`.claude/rules/caution.md`）への反映を忘れる。あるいはその逆。
+- **OK**: 指摘を受けたら `.claude/rules/caution.md`（このファイル）に追記し、同時にプロジェクトの memory（`MEMORY.md` 等）にも反映する
+- **Why**: caution.md はリポジトリにコミットされて共有される。memory は個人のセッション間で引き継がれる。両方に書くことで漏れを防ぐ
+- **How to apply**: 指摘を受けたら必ず (1) このファイルに NG/OK 形式で追記 (2) MEMORY.md にサマリを追記、の2ステップを実行する

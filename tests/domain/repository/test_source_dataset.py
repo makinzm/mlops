@@ -52,7 +52,7 @@ class TestDatasetMetadata:
 
         meta = DatasetMetadata(title="t", owner_slug="u", dataset_slug="s")
         with pytest.raises(Exception):
-            meta.title = "changed"  # type: ignore[misc]
+            meta.title = "changed"  # ty:ignore[invalid-assignment]
 
     def test_dataset_metadata_full_id(self) -> None:
         """DatasetMetadata の full_id が owner_slug/dataset_slug 形式であること。"""
