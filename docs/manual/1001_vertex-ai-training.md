@@ -163,15 +163,22 @@ uv run python -m src usecase=update_source_dataset \
   source_dataset.version_message="vertex AI: code update"
 ```
 
-### 4-3. モデル重みを別の Kaggle Dataset に push
+### 4-3. 最新モデル重みを別の Kaggle Dataset に push
+
+パスに `latest` を含めると、最新タイムスタンプのモデルだけが自動選択されます。
 
 ```bash
 uv run python -m src usecase=update_source_dataset \
   source_dataset.dataset_slug=mlops-vertex-models \
   source_dataset.title=mlops-vertex-models \
-  source_dataset.src_dir=models/titanic \
-  source_dataset.conf_dir=models/titanic \
+  source_dataset.src_dir=models/titanic/titanic_lgbm/latest \
+  source_dataset.conf_dir=models/titanic/titanic_lgbm/latest \
   source_dataset.version_message="vertex AI trained model"
+```
+
+特定のタイムスタンプを指定したい場合は `latest` の代わりに直接指定:
+```bash
+  source_dataset.src_dir=models/titanic/titanic_lgbm/20260323T210627
 ```
 
 > **初回のみ**: `mlops-vertex-models` Dataset が存在しない場合は先に作成してください:
@@ -179,8 +186,8 @@ uv run python -m src usecase=update_source_dataset \
 > uv run python -m src usecase=create_source_dataset \
 >   source_dataset.dataset_slug=mlops-vertex-models \
 >   source_dataset.title=mlops-vertex-models \
->   source_dataset.src_dir=models/titanic \
->   source_dataset.conf_dir=models/titanic
+>   source_dataset.src_dir=models/titanic/titanic_lgbm/latest \
+>   source_dataset.conf_dir=models/titanic/titanic_lgbm/latest
 > ```
 
 ### 4-4. 推論専用 Notebook を push

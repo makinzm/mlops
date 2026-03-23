@@ -24,13 +24,13 @@ steps:
     source_dataset:
       version_message: "auto update: vertex training"
 
-  # ⑤ モデル重みを別の Dataset に push
+  # ⑤ 最新モデル重みを別の Dataset に push（latest → 最新タイムスタンプを自動解決）
   - usecase: update_source_dataset
     source_dataset:
       dataset_slug: mlops-vertex-models
       title: mlops-vertex-models
-      src_dir: models/titanic
-      conf_dir: models/titanic
+      src_dir: models/titanic/titanic_lgbm/latest
+      conf_dir: models/titanic/titanic_lgbm/latest
       extra_dirs: []
       version_message: "auto update: vertex trained model"
 
