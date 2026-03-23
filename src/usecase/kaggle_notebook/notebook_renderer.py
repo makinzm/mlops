@@ -31,6 +31,7 @@ class NotebookRenderer:
         output_path: Path,
         competition: str,
         src_dataset: str,
+        kaggle_username: str,
         enable_internet: bool = True,
         recipe: str = "all_after_download",
     ) -> Path:
@@ -50,6 +51,7 @@ class NotebookRenderer:
         rendered = template.render(
             competition=competition,
             src_dataset=src_dataset,
+            kaggle_username=kaggle_username,
             enable_internet=enable_internet,
             recipe=recipe,
         )

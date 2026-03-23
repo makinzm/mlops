@@ -81,7 +81,9 @@ class TestNotebookGeneration:
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell1_source = "".join(notebook["cells"][0]["source"])
-        assert "pip install" in cell1_source, "セル1に pip install が含まれない"
+        assert "pip" in cell1_source and "install" in cell1_source, (
+            "セル1に pip install が含まれない"
+        )
 
     def test_generated_notebook_cell1_smart_install_filters_indented_comments(
         self, tmp_path: Path

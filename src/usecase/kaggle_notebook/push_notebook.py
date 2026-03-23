@@ -104,6 +104,7 @@ class PushNotebookUseCase:
     def _render_notebook(self, output_dir: Path, competition: str) -> Path:
         """Jinja2 テンプレートから notebook.ipynb を生成する。"""
         src_dataset: str = str(self._cfg.notebook.src_dataset)
+        kaggle_username: str = str(self._cfg.get("kaggle_username", ""))
         enable_internet: bool = bool(self._cfg.notebook.enable_internet)
         notebook_path = output_dir / "notebook.ipynb"
         recipe: str = str(self._cfg.notebook.get("recipe", "all_after_download"))
@@ -111,6 +112,7 @@ class PushNotebookUseCase:
             output_path=notebook_path,
             competition=competition,
             src_dataset=src_dataset,
+            kaggle_username=kaggle_username,
             enable_internet=enable_internet,
             recipe=recipe,
         )

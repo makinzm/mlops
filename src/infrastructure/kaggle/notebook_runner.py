@@ -60,7 +60,7 @@ class NotebookPipelineRunner:
         self,
         competition_slug: str,
         recipe: str,
-        conf_dir: str = "/kaggle/input/mlops-pipeline-src/conf",
+        conf_dir: str = "/kaggle/working/conf",
         overrides: dict[str, Any] | None = None,
     ) -> None:
         self._competition_slug = competition_slug
