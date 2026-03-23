@@ -1,0 +1,6 @@
+job_id: titanic_inference
+timestamp: 20260324T084518
+commit_hash: ede0af15f0d10c81630bf9c962b509b53416b823
+ensemble: mean
+n_models: 1
+n_test: 418

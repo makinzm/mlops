@@ -10,13 +10,13 @@ usecase: pipeline
 job_id: titanic_all_after_download
 
 steps:
-  # ① 前処理（Target Encoding なしのベースライン）
+  # ① 前処理（Target Encoding あり）
   - usecase: preprocess
-    recipe: base
+    recipe: target_encoding
 
-  # ② 学習（LightGBM ベースライン）
+  # ② 学習（LightGBM + Target Encoding）
   - usecase: train
-    recipe: lgbm
+    recipe: lgbm_with_target_encoding
 
   # ③ 推論（LightGBM アンサンブル → submission.csv 生成）
   - usecase: inference

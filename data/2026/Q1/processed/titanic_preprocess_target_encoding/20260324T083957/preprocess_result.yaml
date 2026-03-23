@@ -1,0 +1,55 @@
+commit_hash: 8e787af8e5ac79139029d9a746b266e36a8c4c28
+dag_path: pipeline_dag.html
+executor_used: local
+job_id: titanic_preprocess_target_encoding
+output_dir: data/2026/Q1/processed/titanic_preprocess_target_encoding/20260324T083957
+step_results:
+- method: select_columns
+  reason: null
+  resolver: polars
+  status: ok
+- method: select_columns
+  reason: null
+  resolver: polars
+  status: ok
+- method: fill_na
+  reason: null
+  resolver: sklearn
+  status: ok
+- method: fill_na
+  reason: null
+  resolver: sklearn
+  status: ok
+- method: fill_na
+  reason: null
+  resolver: sklearn
+  status: ok
+- method: arithmetic
+  reason: null
+  resolver: polars
+  status: ok
+- method: target_encode
+  reason: 'Unknown method: ''target_encode'''
+  resolver: sklearn
+  status: failed
+- method: output
+  reason: null
+  resolver: output
+  status: ok
+- method: fill_na
+  reason: null
+  resolver: sklearn
+  status: ok
+- method: arithmetic
+  reason: null
+  resolver: polars
+  status: ok
+- method: ''
+  reason: resolver not found
+  resolver: from_encoder
+  status: skipped
+- method: output
+  reason: null
+  resolver: output
+  status: ok
+timestamp: '2026-03-24T08:39:57.512825'

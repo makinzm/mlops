@@ -1,0 +1,47 @@
+commit_hash: b9cd0575796d6399df6eefa5d08dc4e820cfa58b
+dag_path: pipeline_dag.html
+executor_used: local
+job_id: titanic_preprocess
+output_dir: data/2026/Q1/processed/titanic_preprocess/20260324T082720
+step_results:
+- method: select_columns
+  reason: null
+  resolver: polars
+  status: ok
+- method: fill_na
+  reason: null
+  resolver: sklearn
+  status: ok
+- method: select_columns
+  reason: null
+  resolver: polars
+  status: ok
+- method: fill_na
+  reason: null
+  resolver: sklearn
+  status: ok
+- method: fill_na
+  reason: null
+  resolver: sklearn
+  status: ok
+- method: arithmetic
+  reason: null
+  resolver: polars
+  status: ok
+- method: fill_na
+  reason: null
+  resolver: sklearn
+  status: ok
+- method: arithmetic
+  reason: null
+  resolver: polars
+  status: ok
+- method: output
+  reason: null
+  resolver: output
+  status: ok
+- method: output
+  reason: null
+  resolver: output
+  status: ok
+timestamp: '2026-03-24T08:27:20.124186'
