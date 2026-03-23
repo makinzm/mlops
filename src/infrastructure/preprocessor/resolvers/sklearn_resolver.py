@@ -48,6 +48,24 @@ class SklearnResolver:
             fill_value = kwargs.get("fill_value", 0.0)
             result, _ = self.fill_na(df, strategy=strategy, columns=columns, fill_value=fill_value)  # ty:ignore[invalid-argument-type]
             return result
+        if method == "target_encode":
+            columns_raw = kwargs.get("columns")
+            if not isinstance(columns_raw, list):
+                raise ValueError("target_encode requires 'columns' as list[str]")
+            columns_str: list[str] = [str(c) for c in columns_raw]
+            target_col = str(kwargs.get("target_col", ""))
+            n_splits = int(kwargs.get("n_splits", 5))  # ty:ignore[invalid-argument-type]
+            seed = int(kwargs.get("seed", 42))  # ty:ignore[invalid-argument-type]
+            smoothing = float(kwargs.get("smoothing", 1.0))  # ty:ignore[invalid-argument-type]
+            result, _ = self.target_encode(
+                df,
+                columns=columns_str,
+                target_col=target_col,
+                n_splits=n_splits,
+                seed=seed,
+                smoothing=smoothing,
+            )
+            return result
         raise ValueError(f"Unknown method: {method!r}")
 
     def fill_na(
