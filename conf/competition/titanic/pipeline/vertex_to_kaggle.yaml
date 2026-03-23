@@ -19,9 +19,11 @@ steps:
   - usecase: inference
     recipe: titanic_ensemble
 
-  # ④ モデル + コードを Kaggle Dataset に push
+  # ④ モデル + コードを Kaggle Dataset に push（モデル重みも含む）
   - usecase: update_source_dataset
     source_dataset:
+      extra_dirs:
+        - models/titanic
       version_message: "auto update: vertex training"
 
   # ⑤ Kaggle Notebook を最新モデルで更新

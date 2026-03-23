@@ -116,16 +116,19 @@ def copy_to_staging(
     staging_dir: Path,
     patterns: list[str],
     requirements_path: Path | None = None,
+    extra_dirs: list[Path] | None = None,
 ) -> None:
     """src_dir と conf_dir の内容を staging_dir にコピーする。
 
     .kaggleignore パターンにマッチするファイル・ディレクトリはコピーしない。
     requirements_path が存在する場合は staging_dir/requirements.txt にもコピーする。
+    extra_dirs が指定された場合はそれらのディレクトリもコピーする。
 
     ステージング後の構造:
       staging_dir/
         src/          ← src_dir の中身
         conf/         ← conf_dir の中身
+        models/...    ← extra_dirs の中身（指定された場合）
         requirements.txt  ← requirements_path が存在する場合
 
     Args:
@@ -134,9 +137,14 @@ def copy_to_staging(
         staging_dir: コピー先のステージングディレクトリ。
         patterns: .kaggleignore から読み込んだ除外パターンリスト。
         requirements_path: requirements.txt のパス（省略時はコピーしない）。
+        extra_dirs: 追加でコピーするディレクトリのリスト（省略時はなし）。
     """
     _copy_dir_to_staging(src_dir, staging_dir, patterns)
     _copy_dir_to_staging(conf_dir, staging_dir, patterns)
+
+    for extra_dir in extra_dirs or []:
+        if extra_dir.exists():
+            _copy_dir_to_staging(extra_dir, staging_dir, patterns)
 
     if requirements_path is not None and requirements_path.exists():
         shutil.copy2(requirements_path, staging_dir / "requirements.txt")

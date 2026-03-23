@@ -75,8 +75,12 @@ class UpdateSourceDatasetUseCase:
         staging_dir = make_staging_dir(staging_root)
         requirements_path = src_dir.parent / "requirements.txt"
 
+        # extra_dirs: モデルディレクトリなど追加でアップロードするディレクトリ
+        extra_dirs_raw = self._cfg.source_dataset.get("extra_dirs", [])
+        extra_dirs = [Path(str(d)) for d in extra_dirs_raw] if extra_dirs_raw else []
+
         logger.info("Staging src/ and conf/ to %s", staging_dir)
-        copy_to_staging(src_dir, conf_dir, staging_dir, patterns, requirements_path)
+        copy_to_staging(src_dir, conf_dir, staging_dir, patterns, requirements_path, extra_dirs)
 
         logger.info("Updating Kaggle Dataset: %s (version: %s)", metadata.full_id, version_message)
         try:
