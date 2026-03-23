@@ -11,9 +11,10 @@ from typing import Protocol, runtime_checkable
 
 
 @dataclass
-class VertexJobStatus:
-    """Vertex AI ジョブの最終状態。"""
+class VertexJobResult:
+    """Vertex AI ジョブの実行結果。"""
 
+    resource_name: str
     state: str  # "SUCCEEDED" | "FAILED" | "CANCELLED"
     error_message: str | None = None
 
@@ -26,7 +27,7 @@ class VertexJobStatus:
 class VertexAIRepository(Protocol):
     """Vertex AI カスタムジョブ操作の抽象 Protocol。"""
 
-    def submit_custom_job(
+    def run_custom_job(
         self,
         display_name: str,
         container_uri: str,
@@ -35,12 +36,8 @@ class VertexAIRepository(Protocol):
         machine_type: str,
         env_vars: dict[str, str],
         service_account: str,
-    ) -> str:
-        """カスタムトレーニングジョブを送信し、ジョブリソース名を返す。"""
-        ...
-
-    def wait_for_job(self, job_name: str) -> VertexJobStatus:
-        """ジョブ完了までポーリングし、最終状態を返す。"""
+    ) -> VertexJobResult:
+        """カスタムトレーニングジョブを送信し、完了まで待機して結果を返す。"""
         ...
 
     def cancel_job(self, job_name: str) -> None:
@@ -48,5 +45,5 @@ class VertexAIRepository(Protocol):
         ...
 
     def list_running_jobs(self) -> list[str]:
-        """実行中のジョブリソース名一覧を返す（予算超過時の一括停止用）。"""
+        """実行中のジョブリソース名一覧を返す。"""
         ...

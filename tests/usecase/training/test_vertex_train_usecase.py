@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 import pytest
 from omegaconf import DictConfig, OmegaConf
 
-from src.domain.repository.vertex_ai import VertexJobStatus
+from src.domain.repository.vertex_ai import VertexJobResult
 from src.usecase.training.vertex_train import VertexAITrainUseCase, VertexTrainResult
 
 _FAKE_COMMIT = "b" * 40
@@ -60,8 +60,9 @@ def _make_mock_gcs() -> MagicMock:
 
 def _make_mock_vertex() -> MagicMock:
     mock = MagicMock()
-    mock.submit_custom_job.return_value = _FAKE_JOB_NAME
-    mock.wait_for_job.return_value = VertexJobStatus(state="SUCCEEDED")
+    mock.run_custom_job.return_value = VertexJobResult(
+        resource_name=_FAKE_JOB_NAME, state="SUCCEEDED"
+    )
     return mock
 
 
@@ -112,13 +113,13 @@ class TestVertexAITrainUseCaseExecute:
         )
         usecase.execute()
 
-        submit_call = mock_vertex.submit_custom_job.call_args
-        assert submit_call.kwargs["container_uri"] == "gcr.io/test/training:latest"
-        assert submit_call.kwargs["machine_type"] == "n1-standard-4"
-        assert submit_call.kwargs["service_account"] == "sa@test.iam.gserviceaccount.com"
+        run_call = mock_vertex.run_custom_job.call_args
+        assert run_call.kwargs["container_uri"] == "gcr.io/test/training:latest"
+        assert run_call.kwargs["machine_type"] == "n1-standard-4"
+        assert run_call.kwargs["service_account"] == "sa@test.iam.gserviceaccount.com"
 
-    def test_waits_for_job_completion(self, tmp_path: Path) -> None:
-        """ジョブ完了まで wait_for_job が呼ばれること。"""
+    def test_run_custom_job_is_called(self, tmp_path: Path) -> None:
+        """run_custom_job が呼ばれること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
         usecase = VertexAITrainUseCase(
@@ -126,7 +127,7 @@ class TestVertexAITrainUseCaseExecute:
         )
         usecase.execute()
 
-        mock_vertex.wait_for_job.assert_called_once_with(_FAKE_JOB_NAME)
+        mock_vertex.run_custom_job.assert_called_once()
 
     def test_downloads_model_artifacts_from_gcs(self, tmp_path: Path) -> None:
         """モデル成果物が GCS からローカルにダウンロードされること。"""
@@ -162,8 +163,8 @@ class TestVertexAITrainUseCaseExecute:
         """Vertex AI ジョブが FAILED の場合に RuntimeError が送出されること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        mock_vertex.wait_for_job.return_value = VertexJobStatus(
-            state="FAILED", error_message="OOM error"
+        mock_vertex.run_custom_job.return_value = VertexJobResult(
+            resource_name=_FAKE_JOB_NAME, state="FAILED", error_message="OOM error"
         )
         usecase = VertexAITrainUseCase(
             cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
@@ -206,7 +207,7 @@ class TestVertexAITrainUseCaseExecute:
         )
         usecase.execute()
 
-        submit_call = mock_vertex.submit_custom_job.call_args
+        submit_call = mock_vertex.run_custom_job.call_args
         command: list[str] = submit_call.kwargs["command"]
         assert command[0] == "bash"
         assert command[1] == "-c"
@@ -224,7 +225,7 @@ class TestVertexAITrainUseCaseExecute:
         )
         usecase.execute()
 
-        submit_call = mock_vertex.submit_custom_job.call_args
+        submit_call = mock_vertex.run_custom_job.call_args
         env_vars: dict[str, str] = submit_call.kwargs["env_vars"]
         assert "GCS_DATA_URI" in env_vars
         assert "GCS_MODEL_URI" in env_vars

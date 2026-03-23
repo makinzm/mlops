@@ -1,33 +1,27 @@
 """
 VertexAIRepositoryImpl — google-cloud-aiplatform を使った VertexAIRepository の実装。
 
-submit_custom_job: CustomJob を Vertex AI に送信する。
-wait_for_job: ジョブ完了までポーリングし VertexJobStatus を返す。
+run_custom_job: CustomJob を Vertex AI に送信し、完了まで待機する。
 cancel_job: 実行中のジョブをキャンセルする。
-list_running_jobs: 実行中のジョブ一覧を返す（予算超過対策）。
+list_running_jobs: 実行中のジョブ一覧を返す。
 """
 
 from __future__ import annotations
 
 import logging
 
-from google.cloud import aiplatform
+from google.cloud import aiplatform  # type: ignore[import-untyped]
 
-from src.domain.repository.vertex_ai import VertexJobStatus
+from src.domain.repository.vertex_ai import VertexJobResult
 
 logger = logging.getLogger(__name__)
 
-# Vertex AI ジョブ状態 → VertexJobStatus.state のマッピング
+# Vertex AI ジョブ状態 → VertexJobResult.state のマッピング
 _STATE_MAP: dict[str, str] = {
     "JOB_STATE_SUCCEEDED": "SUCCEEDED",
     "JOB_STATE_FAILED": "FAILED",
     "JOB_STATE_CANCELLED": "CANCELLED",
     "JOB_STATE_CANCELLING": "CANCELLED",
-}
-_RUNNING_STATES: set[str] = {
-    "JOB_STATE_RUNNING",
-    "JOB_STATE_QUEUED",
-    "JOB_STATE_PENDING",
 }
 
 
@@ -38,9 +32,8 @@ class VertexAIRepositoryImpl:
         aiplatform.init(project=project, location=region, staging_bucket=staging_bucket)
         self._project = project
         self._region = region
-        self._jobs: dict[str, object] = {}  # resource_name → job instance
 
-    def submit_custom_job(
+    def run_custom_job(
         self,
         display_name: str,
         container_uri: str,
@@ -49,8 +42,13 @@ class VertexAIRepositoryImpl:
         machine_type: str,
         env_vars: dict[str, str],
         service_account: str,
-    ) -> str:
-        """カスタムトレーニングジョブを送信し、ジョブリソース名を返す。"""
+    ) -> VertexJobResult:
+        """カスタムトレーニングジョブを送信し、完了まで待機して結果を返す。
+
+        内部で run(sync=True) を使用する。sync=True は送信 + 完了待機を
+        1メソッドで行い、ジョブが失敗した場合は RuntimeError を送出する。
+        ref: https://cloud.google.com/python/docs/reference/aiplatform/latest/google.cloud.aiplatform.CustomJob
+        """
         container_spec: dict[str, object] = {
             "image_uri": container_uri,
             "env": [{"name": k, "value": v} for k, v in env_vars.items()],
@@ -70,21 +68,19 @@ class VertexAIRepositoryImpl:
             display_name=display_name,
             worker_pool_specs=worker_pool_specs,
         )
-        # run(sync=False) を使う。submit() だと wait() 用の内部 future が作られず
-        # wait() が即座に返る。run(sync=False) なら wait() で正しくブロックする。
-        # ref: https://github.com/googleapis/python-aiplatform/issues/803
-        job.run(service_account=service_account, sync=False)
-        resource_name: str = job.resource_name
-        self._jobs[resource_name] = job
-        logger.info(f"Submitted Vertex AI job: {resource_name}")
-        return resource_name
+        logger.info(f"Submitting Vertex AI job: {display_name}")
 
-    def wait_for_job(self, job_name: str) -> VertexJobStatus:
-        """ジョブ完了までポーリングし、最終状態を返す。"""
-        # submit() したインスタンスを使う（get() だと wait() が即座に返る場合がある）
-        job = self._jobs.pop(job_name, None) or aiplatform.CustomJob.get(job_name)
-        job.wait()  # type: ignore[union-attr,attr-defined]
-        raw_state: str = job.state.name  # type: ignore[union-attr,attr-defined]
+        # run(sync=True) はジョブ送信 + 完了待機をブロッキングで実行する。
+        # ジョブ失敗時は RuntimeError を送出する。
+        try:
+            job.run(service_account=service_account, sync=True)
+        except RuntimeError:
+            # run() が失敗時に RuntimeError を投げるが、
+            # 結果を VertexJobResult で返したいので catch する
+            pass
+
+        resource_name: str = job.resource_name
+        raw_state: str = job.state.name
         state = _STATE_MAP.get(raw_state, raw_state)
         error_msg: str | None = None
         if state == "FAILED":
@@ -93,8 +89,13 @@ class VertexAIRepositoryImpl:
                 error_msg = str(error.message) if error is not None else raw_state
             except AttributeError:
                 error_msg = raw_state
-        logger.info(f"Job {job_name} finished with state: {state}")
-        return VertexJobStatus(state=state, error_message=error_msg)
+
+        logger.info(f"Job {resource_name} finished with state: {state}")
+        return VertexJobResult(
+            resource_name=resource_name,
+            state=state,
+            error_message=error_msg,
+        )
 
     def cancel_job(self, job_name: str) -> None:
         """実行中のジョブをキャンセルする。"""

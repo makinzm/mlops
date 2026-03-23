@@ -139,7 +139,8 @@ class VertexAITrainUseCase:
             " && pip install -q hydra-core omegaconf python-dotenv pydantic jinja2 mlflow"
             " && python /app/scripts/vertex_entrypoint.py"
         )
-        vertex_job_name = self._vertex.submit_custom_job(
+        # run_custom_job は送信 + 完了待機を1メソッドで行う
+        result = self._vertex.run_custom_job(
             display_name=f"{job_id}-{timestamp}",
             container_uri=str(cfg.gcp.container_uri),
             command=["bash", "-c", bootstrap],
@@ -148,14 +149,13 @@ class VertexAITrainUseCase:
             env_vars=env_vars,
             service_account=str(cfg.gcp.service_account),
         )
-        logger.info(f"Submitted Vertex AI job: {vertex_job_name}")
+        vertex_job_name = result.resource_name
+        logger.info(f"Vertex AI job completed: {vertex_job_name} ({result.state})")
 
-        # 6. ジョブ完了を待機
-        status = self._vertex.wait_for_job(vertex_job_name)
-        if not status.is_succeeded:
+        if not result.is_succeeded:
             raise RuntimeError(
                 f"Vertex AI job failed [{vertex_job_name}]: "
-                f"state={status.state}, error={status.error_message}"
+                f"state={result.state}, error={result.error_message}"
             )
 
         # 7. ローカルにモデル成果物をダウンロード
