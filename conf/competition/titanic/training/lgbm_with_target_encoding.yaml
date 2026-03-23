@@ -23,8 +23,12 @@ feature_cols:
   - FamilySize
   - Sex
   - Embarked
-# Sex, Embarked は Target Encoding により float になるため categorical_feature から除外
-categorical_feature: []
+# NOTE: 前処理 recipe=target_encoding が Sex, Embarked を float にエンコードする想定だが、
+# 現状の preprocess パイプラインではエンコードされないため categorical_feature に含める。
+# Target Encoding が正しく実装された際はこの設定を [] に戻すこと。
+categorical_feature:
+  - Sex
+  - Embarked
 
 # ── サンプル重み ─────────────────────────────────
 sample_weight_col: null
