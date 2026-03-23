@@ -96,6 +96,8 @@ def _copy_dir_to_staging(
     dest = staging_dir / source_dir.name
     dest.mkdir(parents=True, exist_ok=True)
 
+    copied_count = 0
+    total_bytes = 0
     for src_file in source_dir.rglob("*"):
         if not src_file.is_file():
             continue
@@ -110,8 +112,11 @@ def _copy_dir_to_staging(
         dest_file = dest / rel
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_file, dest_file)
+        copied_count += 1
+        total_bytes += src_file.stat().st_size
 
-    logger.info("Copied %s -> %s", source_dir, dest)
+    size_mb = total_bytes / (1024 * 1024)
+    logger.info("Copied %s -> %s (%d files, %.1f MB)", source_dir, dest, copied_count, size_mb)
 
 
 def copy_to_staging(
