@@ -108,7 +108,10 @@ class PushNotebookUseCase:
         enable_internet: bool = bool(self._cfg.notebook.enable_internet)
         notebook_path = output_dir / "notebook.ipynb"
         recipe: str = str(self._cfg.notebook.get("recipe", "all_after_download"))
-        extra_datasets: list[str] = list(self._cfg.notebook.get("extra_datasets") or [])
+        extra_datasets_raw = self._cfg.notebook.get("extra_datasets") or []
+        extra_datasets: list[dict[str, str]] = [
+            {"slug": str(d.slug), "mount_path": str(d.mount_path)} for d in extra_datasets_raw
+        ]
         self._renderer.render(
             output_path=notebook_path,
             competition=competition,
@@ -144,7 +147,7 @@ class PushNotebookUseCase:
             "enable_internet": enable_internet,
             "dataset_sources": [f"{username}/{src_dataset}" if username else src_dataset]
             + [
-                f"{username}/{d}" if username else str(d)
+                f"{username}/{d.slug}" if username else str(d.slug)
                 for d in (self._cfg.notebook.get("extra_datasets") or [])
             ],
             "competition_sources": [competition],

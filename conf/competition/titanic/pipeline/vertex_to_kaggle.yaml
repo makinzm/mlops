@@ -41,7 +41,8 @@ steps:
       recipe: inference_only
       src_dataset: mlops-pipeline-src
       extra_datasets:
-        - titanic-vertex-models
+        - slug: titanic-vertex-models
+          mount_path: /kaggle/working/models/titanic/titanic_lgbm
       competition: titanic
       enable_gpu: false
       enable_internet: false

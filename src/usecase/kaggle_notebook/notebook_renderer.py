@@ -34,7 +34,7 @@ class NotebookRenderer:
         kaggle_username: str,
         enable_internet: bool = True,
         recipe: str = "all_after_download",
-        extra_datasets: list[str] | None = None,
+        extra_datasets: list[dict[str, str]] | None = None,
     ) -> Path:
         """テンプレートを描画して ipynb ファイルを書き出す。
 
