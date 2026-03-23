@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).parent.parent
 LEFTHOOK_YML = REPO_ROOT / "lefthook.yml"
 CI_YML = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 
-REQUIRED_LEFTHOOK_COMMANDS = {"ruff-check", "ruff-format", "mypy", "actionlint"}
+REQUIRED_LEFTHOOK_COMMANDS = {"ruff-check", "ruff-format", "ty", "actionlint"}
 REQUIRED_CI_JOBS = {"lint", "type-check", "test", "actionlint"}
 
 

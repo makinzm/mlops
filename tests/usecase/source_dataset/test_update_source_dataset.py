@@ -57,7 +57,7 @@ class TestUpdateSourceDatasetUseCaseExecute:
         _setup_src(tmp_path)
         cfg = _make_cfg(tmp_path)
         mock_repo = MagicMock()
-        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -72,7 +72,7 @@ class TestUpdateSourceDatasetUseCaseExecute:
         _setup_src(tmp_path)
         cfg = _make_cfg(tmp_path)
         mock_repo = MagicMock()
-        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -83,7 +83,7 @@ class TestUpdateSourceDatasetUseCaseExecute:
         _setup_src(tmp_path)
         cfg = _make_cfg(tmp_path, version_message="add target encoding")
         mock_repo = MagicMock()
-        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -97,7 +97,7 @@ class TestUpdateSourceDatasetUseCaseExecute:
         _setup_src(tmp_path)
         cfg = _make_cfg(tmp_path)
         mock_repo = MagicMock()
-        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         usecase.execute()
 
@@ -112,7 +112,7 @@ class TestUpdateSourceDatasetUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         mock_repo = MagicMock()
         mock_repo.update_version.side_effect = RuntimeError("upload failed")
-        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # type: ignore[arg-type]
+        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         with pytest.raises(RuntimeError, match="upload failed"):
             usecase.execute()

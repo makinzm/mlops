@@ -31,13 +31,8 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.1",
-    "mypy>=1.0",
-    "types-PyYAML>=6.0",
-    "pandas-stubs>=3.0.0.260204",
-    "types-seaborn>=0.13.2.20251221",
-    "scikit-learn-stubs>=0.0.3",
     "mille>=0.0.12",
-    "scipy-stubs>=1.17.1.1",
+    "ty>=0.0.24",
 ]
 
 [build-system]
@@ -55,10 +50,11 @@ exclude = ["notebooks/"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 
-[tool.mypy]
-python_version = "3.11"
-strict = true
-warn_unused_ignores = false
+[tool.ty.environment]
+python-version = "3.11"
+
+[tool.ty.rules]
+unresolved-import = "ignore"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

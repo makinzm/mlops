@@ -96,7 +96,7 @@ class TestTrainUseCase:
         mock_git = _make_mock_git_repo()
 
         # trainer は UseCase が渡した output_dir を output_dir として TrainResult を返す
-        def fake_fit_folds(preprocess_output_dir, output_dir, cfg):  # type: ignore[no-untyped-def]
+        def fake_fit_folds(preprocess_output_dir, output_dir, cfg):
             timestamp = cfg.get("_timestamp", "20260315T120000")
             return _make_train_result(output_dir, timestamp=timestamp)
 
@@ -166,7 +166,7 @@ class TestTrainUseCase:
         mock_trainer = MagicMock()
         mock_git = _make_mock_git_repo()
 
-        def fake_fit_folds(preprocess_output_dir, output_dir, cfg):  # type: ignore[no-untyped-def]
+        def fake_fit_folds(preprocess_output_dir, output_dir, cfg):
             timestamp = cfg.get("_timestamp", "20260315T120000")
             return _make_train_result(output_dir, timestamp=timestamp)
 
@@ -185,7 +185,7 @@ class TestTrainUseCase:
 
         captured: dict[str, Path] = {}
 
-        def fake_fit_folds(preprocess_output_dir, output_dir, cfg):  # type: ignore[no-untyped-def]
+        def fake_fit_folds(preprocess_output_dir, output_dir, cfg):
             captured["output_dir"] = output_dir
             timestamp = cfg.get("_timestamp", "20260315T120000")
             return _make_train_result(output_dir, timestamp=timestamp)

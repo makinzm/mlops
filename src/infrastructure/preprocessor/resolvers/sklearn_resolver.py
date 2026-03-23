@@ -46,7 +46,7 @@ class SklearnResolver:
             if not isinstance(columns, list):
                 raise ValueError("fill_na requires 'columns' as list[str]")
             fill_value = kwargs.get("fill_value", 0.0)
-            result, _ = self.fill_na(df, strategy=strategy, columns=columns, fill_value=fill_value)
+            result, _ = self.fill_na(df, strategy=strategy, columns=columns, fill_value=fill_value)  # ty:ignore[invalid-argument-type]
             return result
         raise ValueError(f"Unknown method: {method!r}")
 

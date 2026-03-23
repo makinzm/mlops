@@ -23,7 +23,7 @@ class InputLoader:
         """
         input_dfs: dict[str, DataFrame] = {}
         for inp in inputs_raw:
-            inp_dict = dict(inp)  # type: ignore[call-overload]
+            inp_dict = dict(inp)  # ty:ignore[no-matching-overload]
             inp_id = str(inp_dict["id"])
             fmt = str(inp_dict.get("format", "csv"))
             if "path" in inp_dict:

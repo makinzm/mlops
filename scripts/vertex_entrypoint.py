@@ -28,7 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from google.cloud import storage  # type: ignore[import-untyped,unused-ignore]
+from google.cloud import storage
 
 logging.basicConfig(
     level=logging.INFO,

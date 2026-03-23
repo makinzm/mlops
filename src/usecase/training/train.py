@@ -93,7 +93,7 @@ class TrainUseCase:
         ts_dir.mkdir(parents=True, exist_ok=True)
 
         # cfg に timestamp / commit_hash を追加して trainer へ渡す
-        raw_cfg: dict[str, Any] = OmegaConf.to_container(cfg, resolve=True)  # type: ignore[assignment]
+        raw_cfg: dict[str, Any] = OmegaConf.to_container(cfg, resolve=True)  # ty:ignore[invalid-assignment]
         raw_cfg["_timestamp"] = timestamp
         raw_cfg["_commit_hash"] = commit_hash
 

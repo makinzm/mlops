@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync
-      - run: uv run mypy tests/ src/
+      - run: uv run ty check src/ tests/ --python .venv --output-format github
 
   test:
     runs-on: ubuntu-latest

@@ -51,8 +51,8 @@ def _parse_analyses(steps_cfg: Any) -> list[Any]:
 
     raw = OmegaConf.to_container(steps_cfg, resolve=True)
     steps = []
-    for item in raw:  # type: ignore[union-attr]
-        d = dict(item)  # type: ignore[arg-type]
+    for item in raw:  # ty:ignore[not-iterable]
+        d = dict(item)  # ty:ignore[no-matching-overload]
         step_type = d.pop("type")
         steps.append(AnalysisStep(type=step_type, params=d))
     return steps
@@ -192,7 +192,7 @@ def _run_update_source_dataset_pipeline(cfg: DictConfig) -> None:
     from src.usecase.source_dataset.update_source_dataset import UpdateSourceDatasetUseCase
 
     try:
-        from kaggle.api.kaggle_api_extended import (  # type: ignore[import-untyped]
+        from kaggle.api.kaggle_api_extended import (
             KaggleApi as KaggleApiExtended,
         )
     except SystemExit as e:
@@ -277,13 +277,13 @@ def main(cfg: DictConfig) -> None:
         except Exception:
             logger.error("ダウンローダーの初期化に失敗しました", exc_info=True)
             raise
-        DownloadDatasetUseCase(downloader, logger).execute()  # type: ignore[arg-type]
+        DownloadDatasetUseCase(downloader, logger).execute()  # ty:ignore[invalid-argument-type]
 
     elif usecase_name == "automatically_eda":
         from src.usecase.eda.automatically_eda import AutomaticallyEDAUseCase
 
         analyzers = _resolve_analyzers(cfg)
-        AutomaticallyEDAUseCase(analyzers, logger).execute()  # type: ignore[arg-type]
+        AutomaticallyEDAUseCase(analyzers, logger).execute()  # ty:ignore[invalid-argument-type]
 
     elif usecase_name == "preprocess":
         _run_preprocess(cfg)

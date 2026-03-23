@@ -71,4 +71,4 @@ commit: `c62eb6b test(RED): GCSRepository/VertexAI/VertexAITrainUseCase/pipeline
 - mille check: 0 violations
 - ruff check: PASS
 - ruff format: PASS
-- mypy: PASS (strict)
+- m-y-p-y: PASS (strict)

@@ -54,7 +54,7 @@ lefthook run pre-commit
 summary:
 ✔️  ruff-check
 ✔️  ruff-format
-✔️  mypy
+✔️  ty
 ✔️  actionlint
 ```
 
@@ -76,10 +76,10 @@ uv run --extra dev ruff check .
 uv run --extra dev ruff format --check .
 ```
 
-### mypy 型チェック
+### ty 型チェック
 
 ```bash
-uv run --extra dev mypy src/
+uv run ty check src/ tests/ --python .venv
 ```
 
 ### actionlint（GitHub Actions ワークフローの Lint）
@@ -118,7 +118,7 @@ PR を作成するか、`main` ブランチにプッシュすると、GitHub Act
 | ジョブ | 内容 |
 |---|---|
 | `lint` | ruff check / ruff format --check |
-| `type-check` | mypy src/ |
+| `type-check` | ty check src/ tests/ |
 | `test` | pytest --cov |
 | `actionlint` | .github/workflows/*.yml の Lint |
 
@@ -141,10 +141,12 @@ lefthook run pre-commit
 
 初回は Nix パッケージのビルドが発生します。2 回目以降はキャッシュが効きます。
 
-### mypy が `types-PyYAML` を要求する
+### ty が import を解決できない
+
+`unresolved-import` が出る場合、`.venv` にパッケージがインストールされているか確認：
 
 ```bash
-uv sync --extra dev
+uv sync
 ```
 
 ### CI で `devenv` が見つからない

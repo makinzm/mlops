@@ -40,9 +40,9 @@ class OutputResolver:
                 df=df,
                 output_dir=output_dir,
                 node_id=node_id,
-                columns=columns,
+                columns=columns,  # ty:ignore[invalid-argument-type]
                 cv=cv,
-                splits=splits,  # type: ignore[arg-type]
+                splits=splits,  # ty:ignore[invalid-argument-type]
             )
             return df
         raise ValueError(f"Unknown method: {method!r}")

@@ -21,6 +21,9 @@ mlruns/
 # Jupyter
 .ipynb_checkpoints/
 
+# ty (type checker cache)
+.ty/
+
 # Pytest
 .coverage
 htmlcov/

@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from google.cloud import storage  # type: ignore[import-untyped]
+from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 

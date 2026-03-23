@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 
-from google.cloud import aiplatform  # type: ignore[import-untyped]
+from google.cloud import aiplatform
 
 from src.domain.repository.vertex_ai import VertexJobResult
 
