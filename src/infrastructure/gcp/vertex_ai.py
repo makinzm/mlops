@@ -38,6 +38,7 @@ class VertexAIRepositoryImpl:
         aiplatform.init(project=project, location=region, staging_bucket=staging_bucket)
         self._project = project
         self._region = region
+        self._jobs: dict[str, object] = {}  # resource_name → job instance
 
     def submit_custom_job(
         self,
@@ -70,14 +71,17 @@ class VertexAIRepositoryImpl:
             worker_pool_specs=worker_pool_specs,
         )
         job.submit(service_account=service_account)
-        logger.info(f"Submitted Vertex AI job: {job.resource_name}")
-        return job.resource_name
+        resource_name: str = job.resource_name
+        self._jobs[resource_name] = job
+        logger.info(f"Submitted Vertex AI job: {resource_name}")
+        return resource_name
 
     def wait_for_job(self, job_name: str) -> VertexJobStatus:
         """ジョブ完了までポーリングし、最終状態を返す。"""
-        job = aiplatform.CustomJob.get(job_name)
-        job.wait()  # type: ignore[no-untyped-call]
-        raw_state: str = job.state.name
+        # submit() したインスタンスを使う（get() だと wait() が即座に返る場合がある）
+        job = self._jobs.pop(job_name, None) or aiplatform.CustomJob.get(job_name)
+        job.wait()  # type: ignore[union-attr,attr-defined]
+        raw_state: str = job.state.name  # type: ignore[union-attr,attr-defined]
         state = _STATE_MAP.get(raw_state, raw_state)
         error_msg: str | None = None
         if state == "FAILED":
