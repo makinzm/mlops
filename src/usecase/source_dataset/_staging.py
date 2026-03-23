@@ -99,6 +99,10 @@ def _copy_dir_to_staging(
     for src_file in source_dir.rglob("*"):
         if not src_file.is_file():
             continue
+        # .gitignore はコピーしない（Kaggle API がアップロード時に読んでしまい
+        # * パターンで全ファイルを除外する問題を防ぐ）
+        if src_file.name == ".gitignore":
+            continue
         rel = src_file.relative_to(source_dir)
         if _is_ignored(rel, patterns):
             logger.debug("Ignored (kaggleignore): %s", rel)
