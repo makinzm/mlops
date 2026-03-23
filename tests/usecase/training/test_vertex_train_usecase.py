@@ -212,7 +212,7 @@ class TestVertexAITrainUseCaseExecute:
         assert command[0] == "bash"
         assert command[1] == "-c"
         bootstrap = command[2]
-        assert "gsutil" in bootstrap
+        assert "google.cloud" in bootstrap
         assert "pip install" in bootstrap
         assert "vertex_entrypoint.py" in bootstrap
 

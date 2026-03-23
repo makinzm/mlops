@@ -122,10 +122,12 @@ class VertexAITrainUseCase:
 
         # 5. Vertex AI ジョブを送信
         #    Kaggle プリビルトイメージを使う場合、command で:
-        #    - gsutil でコードを /app にダウンロード
+        #    - Python SDK でコードを GCS から /app にダウンロード
+        #      (gsutil は Kaggle コンテナ内で ADC を自動取得できないため使わない)
         #    - 不足 deps を pip install
         #    - entrypoint を実行
         env_vars: dict[str, str] = {
+            "GCS_CODE_URI": gcs_code_uri,
             "GCS_DATA_URI": gcs_data_uri,
             "GCS_MODEL_URI": gcs_model_uri,
             "MLOPS_JOB_ID": job_id,
@@ -134,8 +136,20 @@ class VertexAITrainUseCase:
             "MLOPS_COMMIT_HASH": commit_hash,
             "PYTHONPATH": "/app",
         }
+        # GCS からコードをダウンロードする Python ワンライナー
+        # google-cloud-storage は Kaggle イメージに入っており、ADC も自動取得される
+        gcs_download_py = (
+            "import os; from google.cloud import storage; "
+            f"uri='{gcs_code_uri}'; "
+            "bkt,pfx=uri[5:].split('/',1); "
+            "c=storage.Client(); "
+            "[("
+            "  os.makedirs(os.path.dirname(f'/app/{b.name[len(pfx)+1:]}'),exist_ok=True),"
+            "  b.download_to_filename(f'/app/{b.name[len(pfx)+1:]}')"
+            ") for b in c.list_blobs(bkt,prefix=pfx) if b.name[len(pfx)+1:]]"
+        )
         bootstrap = (
-            f"gsutil -m cp -r {gcs_code_uri}/* /app/"
+            f'python -c "{gcs_download_py}"'
             " && pip install -q hydra-core omegaconf python-dotenv pydantic jinja2 mlflow"
             " && python /app/scripts/vertex_entrypoint.py"
         )
