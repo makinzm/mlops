@@ -32,6 +32,7 @@ class NotebookRenderer:
         competition: str,
         src_dataset: str,
         enable_internet: bool = True,
+        recipe: str = "all_after_download",
     ) -> Path:
         """テンプレートを描画して ipynb ファイルを書き出す。
 
@@ -40,6 +41,7 @@ class NotebookRenderer:
             competition: Kaggle competition の slug（例: "titanic"）
             src_dataset: コードを格納する Kaggle Dataset の slug（例: "mlops-pipeline-src"）
             enable_internet: False のとき pip install をスキップする（オフラインコンペ用）
+            recipe: パイプラインレシピ名（例: "inference_only"）
 
         Returns:
             書き出した ipynb ファイルのパス。
@@ -49,6 +51,7 @@ class NotebookRenderer:
             competition=competition,
             src_dataset=src_dataset,
             enable_internet=enable_internet,
+            recipe=recipe,
         )
 
         # JSON として parse してから再 dump することで整形済みファイルを生成する

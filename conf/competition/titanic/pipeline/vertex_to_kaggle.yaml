@@ -1,5 +1,5 @@
 # @package _global_
-# Titanic Vertex AI パイプライン設定 — Vertex AI 学習から Kaggle Notebook 更新まで
+# Titanic Vertex AI パイプライン設定 — Vertex AI 学習から Kaggle 提出まで
 #
 # 実行例:
 #   uv run python -m src usecase=pipeline recipe=vertex_to_kaggle
@@ -19,13 +19,29 @@ steps:
   - usecase: inference
     recipe: titanic_ensemble
 
-  # ④ モデル + コードを Kaggle Dataset に push（モデル重みも含む）
+  # ④ コード（src + conf）を既存 Dataset に push
   - usecase: update_source_dataset
     source_dataset:
-      extra_dirs:
-        - models/titanic
       version_message: "auto update: vertex training"
 
-  # ⑤ Kaggle Notebook を最新モデルで更新
+  # ⑤ モデル重みを別の Dataset に push
+  - usecase: update_source_dataset
+    source_dataset:
+      dataset_slug: mlops-vertex-models
+      title: mlops-vertex-models
+      src_dir: models/titanic
+      conf_dir: models/titanic
+      extra_dirs: []
+      version_message: "auto update: vertex trained model"
+
+  # ⑥ 推論専用 Notebook を push（学習しない）
   - usecase: push_notebook
-    notebook: titanic
+    notebook:
+      kernel_slug: titanic-vertex-inference
+      recipe: inference_only
+      src_dataset: mlops-pipeline-src
+      extra_datasets:
+        - mlops-vertex-models
+      competition: titanic
+      enable_gpu: false
+      enable_internet: false

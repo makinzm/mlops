@@ -106,11 +106,13 @@ class PushNotebookUseCase:
         src_dataset: str = str(self._cfg.notebook.src_dataset)
         enable_internet: bool = bool(self._cfg.notebook.enable_internet)
         notebook_path = output_dir / "notebook.ipynb"
+        recipe: str = str(self._cfg.notebook.get("recipe", "all_after_download"))
         self._renderer.render(
             output_path=notebook_path,
             competition=competition,
             src_dataset=src_dataset,
             enable_internet=enable_internet,
+            recipe=recipe,
         )
         logger.info("Notebook generated: %s", notebook_path)
         return notebook_path
@@ -136,7 +138,11 @@ class PushNotebookUseCase:
             "is_private": True,
             "enable_gpu": enable_gpu,
             "enable_internet": enable_internet,
-            "dataset_sources": [f"{username}/{src_dataset}" if username else src_dataset],
+            "dataset_sources": [f"{username}/{src_dataset}" if username else src_dataset]
+            + [
+                f"{username}/{d}" if username else str(d)
+                for d in (self._cfg.notebook.get("extra_datasets") or [])
+            ],
             "competition_sources": [competition],
             "kernel_sources": [],
         }

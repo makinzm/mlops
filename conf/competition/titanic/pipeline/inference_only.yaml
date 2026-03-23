@@ -1,0 +1,17 @@
+# @package _global_
+# Titanic 推論のみパイプライン — 学習済みモデルで推論 + 提出
+#
+# Vertex AI（またはローカル）で学習したモデルを使い、
+# Kaggle Notebook 上で推論・提出するためのパイプライン。
+# 学習はしない。
+#
+# 実行例:
+#   uv run python -m src usecase=pipeline recipe=inference_only
+
+usecase: pipeline
+job_id: titanic_inference_only
+
+steps:
+  # ① 推論（submission.csv 生成）
+  - usecase: inference
+    recipe: titanic_ensemble
