@@ -92,7 +92,7 @@ uv run python -m src usecase=vertex_train recipe=lgbm
 3. Vertex AI に CustomJob を送信
         ↓
 [Vertex AI コンテナ（Kaggle イメージ）]
-4. gsutil でコードを /app/ にダウンロード
+4. Python SDK でコードを GCS から /app/ にダウンロード
 5. pip install で不足 deps をインストール（hydra-core, omegaconf 等）
 6. 学習を実行
 7. モデルを GCS にアップロード
@@ -145,15 +145,41 @@ gcp:
 
 ---
 
-## 4. フル自動パイプラインの実行
+## 4. Kaggle に提出する
 
-前処理 → Vertex AI 学習 → 推論 → Kaggle Dataset 更新 → Notebook 更新 を一括実行:
+Vertex AI で学習したモデルを Kaggle Notebook で推論・提出するまでの手順です。
+
+### ステップごとに実行する場合
+
+```bash
+# ① 推論（submission.csv 生成）
+uv run python -m src usecase=inference recipe=titanic_ensemble
+
+# ② モデル重み + コードを Kaggle Dataset に push
+uv run python -m src usecase=update_source_dataset \
+  source_dataset.extra_dirs='[models/titanic]' \
+  source_dataset.version_message="vertex AI trained model"
+
+# ③ Kaggle Notebook を push（推論 + 提出）
+uv run python -m src usecase=push_notebook notebook=titanic
+```
+
+Kaggle Notebook 上ではモデルが `/kaggle/input/mlops-pipeline-src/models/titanic/` に配置されます。
+Notebook はそこから `.lgbm` を読み込んで推論・提出を行います。
+
+### フル自動パイプライン（前処理〜提出まで一括）
 
 ```bash
 uv run python -m src usecase=pipeline recipe=vertex_to_kaggle
 ```
 
-このパイプラインは `conf/competition/titanic/pipeline/vertex_to_kaggle.yaml` で定義されています。
+このパイプラインは以下を順に実行します（`conf/competition/titanic/pipeline/vertex_to_kaggle.yaml`）:
+
+1. 前処理
+2. Vertex AI で学習
+3. 推論（submission.csv 生成）
+4. モデル + コードを Kaggle Dataset に push
+5. Kaggle Notebook を更新
 
 ---
 
