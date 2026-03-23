@@ -2,10 +2,10 @@
 PushNotebookUseCase のテスト。
 
 なぜこのテストが必要か:
-  - PushNotebookUseCase は Notebook 生成 → kernel-metadata.json 生成 → Kaggle プッシュを担う。
+  - PushNotebookUseCase は Notebook 生成 → metadata 生成 → push を担う。
   - Notebook のセル構成（3セル）・各セルの内容・kernel-metadata.json の必須フィールドが
-    正しく生成されることをテストで保証しないと、Kaggle 上で Notebook が動かなくなる。
-  - Kaggle API 呼び出しは MagicMock で差し替え、CI で実際の通信が発生しないようにする。
+    正しく生成されることをテストで保証しないと、プラットフォーム上で Notebook が動かなくなる。
+  - API 呼び出しは MagicMock で差し替え、CI で実際の通信が発生しないようにする。
   - per-directory .gitignore と README.md の生成も確認する（DoD 要件）。
 """
 
@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 from omegaconf import OmegaConf
 
-from src.usecase.kaggle_notebook.push_notebook import PushNotebookUseCase
+from src.usecase.notebook.push_notebook import PushNotebookUseCase
 
 
 def _make_cfg(tmp_path: Path) -> object:
@@ -174,10 +174,10 @@ class TestKernelMetadataGeneration:
 
 
 class TestKaggleApiInteraction:
-    """Kaggle API との連携を検証する。"""
+    """Notebook プラットフォーム API との連携を検証する。"""
 
     def test_execute_calls_kernels_push(self, tmp_path: Path) -> None:
-        """execute() が Kaggle API の kernels_push() を1回呼ぶこと。"""
+        """execute() が kernels_push() を1回呼ぶこと。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
         usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
@@ -185,12 +185,12 @@ class TestKaggleApiInteraction:
         mock_api.kernels_push.assert_called_once()
 
     def test_execute_raises_runtime_error_on_auth_failure(self, tmp_path: Path) -> None:
-        """Kaggle API が SystemExit を上げたとき RuntimeError に変換されること。"""
+        """API が SystemExit を上げたとき RuntimeError に変換されること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
         mock_api.kernels_push.side_effect = SystemExit(1)
         usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
-        with pytest.raises(RuntimeError, match="Kaggle"):
+        with pytest.raises(RuntimeError):
             usecase.execute()
 
 

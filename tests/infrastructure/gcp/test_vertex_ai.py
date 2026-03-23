@@ -4,7 +4,7 @@ VertexAIRepositoryImpl の単体テスト。
 なぜこのテストが必要か:
   - VertexAIRepositoryImpl は google-cloud-aiplatform を使い Vertex AI と通信する。
   - テストでは aiplatform モジュールをモックし、実際の GCP 呼び出しを防ぐ。
-  - run_custom_job が正しいパラメータでジョブを送信し VertexJobResult を返すことを保証する。
+  - run_custom_job が正しいパラメータでジョブを送信し TrainingJobResult を返すことを保証する。
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ class TestVertexAIRepositoryImplRunJob:
     """run_custom_job のテスト。"""
 
     def test_run_returns_succeeded_result(self) -> None:
-        """ジョブ成功時に SUCCEEDED の VertexJobResult が返されること。"""
+        """ジョブ成功時に SUCCEEDED の TrainingJobResult が返されること。"""
         mock_job_instance = MagicMock()
         mock_job_instance.resource_name = "projects/123/locations/asia-northeast1/customJobs/456"
         mock_job_instance.state.name = "JOB_STATE_SUCCEEDED"
@@ -81,7 +81,7 @@ class TestVertexAIRepositoryImplRunJob:
         assert "KEY" in env_names
 
     def test_run_returns_failed_result_with_error(self) -> None:
-        """ジョブ失敗時に FAILED の VertexJobResult が返されること。"""
+        """ジョブ失敗時に FAILED の TrainingJobResult が返されること。"""
         mock_job_instance = MagicMock()
         mock_job_instance.resource_name = "projects/123/locations/x/customJobs/1"
         mock_job_instance.state.name = "JOB_STATE_FAILED"

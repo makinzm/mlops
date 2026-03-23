@@ -12,11 +12,11 @@ import logging
 
 from google.cloud import aiplatform
 
-from src.domain.repository.vertex_ai import VertexJobResult
+from src.domain.repository.training_job import TrainingJobResult
 
 logger = logging.getLogger(__name__)
 
-# Vertex AI ジョブ状態 → VertexJobResult.state のマッピング
+# Vertex AI ジョブ状態 → TrainingJobResult.state のマッピング
 _STATE_MAP: dict[str, str] = {
     "JOB_STATE_SUCCEEDED": "SUCCEEDED",
     "JOB_STATE_FAILED": "FAILED",
@@ -42,7 +42,7 @@ class VertexAIRepositoryImpl:
         machine_type: str,
         env_vars: dict[str, str],
         service_account: str,
-    ) -> VertexJobResult:
+    ) -> TrainingJobResult:
         """カスタムトレーニングジョブを送信し、完了まで待機して結果を返す。
 
         内部で run(sync=True) を使用する。sync=True は送信 + 完了待機を
@@ -91,7 +91,7 @@ class VertexAIRepositoryImpl:
                 error_msg = raw_state
 
         logger.info(f"Job {resource_name} finished with state: {state}")
-        return VertexJobResult(
+        return TrainingJobResult(
             resource_name=resource_name,
             state=state,
             error_message=error_msg,

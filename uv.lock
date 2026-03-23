@@ -1849,9 +1849,9 @@ wheels = [
 
 [[package]]
 name = "mille"
-version = "0.0.12"
+version = "0.0.13"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ee/be/c2b994f374686bcc8b7cb54fba31cbb4a450ef94f9e5fb3605535a7c4764/mille-0.0.12.tar.gz", hash = "sha256:cbdc61e21dcd2afdfadfca94f275b3412d86d31f4246d7d0280d952775a477a1", size = 1617591, upload-time = "2026-03-15T01:13:22.005Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/eb/d342c44826a8ba278a37e8ffbf86ffa6a60430792b1f8e214979f7647780/mille-0.0.13.tar.gz", hash = "sha256:a45f3aebe4521be63a1f7f473a53c5c8fa043ebfaa165b42ded8568ee3c9a98c", size = 1843398, upload-time = "2026-03-23T12:26:34.463Z" }
 
 [[package]]
 name = "mlflow"
@@ -1991,7 +1991,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "mille", specifier = ">=0.0.12" },
+    { name = "mille", specifier = ">=0.0.13" },
     { name = "pytest", specifier = ">=7.0" },
     { name = "pytest-cov", specifier = ">=4.0" },
     { name = "ruff", specifier = ">=0.1" },

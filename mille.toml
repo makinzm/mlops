@@ -12,6 +12,7 @@ paths = ["src/domain/**"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["dataclasses", "pathlib", "typing"]
+name_deny = ["gcp", "vertex", "lgbm", "titanic", "kaggle"]
 
 [[layers]]
 name = "src_infrastructure"
@@ -20,6 +21,7 @@ allow = ["src_domain", "src_usecase"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["datetime", "google", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "polars", "seaborn", "sklearn", "subprocess", "typing", "yaml", "zipfile"]
+name_deny = ["titanic"]
 
 [[layers]]
 name = "src_usecase"
@@ -28,6 +30,7 @@ allow = ["src_domain"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["collections", "dataclasses", "datetime", "fnmatch", "jinja2", "json", "logging", "numpy", "omegaconf", "pathlib", "polars", "scipy", "shutil", "typing", "yaml"]
+name_deny = ["gcp", "vertex", "lgbm", "titanic", "kaggle"]
 
 [[layers]]
 name = "tests_domain"

@@ -30,9 +30,9 @@ class PipelineUseCase:
         run_inference: Callable[[DictConfig], None],
         **extra_runners: Callable[[DictConfig], None],
     ) -> None:
-        # extra_runners のキーは "run_vertex_train" 形式で渡されるため、
+        # extra_runners のキーは "run_<name>" 形式で渡されるため、
         # "run_" プレフィックスを除去して step.usecase の値に合わせる。
-        # 例: run_vertex_train → vertex_train
+        # 例: run_remote_train → remote_train
         normalized_extras = {
             (k[len("run_") :] if k.startswith("run_") else k): v for k, v in extra_runners.items()
         }

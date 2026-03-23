@@ -1,22 +1,22 @@
 """
-VertexAITrainUseCase — GCP Vertex AI でモデル学習を実行するユースケース。
+RemoteTrainUseCase — リモート環境でモデル学習を実行するユースケース。
 
 処理フロー:
 1. preprocess_output_dir を解決（"latest" → 最新タイムスタンプ）
-2. src/ + conf/ を GCS にアップロード（コードはイメージに含めず GCS 経由で渡す）
-3. preprocessed data を GCS にアップロード
-4. Vertex AI CustomJob を送信（コンテナに GCS_CODE_URI / GCS_DATA_URI / GCS_MODEL_URI を渡す）
+2. src/ + conf/ をオブジェクトストレージにアップロード（コードはイメージに含めず経由で渡す）
+3. preprocessed data をオブジェクトストレージにアップロード
+4. リモート学習ジョブを送信（コンテナに GCS_CODE_URI / GCS_DATA_URI / GCS_MODEL_URI を渡す）
 5. ジョブ完了をポーリング（失敗時は RuntimeError を送出）
-6. GCS からモデル成果物をローカルにダウンロード
+6. オブジェクトストレージからモデル成果物をローカルにダウンロード
 7. per-job .gitignore を配置
-8. VertexTrainResult を返す
+8. RemoteTrainResult を返す
 
 出力ディレクトリ構造:
   models/{competition}/{job_id}/
     ├── .gitignore
     └── {YYYYMMDDTHHMMSS}/
-        ├── （Vertex AI コンテナが生成した fold_N/ など）
-        └── （GCS からダウンロードされた全成果物）
+        ├── （コンテナが生成した fold_N/ など）
+        └── （オブジェクトストレージからダウンロードされた全成果物）
 """
 
 from __future__ import annotations
@@ -28,9 +28,9 @@ from pathlib import Path
 
 from omegaconf import DictConfig
 
-from src.domain.repository.gcs import GCSRepository
 from src.domain.repository.git import GitRepository
-from src.domain.repository.vertex_ai import VertexAIRepository
+from src.domain.repository.object_storage import ObjectStorageRepository
+from src.domain.repository.training_job import TrainingJobRepository
 from src.usecase._utils import resolve_latest_dir
 
 logger = logging.getLogger(__name__)
@@ -44,25 +44,25 @@ _MODELS_DIR_GITIGNORE = """\
 """
 
 # プロジェクトルート（src/ の親ディレクトリ）
-# src/usecase/training/vertex_train.py → .parent x4 → プロジェクトルート
+# src/usecase/training/remote_train.py → .parent x4 → プロジェクトルート
 _PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 @dataclass
-class VertexTrainResult:
-    """Vertex AI トレーニングジョブの実行結果。"""
+class RemoteTrainResult:
+    """リモート学習ジョブの実行結果。"""
 
     job_id: str
     timestamp: str
     commit_hash: str
-    vertex_job_name: str
+    remote_job_name: str
     gcs_data_uri: str
     gcs_model_uri: str
     local_model_dir: Path
 
 
-class VertexAITrainUseCase:
-    """GCS + Vertex AI を使いリモートでモデル学習を実行する。
+class RemoteTrainUseCase:
+    """オブジェクトストレージ + リモート学習基盤を使いリモートでモデル学習を実行する。
 
     Args:
         cfg: Hydra DictConfig。以下のキーを使用する:
@@ -70,21 +70,21 @@ class VertexAITrainUseCase:
             - cfg.preprocess_output_dir: 前処理済みデータのパス
             - cfg.output_dir: モデル出力先のルートディレクトリ
             - cfg.recipe: 使用する学習レシピ名
-            - cfg.gcp.project: GCP プロジェクト ID
-            - cfg.gcp.staging_bucket: GCS バケット URI
+            - cfg.gcp.project: クラウドプロジェクト ID
+            - cfg.gcp.staging_bucket: オブジェクトストレージバケット URI
             - cfg.gcp.container_uri: Docker イメージ URI
-            - cfg.gcp.machine_type: Vertex AI マシンタイプ
+            - cfg.gcp.machine_type: マシンタイプ
             - cfg.gcp.service_account: 学習 SA のメールアドレス
-        gcs: GCSRepository の実装。
-        vertex: VertexAIRepository の実装。
+        gcs: ObjectStorageRepository の実装。
+        vertex: TrainingJobRepository の実装。
         git_repo: GitRepository の実装。
     """
 
     def __init__(
         self,
         cfg: DictConfig,
-        gcs: GCSRepository,
-        vertex: VertexAIRepository,
+        gcs: ObjectStorageRepository,
+        vertex: TrainingJobRepository,
         git_repo: GitRepository,
     ) -> None:
         self._cfg = cfg
@@ -92,7 +92,7 @@ class VertexAITrainUseCase:
         self._vertex = vertex
         self._git_repo = git_repo
 
-    def execute(self) -> VertexTrainResult:
+    def execute(self) -> RemoteTrainResult:
         cfg = self._cfg
         job_id = str(cfg.job_id)
         recipe = str(cfg.get("recipe", "lgbm"))
@@ -103,27 +103,26 @@ class VertexAITrainUseCase:
         # 1. preprocess_output_dir の "latest" 解決
         preprocess_dir = resolve_latest_dir(str(cfg.preprocess_output_dir))
 
-        # 2. GCS URI を確定
+        # 2. オブジェクトストレージ URI を確定
         bucket_base = str(cfg.gcp.staging_bucket).rstrip("/")
         gcs_code_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/code"
         gcs_data_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/data"
         gcs_model_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/models"
 
-        # 3. src/ + conf/ + scripts/ を GCS にアップロード
-        #    Docker イメージにはコードを含めず、GCS 経由で渡す
+        # 3. src/ + conf/ + scripts/ をオブジェクトストレージにアップロード
+        #    Docker イメージにはコードを含めず、オブジェクトストレージ経由で渡す
         logger.info(f"Uploading code to {gcs_code_uri}")
         self._gcs.upload_dir(_PROJECT_ROOT / "src", f"{gcs_code_uri}/src")
         self._gcs.upload_dir(_PROJECT_ROOT / "conf", f"{gcs_code_uri}/conf")
         self._gcs.upload_dir(_PROJECT_ROOT / "scripts", f"{gcs_code_uri}/scripts")
 
-        # 4. GCS にデータをアップロード
+        # 4. オブジェクトストレージにデータをアップロード
         logger.info(f"Uploading preprocessed data to {gcs_data_uri}")
         self._gcs.upload_dir(preprocess_dir, gcs_data_uri)
 
-        # 5. Vertex AI ジョブを送信
-        #    Kaggle プリビルトイメージを使う場合、command で:
-        #    - Python SDK でコードを GCS から /app にダウンロード
-        #      (gsutil は Kaggle コンテナ内で ADC を自動取得できないため使わない)
+        # 5. リモート学習ジョブを送信
+        #    コンテナイメージを使う場合、command で:
+        #    - Python SDK でコードをオブジェクトストレージから /app にダウンロード
         #    - 不足 deps を pip install
         #    - entrypoint を実行
         env_vars: dict[str, str] = {
@@ -136,8 +135,7 @@ class VertexAITrainUseCase:
             "MLOPS_COMMIT_HASH": commit_hash,
             "PYTHONPATH": "/app",
         }
-        # GCS からコードをダウンロードする Python ワンライナー
-        # google-cloud-storage は Kaggle イメージに入っており、ADC も自動取得される
+        # オブジェクトストレージからコードをダウンロードする Python ワンライナー
         gcs_download_py = (
             "import os; from google.cloud import storage; "
             f"uri='{gcs_code_uri}'; "
@@ -163,12 +161,12 @@ class VertexAITrainUseCase:
             env_vars=env_vars,
             service_account=str(cfg.gcp.service_account),
         )
-        vertex_job_name = result.resource_name
-        logger.info(f"Vertex AI job completed: {vertex_job_name} ({result.state})")
+        remote_job_name = result.resource_name
+        logger.info(f"Remote training job completed: {remote_job_name} ({result.state})")
 
         if not result.is_succeeded:
             raise RuntimeError(
-                f"Vertex AI job failed [{vertex_job_name}]: "
+                f"Remote training job failed [{remote_job_name}]: "
                 f"state={result.state}, error={result.error_message}"
             )
 
@@ -184,11 +182,11 @@ class VertexAITrainUseCase:
         if not gitignore_path.exists():
             gitignore_path.write_text(_MODELS_DIR_GITIGNORE)
 
-        return VertexTrainResult(
+        return RemoteTrainResult(
             job_id=job_id,
             timestamp=timestamp,
             commit_hash=commit_hash,
-            vertex_job_name=vertex_job_name,
+            remote_job_name=remote_job_name,
             gcs_data_uri=gcs_data_uri,
             gcs_model_uri=gcs_model_uri,
             local_model_dir=local_model_dir,

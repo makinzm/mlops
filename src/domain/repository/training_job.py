@@ -1,9 +1,9 @@
 """
-Vertex AI ジョブリポジトリのドメイン定義。
+リモート学習ジョブリポジトリのドメイン定義。
 
 なぜここに定義するか:
-  UseCase 層は Vertex AI の具体 SDK を知らない。Protocol を通じてのみ依存する。
-  これにより GCP 依存を infrastructure 層に閉じられる。
+  UseCase 層はリモート学習基盤の具体 SDK を知らない。Protocol を通じてのみ依存する。
+  これにより特定クラウド依存を infrastructure 層に閉じられる。
 """
 
 from dataclasses import dataclass
@@ -11,8 +11,8 @@ from typing import Protocol, runtime_checkable
 
 
 @dataclass
-class VertexJobResult:
-    """Vertex AI ジョブの実行結果。"""
+class TrainingJobResult:
+    """リモート学習ジョブの実行結果。"""
 
     resource_name: str
     state: str  # "SUCCEEDED" | "FAILED" | "CANCELLED"
@@ -24,8 +24,8 @@ class VertexJobResult:
 
 
 @runtime_checkable
-class VertexAIRepository(Protocol):
-    """Vertex AI カスタムジョブ操作の抽象 Protocol。"""
+class TrainingJobRepository(Protocol):
+    """リモート学習ジョブ操作の抽象 Protocol。"""
 
     def run_custom_job(
         self,
@@ -36,7 +36,7 @@ class VertexAIRepository(Protocol):
         machine_type: str,
         env_vars: dict[str, str],
         service_account: str,
-    ) -> VertexJobResult:
+    ) -> TrainingJobResult:
         """カスタムトレーニングジョブを送信し、完了まで待機して結果を返す。"""
         ...
 
