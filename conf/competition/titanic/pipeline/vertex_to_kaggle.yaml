@@ -42,7 +42,7 @@ steps:
       src_dataset: mlops-pipeline-src
       extra_datasets:
         - slug: titanic-vertex-models
-          mount_path: /kaggle/working/models/titanic/titanic_lgbm
+          mount_path: /kaggle/working/models/titanic
       competition: titanic
       enable_gpu: false
       enable_internet: false
