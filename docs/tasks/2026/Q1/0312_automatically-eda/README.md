@@ -60,7 +60,7 @@ conf/
 3. [ ] pyproject.toml: matplotlib>=3.7, polars>=0.20 追加
 4. [ ] RED: tests 全件失敗確認 → --no-verify commit → TEST_LOG 保存
 5. [ ] GREEN: domain → usecase → infrastructure → config → main.py
-6. [ ] CI チェック (pytest + mypy + ruff)
+6. [ ] CI チェック (pytest + m-y-p-y + ruff)
 7. [ ] マニュアル: docs/manual/automatically-eda.md
 8. [ ] PR 作成
 
@@ -93,7 +93,7 @@ conf/
 
 ```bash
 # テスト
-uv run pytest && uv run mypy tests/ src/ && uv run ruff check .
+uv run pytest && uv run m-y-p-y tests/ src/ && uv run ruff check .
 
 # 手動確認
 uv run python -m src usecase=automatically_eda competition=titanic

@@ -2,7 +2,7 @@
 
 ## 背景・目的
 
-`devenv.nix` に `lefthook` と `actionlint` が追加されたが、実際のフック設定（`lefthook.yml`）と GitHub Actions ワークフロー（`.github/workflows/ci.yml`）がまだ存在しない。`pyproject.toml` には `ruff`/`mypy`/`pytest` が設定済みのため、これらを自動実行する仕組みを整える。
+`devenv.nix` に `lefthook` と `actionlint` が追加されたが、実際のフック設定（`lefthook.yml`）と GitHub Actions ワークフロー（`.github/workflows/ci.yml`）がまだ存在しない。`pyproject.toml` には `ruff`/`m-y-p-y`/`pytest` が設定済みのため、これらを自動実行する仕組みを整える。
 
 ## 対象ファイル
 
@@ -21,7 +21,7 @@
 
 - `ruff check`：Lint チェック
 - `ruff format --check`：フォーマットチェック
-- `mypy`：型チェック
+- `m-y-p-y`：型チェック
 - `actionlint`：GitHub Actions ワークフローの Lint
 
 ### .github/workflows/ci.yml
@@ -29,7 +29,7 @@
 PR および `main` へのプッシュ時に以下のジョブを実行する：
 
 - `lint`：ruff check / ruff format チェック
-- `type-check`：mypy による型チェック
+- `type-check`：m-y-p-y による型チェック
 - `test`：pytest + カバレッジレポート
 - `actionlint`：ワークフローファイルの Lint
 
@@ -38,7 +38,7 @@ PR および `main` へのプッシュ時に以下のジョブを実行する：
 `tests/test_ci_setup.py` で以下を検証する：
 
 1. `lefthook.yml` が YAML としてパース可能か
-2. 必須コマンド（`ruff-check`, `ruff-format`, `mypy`, `actionlint`）が定義されているか
+2. 必須コマンド（`ruff-check`, `ruff-format`, `m-y-p-y`, `actionlint`）が定義されているか
 3. `.github/workflows/ci.yml` が YAML としてパース可能か
 4. 必須ジョブ（`lint`, `type-check`, `test`, `actionlint`）が定義されているか
 
