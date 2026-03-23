@@ -70,7 +70,10 @@ class VertexAIRepositoryImpl:
             display_name=display_name,
             worker_pool_specs=worker_pool_specs,
         )
-        job.submit(service_account=service_account)
+        # run(sync=False) を使う。submit() だと wait() 用の内部 future が作られず
+        # wait() が即座に返る。run(sync=False) なら wait() で正しくブロックする。
+        # ref: https://github.com/googleapis/python-aiplatform/issues/803
+        job.run(service_account=service_account, sync=False)
         resource_name: str = job.resource_name
         self._jobs[resource_name] = job
         logger.info(f"Submitted Vertex AI job: {resource_name}")
