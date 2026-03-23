@@ -1,14 +1,14 @@
 """
-PushNotebookUseCase — Notebook 生成 → kernel-metadata.json 生成 → Kaggle プッシュ。
+PushNotebookUseCase — Notebook 生成 → kernel-metadata.json 生成 → プラットフォームへプッシュ。
 
 処理フロー:
 1. output_dir/{competition}/ を作成し、per-directory .gitignore を配置する
 2. Jinja2 テンプレートから notebook.ipynb を生成する
 3. kernel-metadata.json を生成する
-4. Kaggle API の kernels_push() でアップロードする
+4. NotebookPlatformPort の kernels_push() でアップロードする
 5. README.md を生成する（ツリー構造 + メタ情報）
 
-Kaggle API は KaggleApiPort Protocol で抽象化しており、
+Notebook API は NotebookPlatformPort Protocol で抽象化しており、
 テスト時は MagicMock に差し替えて CI で実際の通信が発生しないようにする。
 """
 
@@ -23,7 +23,7 @@ from typing import Any, Protocol
 from omegaconf import DictConfig
 
 from src.usecase._utils import build_tree_lines
-from src.usecase.kaggle_notebook.notebook_renderer import NotebookRenderer
+from src.usecase.notebook.notebook_renderer import NotebookRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +38,11 @@ _PUSH_NOTEBOOK_GITIGNORE = """\
 """
 
 
-class KaggleApiPort(Protocol):
-    """Kaggle API の最小インターフェース。テスト時は MagicMock で差し替える。"""
+class NotebookPlatformPort(Protocol):
+    """Notebook プラットフォーム API の最小インターフェース。テスト時は MagicMock で差し替える。"""
 
     def kernels_push(self, folder: str) -> Any:
-        """kernel-metadata.json が存在するディレクトリを Kaggle にプッシュする。"""
+        """kernel-metadata.json が存在するディレクトリをプラットフォームにプッシュする。"""
         ...
 
 
@@ -55,33 +55,33 @@ class PushResult:
 
 
 class PushNotebookUseCase:
-    """Notebook 生成 + Kaggle プッシュを担うユースケース。
+    """Notebook 生成 + プラットフォームプッシュを担うユースケース。
 
     Args:
         cfg: Hydra DictConfig。以下のキーを使用する:
             - cfg.output_dir: 出力先ルートディレクトリ
-            - cfg.notebook.competition: Kaggle competition slug
-            - cfg.notebook.kernel_slug: Kaggle Kernel の URL slug
-            - cfg.notebook.src_dataset: src/ を格納する Kaggle Dataset slug
+            - cfg.notebook.competition: competition slug
+            - cfg.notebook.kernel_slug: Kernel の URL slug
+            - cfg.notebook.src_dataset: src/ を格納する Dataset slug
             - cfg.notebook.enable_gpu: GPU 有効化フラグ
             - cfg.notebook.enable_internet: インターネット接続フラグ
-            - cfg.kaggle_username: Kaggle ユーザー名
-        kaggle_api: KaggleApiPort を実装したオブジェクト。
+            - cfg.kaggle_username: ユーザー名
+        kaggle_api: NotebookPlatformPort を実装したオブジェクト。
     """
 
-    def __init__(self, cfg: DictConfig, kaggle_api: KaggleApiPort) -> None:
+    def __init__(self, cfg: DictConfig, kaggle_api: NotebookPlatformPort) -> None:
         self._cfg = cfg
         self._api = kaggle_api
         self._renderer = NotebookRenderer()
 
     def execute(self) -> PushResult:
-        """Notebook を生成して Kaggle にプッシュする。
+        """Notebook を生成してプラットフォームにプッシュする。
 
         Returns:
             PushResult（notebook_path, metadata_path）
 
         Raises:
-            RuntimeError: Kaggle API の呼び出しが SystemExit を上げた場合。
+            RuntimeError: API の呼び出しが SystemExit を上げた場合。
         """
         competition: str = str(self._cfg.notebook.competition)
         output_dir = Path(str(self._cfg.output_dir)) / competition
@@ -127,8 +127,7 @@ class PushNotebookUseCase:
     def _generate_kernel_metadata(self, output_dir: Path, competition: str) -> Path:
         """kernel-metadata.json を生成する。
 
-        Kaggle の kernels push コマンドが要求するフォーマットに従う。
-        参照: https://github.com/Kaggle/kaggle-api/blob/main/docs/README.md
+        Notebook プラットフォームの kernels push コマンドが要求するフォーマットに従う。
         """
         username: str = str(self._cfg.get("kaggle_username", ""))
         kernel_slug: str = str(self._cfg.notebook.kernel_slug)
@@ -160,19 +159,19 @@ class PushNotebookUseCase:
         return metadata_path
 
     def _push(self, output_dir: Path) -> None:
-        """Kaggle API の kernels_push() でアップロードする。"""
+        """Notebook プラットフォームの kernels_push() でアップロードする。"""
         try:
             self._api.kernels_push(str(output_dir))
-            logger.info("Pushed to Kaggle: %s", output_dir)
+            logger.info("Pushed notebook: %s", output_dir)
         except SystemExit as e:
             raise RuntimeError(
-                "Kaggle API の呼び出しに失敗しました。認証情報を確認してください。"
+                "Notebook API の呼び出しに失敗しました。認証情報を確認してください。"
             ) from e
 
     def _write_readme(self, output_dir: Path) -> None:
         """README.md にツリー構造を出力する。"""
         lines: list[str] = [
-            f"# Kaggle Notebook Push — `{output_dir.name}`",
+            f"# Notebook Push — `{output_dir.name}`",
             "",
             "## Output Files",
             "",

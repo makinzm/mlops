@@ -40,8 +40,8 @@ class NotebookRenderer:
 
         Args:
             output_path: 出力先ファイルパス（例: outputs/push_notebook/titanic/notebook.ipynb）
-            competition: Kaggle competition の slug（例: "titanic"）
-            src_dataset: コードを格納する Kaggle Dataset の slug（例: "mlops-pipeline-src"）
+            competition: コンペティションの slug（例: "titanic"）
+            src_dataset: コードを格納する Dataset の slug（例: "mlops-pipeline-src"）
             enable_internet: False のとき pip install をスキップする（オフラインコンペ用）
             recipe: パイプラインレシピ名（例: "inference_only"）
 

@@ -22,7 +22,7 @@ from src.usecase._utils import resolve_latest_dir
 from src.usecase.source_dataset._staging import (
     cleanup_staging_dir,
     copy_to_staging,
-    load_kaggleignore_patterns,
+    load_ignore_patterns,
     make_staging_dir,
 )
 
@@ -61,8 +61,8 @@ class UpdateSourceDatasetUseCase:
             resolve_latest_dir(str(conf_dir_raw)) if conf_dir_raw else src_dir.parent / "conf"
         )
         staging_root = Path(str(self._cfg.staging_dir))
-        kaggleignore_raw = self._cfg.source_dataset.get("kaggleignore")
-        kaggleignore_path = Path(str(kaggleignore_raw)) if kaggleignore_raw else None
+        ignore_file_raw = self._cfg.source_dataset.get("kaggleignore")
+        ignore_file_path = Path(str(ignore_file_raw)) if ignore_file_raw else None
         version_message: str = str(
             self._cfg.source_dataset.get("version_message", "update source code")
         )
@@ -74,7 +74,7 @@ class UpdateSourceDatasetUseCase:
             license_name=str(self._cfg.source_dataset.get("license_name", "CC0-1.0")),
         )
 
-        patterns = load_kaggleignore_patterns(kaggleignore_path)
+        patterns = load_ignore_patterns(ignore_file_path)
         staging_dir = make_staging_dir(staging_root)
         requirements_path = src_dir.parent / "requirements.txt"
 

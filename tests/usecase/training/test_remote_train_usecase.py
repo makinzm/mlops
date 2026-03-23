@@ -1,12 +1,12 @@
 """
-VertexAITrainUseCase の単体テスト。
+RemoteTrainUseCase の単体テスト。
 
 なぜこのテストが必要か:
-  - VertexAITrainUseCase は GCSRepository と VertexAIRepository を受け取り、
-    コード + データの GCS アップロード → Vertex AI ジョブ送信 → 完了待機 →
-    モデルの GCS ダウンロード の一連の流れを担う。
-  - 各リポジトリの Mock を使い、GCP 呼び出しなしで UseCase ロジックをテストする。
-  - .gitignore 配置、VertexTrainResult の正しい構造を保証する。
+  - RemoteTrainUseCase は ObjectStorageRepository と TrainingJobRepository を受け取り、
+    コード + データのオブジェクトストレージアップロード → リモート学習ジョブ送信 → 完了待機 →
+    モデルのオブジェクトストレージダウンロード の一連の流れを担う。
+  - 各リポジトリの Mock を使い、クラウド呼び出しなしで UseCase ロジックをテストする。
+  - .gitignore 配置、RemoteTrainResult の正しい構造を保証する。
 """
 
 from __future__ import annotations
@@ -17,15 +17,15 @@ from unittest.mock import MagicMock
 import pytest
 from omegaconf import DictConfig, OmegaConf
 
-from src.domain.repository.vertex_ai import VertexJobResult
-from src.usecase.training.vertex_train import VertexAITrainUseCase, VertexTrainResult
+from src.domain.repository.training_job import TrainingJobResult
+from src.usecase.training.remote_train import RemoteTrainResult, RemoteTrainUseCase
 
 _FAKE_COMMIT = "b" * 40
 _FAKE_JOB_NAME = "projects/123/locations/asia-northeast1/customJobs/789"
 
 
 def _make_cfg(tmp_path: Path) -> DictConfig:
-    """VertexAITrainUseCase 用の DictConfig を生成する。"""
+    """RemoteTrainUseCase 用の DictConfig を生成する。"""
     processed_dir = tmp_path / "processed" / "titanic_preprocess" / "20260315T120000" / "train_out"
     processed_dir.mkdir(parents=True)
     (processed_dir / "fold_0").mkdir()
@@ -60,7 +60,7 @@ def _make_mock_gcs() -> MagicMock:
 
 def _make_mock_vertex() -> MagicMock:
     mock = MagicMock()
-    mock.run_custom_job.return_value = VertexJobResult(
+    mock.run_custom_job.return_value = TrainingJobResult(
         resource_name=_FAKE_JOB_NAME, state="SUCCEEDED"
     )
     return mock
@@ -72,26 +72,26 @@ def _make_mock_git_repo() -> MagicMock:
     return mock
 
 
-class TestVertexAITrainUseCaseExecute:
-    """VertexAITrainUseCase.execute() のテスト。"""
+class TestRemoteTrainUseCaseExecute:
+    """RemoteTrainUseCase.execute() のテスト。"""
 
-    def test_returns_vertex_train_result(self, tmp_path: Path) -> None:
-        """execute() が VertexTrainResult を返すこと。"""
+    def test_returns_remote_train_result(self, tmp_path: Path) -> None:
+        """execute() が RemoteTrainResult を返すこと。"""
         cfg = _make_cfg(tmp_path)
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg,
             gcs=_make_mock_gcs(),
             vertex=_make_mock_vertex(),
             git_repo=_make_mock_git_repo(),
         )
         result = usecase.execute()
-        assert isinstance(result, VertexTrainResult)
+        assert isinstance(result, RemoteTrainResult)
 
     def test_uploads_code_and_data_to_gcs(self, tmp_path: Path) -> None:
-        """src/ + conf/ + scripts/ + preprocessed data が GCS にアップロードされること。"""
+        """コードとデータがストレージにアップロードされること。"""
         cfg = _make_cfg(tmp_path)
         mock_gcs = _make_mock_gcs()
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg, gcs=mock_gcs, vertex=_make_mock_vertex(), git_repo=_make_mock_git_repo()
         )
         usecase.execute()
@@ -104,11 +104,11 @@ class TestVertexAITrainUseCaseExecute:
         assert any("/code/scripts" in uri for uri in upload_uris)
         assert any("/data" in uri for uri in upload_uris)
 
-    def test_submits_vertex_job_with_correct_params(self, tmp_path: Path) -> None:
-        """Vertex AI ジョブが正しいコンテナ URI とマシンタイプで送信されること。"""
+    def test_submits_job_with_correct_params(self, tmp_path: Path) -> None:
+        """リモート学習ジョブが正しいコンテナ URI とマシンタイプで送信されること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
         )
         usecase.execute()
@@ -122,7 +122,7 @@ class TestVertexAITrainUseCaseExecute:
         """run_custom_job が呼ばれること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
         )
         usecase.execute()
@@ -130,10 +130,10 @@ class TestVertexAITrainUseCaseExecute:
         mock_vertex.run_custom_job.assert_called_once()
 
     def test_downloads_model_artifacts_from_gcs(self, tmp_path: Path) -> None:
-        """モデル成果物が GCS からローカルにダウンロードされること。"""
+        """モデル成果物がオブジェクトストレージからローカルにダウンロードされること。"""
         cfg = _make_cfg(tmp_path)
         mock_gcs = _make_mock_gcs()
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg, gcs=mock_gcs, vertex=_make_mock_vertex(), git_repo=_make_mock_git_repo()
         )
         result = usecase.execute()
@@ -148,7 +148,7 @@ class TestVertexAITrainUseCaseExecute:
     def test_creates_gitignore_in_job_dir(self, tmp_path: Path) -> None:
         """job_id ディレクトリに .gitignore が作成されること。"""
         cfg = _make_cfg(tmp_path)
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg,
             gcs=_make_mock_gcs(),
             vertex=_make_mock_vertex(),
@@ -160,13 +160,13 @@ class TestVertexAITrainUseCaseExecute:
         assert (job_dir / ".gitignore").exists()
 
     def test_raises_on_job_failure(self, tmp_path: Path) -> None:
-        """Vertex AI ジョブが FAILED の場合に RuntimeError が送出されること。"""
+        """リモート学習ジョブが FAILED の場合に RuntimeError が送出されること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        mock_vertex.run_custom_job.return_value = VertexJobResult(
+        mock_vertex.run_custom_job.return_value = TrainingJobResult(
             resource_name=_FAKE_JOB_NAME, state="FAILED", error_message="OOM error"
         )
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
         )
 
@@ -174,9 +174,9 @@ class TestVertexAITrainUseCaseExecute:
             usecase.execute()
 
     def test_result_contains_commit_hash(self, tmp_path: Path) -> None:
-        """VertexTrainResult に commit_hash が記録されること。"""
+        """RemoteTrainResult に commit_hash が記録されること。"""
         cfg = _make_cfg(tmp_path)
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg,
             gcs=_make_mock_gcs(),
             vertex=_make_mock_vertex(),
@@ -186,9 +186,9 @@ class TestVertexAITrainUseCaseExecute:
         assert result.commit_hash == _FAKE_COMMIT
 
     def test_result_contains_gcs_uris(self, tmp_path: Path) -> None:
-        """VertexTrainResult に GCS URI が記録されること。"""
+        """RemoteTrainResult にオブジェクトストレージ URI が記録されること。"""
         cfg = _make_cfg(tmp_path)
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg,
             gcs=_make_mock_gcs(),
             vertex=_make_mock_vertex(),
@@ -199,10 +199,10 @@ class TestVertexAITrainUseCaseExecute:
         assert result.gcs_model_uri.startswith("gs://")
 
     def test_command_contains_bootstrap(self, tmp_path: Path) -> None:
-        """command に gsutil + pip install + entrypoint の bootstrap が含まれること。"""
+        """command に bootstrap スクリプトが含まれること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
         )
         usecase.execute()
@@ -217,10 +217,10 @@ class TestVertexAITrainUseCaseExecute:
         assert "vertex_entrypoint.py" in bootstrap
 
     def test_env_vars_contain_gcs_uris(self, tmp_path: Path) -> None:
-        """Vertex AI ジョブの env_vars に GCS_DATA_URI と GCS_MODEL_URI が含まれること。"""
+        """リモート学習ジョブの env_vars に GCS_DATA_URI と GCS_MODEL_URI が含まれること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        usecase = VertexAITrainUseCase(
+        usecase = RemoteTrainUseCase(
             cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
         )
         usecase.execute()

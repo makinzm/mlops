@@ -133,7 +133,7 @@ class InferenceUseCase:
             for model_path_str in models_cfg:
                 # "latest" を含むパスを最新タイムスタンプに解決
                 model_dir = resolve_latest_dir(str(model_path_str))
-                # モデルパスが fold_N/model.lgbm の場合は親ディレクトリを渡す
+                # モデルパスが fold_N/model.* の場合は親ディレクトリを渡す
                 if model_dir.suffix == ".lgbm":
                     model_dir = model_dir.parent.parent
                 pred = self._inferencer.predict_folds(model_dir, test_df, feature_cols)
@@ -141,7 +141,7 @@ class InferenceUseCase:
 
             final_pred = strategy.aggregate(predictions)
 
-            # submission 生成（Kaggle フォーマット）
+            # submission 生成（コンペティションフォーマット）
             passenger_ids = test_df[passenger_id_col].to_list()
             threshold_raw = cfg.get("submission", {})
             threshold: float | None = (

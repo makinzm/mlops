@@ -12,7 +12,7 @@ steps:
     recipe: base
 
   # ② Vertex AI で学習
-  - usecase: vertex_train
+  - usecase: remote_train
     recipe: lgbm
 
   # ③ 推論（submission.csv 生成）

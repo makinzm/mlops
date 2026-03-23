@@ -1,5 +1,5 @@
 # @package _global_
-usecase: vertex_train
+usecase: remote_train
 
 defaults:
   - /gcp: vertex

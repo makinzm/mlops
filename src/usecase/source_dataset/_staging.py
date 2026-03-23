@@ -5,7 +5,7 @@ CreateSourceDatasetUseCase / UpdateSourceDatasetUseCase の共通ロジックを
 
 ステージング戦略:
   - .staging/source_dataset_{YYYYMMDD_HHMMSS}/ を作成する
-  - src/ と conf/ を .kaggleignore でフィルタしながらコピーする
+  - src/ と conf/ を ignore ファイルでフィルタしながらコピーする
   - 成功時はステージングディレクトリを削除する（失敗時は残す）
   - /tmp は使わない（プロジェクトルート直下の .staging/ のみ使用）
 """
@@ -40,23 +40,23 @@ def make_staging_dir(staging_root: Path) -> Path:
     return staging_dir
 
 
-def load_kaggleignore_patterns(kaggleignore_path: Path | None) -> list[str]:
-    """kaggleignore ファイルからパターンリストを読み込む。
+def load_ignore_patterns(ignore_file_path: Path | None) -> list[str]:
+    """ignore ファイルからパターンリストを読み込む。
 
     Args:
-        kaggleignore_path: .kaggleignore ファイルのパス。None の場合は空リストを返す。
+        ignore_file_path: ignore ファイルのパス。None の場合は空リストを返す。
 
     Returns:
         除外パターンのリスト（コメント行・空行は除く）。
     """
-    if kaggleignore_path is None or not kaggleignore_path.exists():
+    if ignore_file_path is None or not ignore_file_path.exists():
         return []
-    lines = kaggleignore_path.read_text().splitlines()
+    lines = ignore_file_path.read_text().splitlines()
     return [line.strip() for line in lines if line.strip() and not line.startswith("#")]
 
 
 def _is_ignored(rel_path: Path, patterns: list[str]) -> bool:
-    """指定した相対パスが .kaggleignore パターンにマッチするか返す。
+    """指定した相対パスが ignore パターンにマッチするか返す。
 
     マッチング戦略:
     - 末尾 / があるパターン（ディレクトリ指定）: パスの各コンポーネントと照合する
@@ -66,7 +66,7 @@ def _is_ignored(rel_path: Path, patterns: list[str]) -> bool:
 
     Args:
         rel_path: src_dir からの相対パス。
-        patterns: .kaggleignore から読み込んだパターンリスト（コメント・空行なし）。
+        patterns: ignore ファイルから読み込んだパターンリスト（コメント・空行なし）。
     """
     parts = rel_path.parts
     for pattern in patterns:
@@ -86,12 +86,12 @@ def _copy_dir_to_staging(
 ) -> None:
     """source_dir の内容を staging_dir/{source_dir.name}/ にコピーする（内部ヘルパー）。
 
-    .kaggleignore パターンにマッチするファイル・ディレクトリはコピーしない。
+    ignore パターンにマッチするファイル・ディレクトリはコピーしない。
 
     Args:
         source_dir: コピー元ディレクトリ。
         staging_dir: コピー先のステージングディレクトリ。
-        patterns: .kaggleignore から読み込んだ除外パターンリスト。
+        patterns: ignore ファイルから読み込んだ除外パターンリスト。
     """
     dest = staging_dir / source_dir.name
     dest.mkdir(parents=True, exist_ok=True)
@@ -101,13 +101,13 @@ def _copy_dir_to_staging(
     for src_file in source_dir.rglob("*"):
         if not src_file.is_file():
             continue
-        # .gitignore はコピーしない（Kaggle API がアップロード時に読んでしまい
+        # .gitignore はコピーしない（アップロード API が読んでしまい
         # * パターンで全ファイルを除外する問題を防ぐ）
         if src_file.name == ".gitignore":
             continue
         rel = src_file.relative_to(source_dir)
         if _is_ignored(rel, patterns):
-            logger.debug("Ignored (kaggleignore): %s", rel)
+            logger.debug("Ignored (ignore_file): %s", rel)
             continue
         dest_file = dest / rel
         dest_file.parent.mkdir(parents=True, exist_ok=True)
@@ -129,7 +129,7 @@ def copy_to_staging(
 ) -> None:
     """src_dir と conf_dir の内容を staging_dir にコピーする。
 
-    .kaggleignore パターンにマッチするファイル・ディレクトリはコピーしない。
+    ignore パターンにマッチするファイル・ディレクトリはコピーしない。
     requirements_path が存在する場合は staging_dir/requirements.txt にもコピーする。
     extra_dirs が指定された場合はそれらのディレクトリもコピーする。
 
@@ -144,7 +144,7 @@ def copy_to_staging(
         src_dir: コピー元 src/ ディレクトリ。
         conf_dir: コピー元 conf/ ディレクトリ。
         staging_dir: コピー先のステージングディレクトリ。
-        patterns: .kaggleignore から読み込んだ除外パターンリスト。
+        patterns: ignore ファイルから読み込んだ除外パターンリスト。
         requirements_path: requirements.txt のパス（省略時はコピーしない）。
         extra_dirs: 追加でコピーするディレクトリのリスト（省略時はなし）。
     """
