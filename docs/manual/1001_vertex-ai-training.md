@@ -147,39 +147,77 @@ gcp:
 
 ## 4. Kaggle に提出する
 
-Vertex AI で学習したモデルを Kaggle Notebook で推論・提出するまでの手順です。
+Vertex AI で学習したモデルを Kaggle Notebook で推論・提出する手順です。
+既存の `mlops-pipeline-src` Dataset / `titanic-pipeline` Notebook には触りません。
 
-### ステップごとに実行する場合
+### 4-1. 推論（ローカルで submission.csv を生成）
 
 ```bash
-# ① 推論（submission.csv 生成）
 uv run python -m src usecase=inference recipe=titanic_ensemble
-
-# ② モデル重み + コードを Kaggle Dataset に push
-uv run python -m src usecase=update_source_dataset \
-  source_dataset.extra_dirs='[models/titanic]' \
-  source_dataset.version_message="vertex AI trained model"
-
-# ③ Kaggle Notebook を push（推論 + 提出）
-uv run python -m src usecase=push_notebook notebook=titanic
 ```
 
-Kaggle Notebook 上ではモデルが `/kaggle/input/mlops-pipeline-src/models/titanic/` に配置されます。
-Notebook はそこから `.lgbm` を読み込んで推論・提出を行います。
+### 4-2. コード（src + conf）を Kaggle Dataset に push
 
-### フル自動パイプライン（前処理〜提出まで一括）
+```bash
+uv run python -m src usecase=update_source_dataset \
+  source_dataset.version_message="vertex AI: code update"
+```
+
+### 4-3. モデル重みを別の Kaggle Dataset に push
+
+```bash
+uv run python -m src usecase=update_source_dataset \
+  source_dataset.dataset_slug=mlops-vertex-models \
+  source_dataset.title=mlops-vertex-models \
+  source_dataset.src_dir=models/titanic \
+  source_dataset.conf_dir=models/titanic \
+  source_dataset.version_message="vertex AI trained model"
+```
+
+> **初回のみ**: `mlops-vertex-models` Dataset が存在しない場合は先に作成してください:
+> ```bash
+> uv run python -m src usecase=create_source_dataset \
+>   source_dataset.dataset_slug=mlops-vertex-models \
+>   source_dataset.title=mlops-vertex-models \
+>   source_dataset.src_dir=models/titanic \
+>   source_dataset.conf_dir=models/titanic
+> ```
+
+### 4-4. 推論専用 Notebook を push
+
+```bash
+uv run python -m src usecase=push_notebook \
+  notebook.kernel_slug=titanic-vertex-inference \
+  notebook.recipe=inference_only \
+  notebook.extra_datasets='[mlops-vertex-models]'
+```
+
+Kaggle Notebook 上のデータ配置:
+```
+/kaggle/input/mlops-pipeline-src/    → src/, conf/
+/kaggle/input/mlops-vertex-models/   → models/titanic/ (*.lgbm)
+```
+
+Notebook は `inference_only` パイプラインを実行し、学習はせず推論 + 提出のみ行います。
+
+### 4-5. フル自動パイプライン（前処理〜提出まで一括）
+
+上記 4-1 〜 4-4 を一括実行:
 
 ```bash
 uv run python -m src usecase=pipeline recipe=vertex_to_kaggle
 ```
 
-このパイプラインは以下を順に実行します（`conf/competition/titanic/pipeline/vertex_to_kaggle.yaml`）:
+パイプライン内容（`conf/competition/titanic/pipeline/vertex_to_kaggle.yaml`）:
 
-1. 前処理
-2. Vertex AI で学習
-3. 推論（submission.csv 生成）
-4. モデル + コードを Kaggle Dataset に push
-5. Kaggle Notebook を更新
+| Step | 内容 |
+|------|------|
+| ① preprocess | 前処理 |
+| ② vertex_train | Vertex AI で学習 |
+| ③ inference | 推論（submission.csv 生成） |
+| ④ update_source_dataset | コードを `mlops-pipeline-src` に push |
+| ⑤ update_source_dataset | モデルを `mlops-vertex-models` に push |
+| ⑥ push_notebook | `titanic-vertex-inference` Notebook を push（推論のみ） |
 
 ---
 
