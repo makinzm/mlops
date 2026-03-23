@@ -27,8 +27,8 @@ steps:
   # ⑤ 最新モデル重みを別の Dataset に push（latest → 最新タイムスタンプを自動解決）
   - usecase: update_source_dataset
     source_dataset:
-      dataset_slug: mlops-vertex-models
-      title: mlops-vertex-models
+      dataset_slug: titanic-vertex-models
+      title: titanic-vertex-models
       src_dir: models/titanic/titanic_lgbm/latest
       conf_dir: models/titanic/titanic_lgbm/latest
       extra_dirs: []
@@ -41,7 +41,7 @@ steps:
       recipe: inference_only
       src_dataset: mlops-pipeline-src
       extra_datasets:
-        - mlops-vertex-models
+        - titanic-vertex-models
       competition: titanic
       enable_gpu: false
       enable_internet: false

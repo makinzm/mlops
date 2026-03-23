@@ -159,45 +159,43 @@ uv run python -m src usecase=inference recipe=titanic_ensemble
 ### 4-2. コード（src + conf）を Kaggle Dataset に push
 
 ```bash
-uv run python -m src usecase=update_source_dataset \
-  source_dataset.version_message="vertex AI: code update"
+uv run python -m src usecase=update_source_dataset
 ```
 
-### 4-3. 最新モデル重みを別の Kaggle Dataset に push
+設定: `conf/usecase/update_source_dataset.yaml`
 
-パスに `latest` を含めると、最新タイムスタンプのモデルだけが自動選択されます。
+### 4-3. 最新モデル重みを Kaggle Dataset に push
+
+最新タイムスタンプのモデルだけが自動選択されます（`latest` 解決）。
 
 ```bash
-uv run python -m src usecase=update_source_dataset \
-  source_dataset.dataset_slug=mlops-vertex-models \
-  source_dataset.title=mlops-vertex-models \
-  source_dataset.src_dir=models/titanic/titanic_lgbm/latest \
-  source_dataset.conf_dir=models/titanic/titanic_lgbm/latest \
-  source_dataset.version_message="vertex AI trained model"
+# 初回（Dataset 作成）
+uv run python -m src usecase=create_vertex_models
+
+# 2回目以降（バージョン更新）
+uv run python -m src usecase=upload_vertex_models
 ```
 
-特定のタイムスタンプを指定したい場合は `latest` の代わりに直接指定:
-```bash
-  source_dataset.src_dir=models/titanic/titanic_lgbm/20260323T210627
-```
+設定: `conf/usecase/create_vertex_models.yaml` / `conf/usecase/upload_vertex_models.yaml`
 
-> **初回のみ**: `mlops-vertex-models` Dataset が存在しない場合は先に作成してください:
-> ```bash
-> uv run python -m src usecase=create_source_dataset \
->   source_dataset.dataset_slug=mlops-vertex-models \
->   source_dataset.title=mlops-vertex-models \
->   source_dataset.src_dir=models/titanic/titanic_lgbm/latest \
->   source_dataset.conf_dir=models/titanic/titanic_lgbm/latest
-> ```
+| 設定項目 | 値 | 変更ファイル |
+|---------|------|------|
+| Dataset slug | `titanic-vertex-models` | `conf/usecase/upload_vertex_models.yaml` |
+| モデルパス | `models/titanic/titanic_lgbm/latest` | 同上の `src_dir` |
 
 ### 4-4. 推論専用 Notebook を push
 
 ```bash
-uv run python -m src usecase=push_notebook \
-  notebook.kernel_slug=titanic-vertex-inference \
-  notebook.recipe=inference_only \
-  notebook.extra_datasets='[mlops-vertex-models]'
+uv run python -m src usecase=push_vertex_notebook
 ```
+
+設定: `conf/usecase/push_vertex_notebook.yaml`
+
+| 設定項目 | 値 | 変更ファイル |
+|---------|------|------|
+| Notebook slug | `titanic-vertex-inference` | `conf/usecase/push_vertex_notebook.yaml` |
+| レシピ | `inference_only`（学習しない） | 同上の `recipe` |
+| モデル Dataset | `titanic-vertex-models` | 同上の `extra_datasets` |
 
 Kaggle Notebook 上のデータ配置:
 ```

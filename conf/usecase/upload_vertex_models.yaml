@@ -1,0 +1,17 @@
+# @package _global_
+# Vertex AI 学習済みモデルを Kaggle Dataset にアップロードする設定
+#
+# 実行: uv run python -m src usecase=upload_vertex_models
+usecase: update_source_dataset
+
+source_dataset:
+  src_dir: models/titanic/titanic_lgbm/latest
+  conf_dir: models/titanic/titanic_lgbm/latest
+  dataset_slug: titanic-vertex-models
+  title: titanic-vertex-models
+  license_name: CC0-1.0
+  kaggleignore: .kaggleignore
+  extra_dirs: []
+  version_message: "vertex AI trained model"
+
+staging_dir: .staging
