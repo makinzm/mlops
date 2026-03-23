@@ -108,6 +108,7 @@ class PushNotebookUseCase:
         enable_internet: bool = bool(self._cfg.notebook.enable_internet)
         notebook_path = output_dir / "notebook.ipynb"
         recipe: str = str(self._cfg.notebook.get("recipe", "all_after_download"))
+        extra_datasets: list[str] = list(self._cfg.notebook.get("extra_datasets") or [])
         self._renderer.render(
             output_path=notebook_path,
             competition=competition,
@@ -115,6 +116,7 @@ class PushNotebookUseCase:
             kaggle_username=kaggle_username,
             enable_internet=enable_internet,
             recipe=recipe,
+            extra_datasets=extra_datasets,
         )
         logger.info("Notebook generated: %s", notebook_path)
         return notebook_path

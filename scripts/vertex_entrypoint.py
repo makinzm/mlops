@@ -113,8 +113,21 @@ def main() -> None:
         sys.exit(result.returncode)
 
     # 4. GCS にモデルをアップロード
+    #    TrainUseCase は model_dir/{job_id}/{timestamp}/fold_0/model.lgbm の構造で出力する。
+    #    UseCase 側は GCS の内容を models/titanic/titanic_lgbm/{local_ts}/ にダウンロードするので、
+    #    fold_0/ が直下に来るよう、最も深いタイムスタンプディレクトリを見つけてアップロードする。
     logger.info("=== Step 3: Uploading models to GCS ===")
-    upload_to_gcs(model_dir, gcs_model_uri)
+    import glob as _glob
+
+    fold_markers = _glob.glob(str(model_dir / "**" / "fold_0" / "model.lgbm"), recursive=True)
+    if fold_markers:
+        # fold_0/model.lgbm の 2 つ上がタイムスタンプディレクトリ
+        actual_model_dir = Path(fold_markers[0]).parent.parent
+        logger.info(f"Found model output at: {actual_model_dir}")
+        upload_to_gcs(actual_model_dir, gcs_model_uri)
+    else:
+        logger.warning("fold_0/model.lgbm が見つかりません。model_dir 全体をアップロードします。")
+        upload_to_gcs(model_dir, gcs_model_uri)
     logger.info("=== Training pipeline complete ===")
 
 

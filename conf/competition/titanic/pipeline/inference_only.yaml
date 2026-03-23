@@ -12,6 +12,10 @@ usecase: pipeline
 job_id: titanic_inference_only
 
 steps:
-  # ① 推論（submission.csv 生成）
+  # ① 前処理（Kaggle 上でテストデータを変換）
+  - usecase: preprocess
+    recipe: base
+
+  # ② 推論（submission.csv 生成 — 学習はしない）
   - usecase: inference
     recipe: titanic_ensemble

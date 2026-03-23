@@ -34,6 +34,7 @@ class NotebookRenderer:
         kaggle_username: str,
         enable_internet: bool = True,
         recipe: str = "all_after_download",
+        extra_datasets: list[str] | None = None,
     ) -> Path:
         """テンプレートを描画して ipynb ファイルを書き出す。
 
@@ -54,6 +55,7 @@ class NotebookRenderer:
             kaggle_username=kaggle_username,
             enable_internet=enable_internet,
             recipe=recipe,
+            extra_datasets=extra_datasets or [],
         )
 
         # JSON として parse してから再 dump することで整形済みファイルを生成する

@@ -73,7 +73,26 @@
     "_CONF_LINK = '/kaggle/working/conf'\n",
     "if os.path.lexists(_CONF_LINK):\n",
     "    os.remove(_CONF_LINK)\n",
-    "os.symlink(f'{_DATASET_ROOT}/conf', _CONF_LINK)"
+    "os.symlink(f'{_DATASET_ROOT}/conf', _CONF_LINK)\n",
+    "\n",
+    "# 追加 Dataset（モデル重み等）のシンボリックリンクを張る\n",
+    "# _patch_paths が models パスを /kaggle/working/ 以下に変換するため、\n",
+    "# 外部 Dataset の中身を /kaggle/working/ 以下に配置する必要がある\n",
+    {% for ds in extra_datasets %}
+    "_EXTRA_DS = '{{ ds }}'\n",
+    "_EXTRA_NEW = f'/kaggle/input/datasets/{_KAGGLE_USERNAME}/{_EXTRA_DS}'\n",
+    "_EXTRA_OLD = f'/kaggle/input/{_EXTRA_DS}'\n",
+    "_EXTRA_ROOT = _EXTRA_NEW if os.path.exists(_EXTRA_NEW) else _EXTRA_OLD\n",
+    "if os.path.exists(_EXTRA_ROOT):\n",
+    "    # Dataset の中身を /kaggle/working/ 以下に展開（シンボリックリンク）\n",
+    "    for _item in os.listdir(_EXTRA_ROOT):\n",
+    "        _src = os.path.join(_EXTRA_ROOT, _item)\n",
+    "        _dst = os.path.join('/kaggle/working', _item)\n",
+    "        if not os.path.lexists(_dst):\n",
+    "            os.symlink(_src, _dst)\n",
+    "    print(f'Extra dataset linked: {_EXTRA_ROOT} -> /kaggle/working/')\n",
+    {% endfor %}
+    "print('Setup complete')"
    ]
   },
   {
