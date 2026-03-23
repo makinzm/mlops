@@ -19,7 +19,7 @@ paths = ["src/infrastructure/**"]
 allow = ["src_domain", "src_usecase"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["datetime", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "polars", "seaborn", "sklearn", "subprocess", "typing", "yaml", "zipfile"]
+external_allow = ["datetime", "google", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "polars", "seaborn", "sklearn", "subprocess", "typing", "yaml", "zipfile"]
 
 [[layers]]
 name = "src_usecase"
@@ -43,7 +43,7 @@ paths = ["tests/infrastructure/**"]
 allow = ["src_domain", "src_infrastructure"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["json", "lightgbm", "math", "numpy", "omegaconf", "pandas", "pathlib", "polars", "pytest", "src", "typing", "unittest", "yaml", "zipfile"]
+external_allow = ["google", "json", "lightgbm", "math", "numpy", "omegaconf", "pandas", "pathlib", "polars", "pytest", "src", "typing", "unittest", "yaml", "zipfile"]
 
 [[layers]]
 name = "tests_usecase"
@@ -51,4 +51,4 @@ paths = ["tests/usecase/**"]
 allow = ["src_domain", "src_usecase", "src_infrastructure"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["json", "numpy", "omegaconf", "pathlib", "polars", "pytest", "re", "src", "typing", "unittest", "yaml"]
+external_allow = ["google", "json", "numpy", "omegaconf", "pathlib", "polars", "pytest", "re", "src", "typing", "unittest", "yaml"]

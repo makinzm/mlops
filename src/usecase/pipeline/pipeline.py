@@ -2,7 +2,7 @@
 PipelineUseCase — 複数 usecase を順次実行するパイプライン。
 
 cfg.steps を順番にループし、step.usecase に応じて
-注入された runner 関数（_run_preprocess / _run_train / _run_inference）を呼ぶ。
+注入された runner 関数を呼ぶ。
 
 設計上の注意:
 - PipelineUseCase 自身はインフラに依存しない。
@@ -10,6 +10,7 @@ cfg.steps を順番にループし、step.usecase に応じて
   テスト時は Mock runner に差し替えられる。
 - fail-fast: 1ステップが例外を上げたら後続ステップを実行せずに例外を伝播する。
 - 全パスは各 step の cfg で管理する（Hydra Config）。
+- runner は **extra_runners で拡張可能。新 usecase 追加時は main.py 側に追加する。
 """
 
 from __future__ import annotations
@@ -27,11 +28,19 @@ class PipelineUseCase:
         run_preprocess: Callable[[DictConfig], None],
         run_train: Callable[[DictConfig], None],
         run_inference: Callable[[DictConfig], None],
+        **extra_runners: Callable[[DictConfig], None],
     ) -> None:
+        # extra_runners のキーは "run_vertex_train" 形式で渡されるため、
+        # "run_" プレフィックスを除去して step.usecase の値に合わせる。
+        # 例: run_vertex_train → vertex_train
+        normalized_extras = {
+            (k[len("run_") :] if k.startswith("run_") else k): v for k, v in extra_runners.items()
+        }
         self._runners: dict[str, Callable[[DictConfig], None]] = {
             "preprocess": run_preprocess,
             "train": run_train,
             "inference": run_inference,
+            **normalized_extras,
         }
 
     def run(self, cfg: DictConfig) -> None:

@@ -8,6 +8,7 @@ source_dataset:
   title: mlops-pipeline-src         # Kaggle 上での表示タイトル
   license_name: CC0-1.0
   kaggleignore: .kaggleignore       # フィルタリング設定ファイル
+  extra_dirs: []                    # 追加でアップロードするディレクトリ（例: [models/titanic]）
   version_message: "update source code"  # CLI で上書き可: source_dataset.version_message="..."
 
 staging_dir: .staging

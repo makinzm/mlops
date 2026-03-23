@@ -289,3 +289,41 @@
 - **NG**: `uv run --extra kaggle --extra dev pytest tests/`
 - **OK**: 初回に `uv sync --extra kaggle --extra dev` を一度だけ実行し、その後は `uv run pytest tests/` で十分
 - ドキュメントでは「セットアップ」と「日常コマンド」を分けて記載する
+
+---
+
+## Kaggle Notebook
+
+### Notebook push 前に必ず Dataset を更新する
+
+- **NG**: 新しい config（例: `conf/competition/titanic/pipeline/inference_only.yaml`）を追加して Notebook push だけ行う → Kaggle 上で `FileNotFoundError: pipeline yaml が見つかりません`
+- **OK**: Notebook push の前に `uv run python -m src usecase=update_source_dataset` で `mlops-pipeline-src` Dataset を更新する
+- **Why**: Notebook は Kaggle 上の Dataset の中身を `/kaggle/input/` から読む。ローカルに conf を追加しても Dataset に push していなければ Kaggle 上には存在しない
+- **How to apply**: パイプラインでは `update_source_dataset` ステップを `push_notebook` より前に配置する。手動実行時も同様の順序を守る
+
+### Kaggle Dataset のパスは新旧2形式が存在する
+
+- 旧形式: `/kaggle/input/{slug}/`
+- 新形式: `/kaggle/input/datasets/{owner}/{slug}/`
+- **NG**: テンプレートでパスをハードコードする
+- **OK**: テンプレート（`templates/notebook/pipeline.ipynb.j2`）で両方を `os.path.exists` で検出し、存在する方を使う
+- **How to apply**: テンプレートの `_DATASET_ROOT` 自動検出ロジックを変更しないこと
+
+### シンボリックリンクのパスには `/src` サフィックスが必要
+
+- **NG**: `_SRC_DATASET_PATH = '/kaggle/input/{slug}'` → `from src.xxx` が動かない（`No module named 'src'`）
+- **OK**: `_SRC_DATASET_PATH = '/kaggle/input/{slug}/src'` → staging で `src/` がサブディレクトリとして配置されるため
+- `os.path.lexists` を使う（`os.path.exists` だと壊れたシンボリックリンクを検出できない）
+- 既存リンクを無条件削除してから再作成する
+
+### ステージングに .gitignore をコピーしない
+
+- **NG**: モデルディレクトリの `.gitignore`（`*` パターン）がステージングにコピーされる → Kaggle API がアップロード時に読み、全ファイルを除外 → 0 バイトの Dataset
+- **OK**: `_copy_dir_to_staging` で `.gitignore` を除外する（`src/usecase/source_dataset/_staging.py`）
+- **How to apply**: ステージングコピーのロジックを変更するときは `.gitignore` 除外を維持する
+
+### 削除した Kaggle Dataset の slug は再利用できない
+
+- **NG**: Kaggle 上で Dataset を削除して同じ slug で再作成 → `[Dataset no longer available]`
+- **OK**: 新しい slug 名を使って作成する
+- **How to apply**: Dataset slug を変更する場合は config ファイル（`conf/usecase/` 以下）も更新する

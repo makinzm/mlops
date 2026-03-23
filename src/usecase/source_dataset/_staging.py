@@ -96,8 +96,14 @@ def _copy_dir_to_staging(
     dest = staging_dir / source_dir.name
     dest.mkdir(parents=True, exist_ok=True)
 
+    copied_count = 0
+    total_bytes = 0
     for src_file in source_dir.rglob("*"):
         if not src_file.is_file():
+            continue
+        # .gitignore はコピーしない（Kaggle API がアップロード時に読んでしまい
+        # * パターンで全ファイルを除外する問題を防ぐ）
+        if src_file.name == ".gitignore":
             continue
         rel = src_file.relative_to(source_dir)
         if _is_ignored(rel, patterns):
@@ -106,8 +112,11 @@ def _copy_dir_to_staging(
         dest_file = dest / rel
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_file, dest_file)
+        copied_count += 1
+        total_bytes += src_file.stat().st_size
 
-    logger.info("Copied %s -> %s", source_dir, dest)
+    size_mb = total_bytes / (1024 * 1024)
+    logger.info("Copied %s -> %s (%d files, %.1f MB)", source_dir, dest, copied_count, size_mb)
 
 
 def copy_to_staging(
@@ -116,16 +125,19 @@ def copy_to_staging(
     staging_dir: Path,
     patterns: list[str],
     requirements_path: Path | None = None,
+    extra_dirs: list[Path] | None = None,
 ) -> None:
     """src_dir と conf_dir の内容を staging_dir にコピーする。
 
     .kaggleignore パターンにマッチするファイル・ディレクトリはコピーしない。
     requirements_path が存在する場合は staging_dir/requirements.txt にもコピーする。
+    extra_dirs が指定された場合はそれらのディレクトリもコピーする。
 
     ステージング後の構造:
       staging_dir/
         src/          ← src_dir の中身
         conf/         ← conf_dir の中身
+        models/...    ← extra_dirs の中身（指定された場合）
         requirements.txt  ← requirements_path が存在する場合
 
     Args:
@@ -134,9 +146,14 @@ def copy_to_staging(
         staging_dir: コピー先のステージングディレクトリ。
         patterns: .kaggleignore から読み込んだ除外パターンリスト。
         requirements_path: requirements.txt のパス（省略時はコピーしない）。
+        extra_dirs: 追加でコピーするディレクトリのリスト（省略時はなし）。
     """
     _copy_dir_to_staging(src_dir, staging_dir, patterns)
     _copy_dir_to_staging(conf_dir, staging_dir, patterns)
+
+    for extra_dir in extra_dirs or []:
+        if extra_dir.exists():
+            _copy_dir_to_staging(extra_dir, staging_dir, patterns)
 
     if requirements_path is not None and requirements_path.exists():
         shutil.copy2(requirements_path, staging_dir / "requirements.txt")

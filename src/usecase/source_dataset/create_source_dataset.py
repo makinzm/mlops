@@ -18,6 +18,7 @@ from pathlib import Path
 from omegaconf import DictConfig
 
 from src.domain.repository.source_dataset import DatasetMetadata, SourceDatasetRepository
+from src.usecase._utils import resolve_latest_dir
 from src.usecase.source_dataset._staging import (
     cleanup_staging_dir,
     copy_to_staging,
@@ -53,9 +54,11 @@ class CreateSourceDatasetUseCase:
         Raises:
             RuntimeError: repository.create() が失敗した場合（ステージングを残す）。
         """
-        src_dir = Path(str(self._cfg.source_dataset.src_dir))
+        src_dir = resolve_latest_dir(str(self._cfg.source_dataset.src_dir))
         conf_dir_raw = self._cfg.source_dataset.get("conf_dir")
-        conf_dir = Path(str(conf_dir_raw)) if conf_dir_raw else src_dir.parent / "conf"
+        conf_dir = (
+            resolve_latest_dir(str(conf_dir_raw)) if conf_dir_raw else src_dir.parent / "conf"
+        )
         staging_root = Path(str(self._cfg.staging_dir))
         kaggleignore_raw = self._cfg.source_dataset.get("kaggleignore")
         kaggleignore_path = Path(str(kaggleignore_raw)) if kaggleignore_raw else None

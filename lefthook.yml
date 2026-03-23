@@ -11,7 +11,7 @@ pre-commit:
     ruff-format:
       run: uv run ruff format --check .
     mypy:
-      run: uv run mypy tests/ src/
+      run: rm -rf .mypy_cache && uv run mypy tests/ src/
     actionlint:
       glob: ".github/workflows/*.yml"
       run: actionlint

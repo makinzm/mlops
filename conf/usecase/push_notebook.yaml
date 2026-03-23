@@ -5,7 +5,9 @@ notebook:
   competition: titanic            # Kaggle competition slug（input として追加）
   kernel_slug: titanic-pipeline   # Kaggle Kernel の URL slug
   src_dataset: mlops-pipeline-src # src/ を格納する Kaggle Dataset slug
+  recipe: all_after_download       # Notebook 内で実行するパイプラインレシピ
   enable_gpu: false
   enable_internet: false
+  extra_datasets: []              # 追加 Dataset sources（例: [mlops-vertex-models]）
 
 output_dir: notebooks

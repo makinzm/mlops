@@ -22,6 +22,15 @@ if "kaggle" not in sys.modules:
     sys.modules["kaggle.api"] = MagicMock()
     sys.modules["kaggle.api.kaggle_api_extended"] = _mock_api_module
 
+# google-cloud-* は GCP 認証情報がない CI 環境で import 時に失敗する可能性があるため、
+# テスト収集前に sys.modules にモックを登録しておく。
+# テスト内では patch() でさらに上書きして動作を制御する。
+if "google" not in sys.modules:
+    sys.modules["google"] = MagicMock()
+    sys.modules["google.cloud"] = MagicMock()
+    sys.modules["google.cloud.storage"] = MagicMock()
+    sys.modules["google.cloud.aiplatform"] = MagicMock()
+
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(

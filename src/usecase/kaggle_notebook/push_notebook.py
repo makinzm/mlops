@@ -104,13 +104,22 @@ class PushNotebookUseCase:
     def _render_notebook(self, output_dir: Path, competition: str) -> Path:
         """Jinja2 テンプレートから notebook.ipynb を生成する。"""
         src_dataset: str = str(self._cfg.notebook.src_dataset)
+        kaggle_username: str = str(self._cfg.get("kaggle_username", ""))
         enable_internet: bool = bool(self._cfg.notebook.enable_internet)
         notebook_path = output_dir / "notebook.ipynb"
+        recipe: str = str(self._cfg.notebook.get("recipe", "all_after_download"))
+        extra_datasets_raw = self._cfg.notebook.get("extra_datasets") or []
+        extra_datasets: list[dict[str, str]] = [
+            {"slug": str(d.slug), "mount_path": str(d.mount_path)} for d in extra_datasets_raw
+        ]
         self._renderer.render(
             output_path=notebook_path,
             competition=competition,
             src_dataset=src_dataset,
+            kaggle_username=kaggle_username,
             enable_internet=enable_internet,
+            recipe=recipe,
+            extra_datasets=extra_datasets,
         )
         logger.info("Notebook generated: %s", notebook_path)
         return notebook_path
@@ -136,7 +145,11 @@ class PushNotebookUseCase:
             "is_private": True,
             "enable_gpu": enable_gpu,
             "enable_internet": enable_internet,
-            "dataset_sources": [f"{username}/{src_dataset}" if username else src_dataset],
+            "dataset_sources": [f"{username}/{src_dataset}" if username else src_dataset]
+            + [
+                f"{username}/{d.slug}" if username else str(d.slug)
+                for d in (self._cfg.notebook.get("extra_datasets") or [])
+            ],
             "competition_sources": [competition],
             "kernel_sources": [],
         }

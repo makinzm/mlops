@@ -45,3 +45,10 @@ devenv.local.yaml
 
 # Generated Kaggle Notebooks (reproducible from push_notebook + template + conf/)
 notebooks/
+
+# Terraform state & secrets
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.tfstate.lock.info
+terraform.tfvars

@@ -6,7 +6,7 @@ trainer:
 
 # ── 入力 ──────────────────────────────────────────
 # "latest" を指定すると output_dir/job_id/ 配下の最新タイムスタンプを自動選択
-preprocess_output_dir: data/2026/Q1/processed/titanic_preprocess/latest/train_out
+preprocess_output_dir: ${oc.env:MLOPS_DATA_DIR,data/2026/Q1/processed/titanic_preprocess/latest/train_out}
 target_col: Survived
 feature_cols:
   - Pclass
@@ -59,5 +59,5 @@ logging:
   eval_freq: 100
   save_importance: true
 
-output_dir: models/${competition.name}
+output_dir: ${oc.env:MLOPS_MODEL_DIR,models/${competition.name}}
 seed: 42
