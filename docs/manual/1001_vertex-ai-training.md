@@ -2,6 +2,14 @@
 
 前提条件: [docs/manual/1000_gcp-initial-setup.md](./1000_gcp-initial-setup.md) が完了済みであること。
 
+> **このマニュアルのコンペティション固有の値について:**
+>
+> 本マニュアルの例は `titanic` コンペティションを前提にしています。
+> これは `conf/config.yaml` の `defaults` で `competition: titanic` が設定されているためです。
+> 別のコンペティションに切り替える場合は CLI で `competition=other_name` を渡すか、
+> `conf/config.yaml` のデフォルトを変更してください。
+> コンペティション固有の設定は `conf/competition/{name}/` 以下に配置されています。
+
 ---
 
 ## 1. Terraform でリソースを作成する
@@ -84,7 +92,7 @@ uv run python -m src usecase=preprocess recipe=base
 | ファイル | 役割 |
 |---------|------|
 | `conf/usecase/preprocess.yaml` | 前処理 usecase の基本設定 |
-| `conf/competition/titanic/preprocess/base.yaml` | Titanic 用前処理レシピ |
+| `conf/competition/titanic/preprocess/base.yaml` | 前処理レシピ（`titanic` は `conf/config.yaml` のデフォルト competition） |
 
 ### Vertex AI で学習を実行
 
@@ -96,7 +104,7 @@ uv run python -m src usecase=vertex_train recipe=lgbm
 |---------|------|
 | `conf/usecase/vertex_train.yaml` | vertex_train usecase の設定 |
 | `conf/gcp/vertex.yaml` | GCP プロジェクト・リージョン・マシンタイプ等（`.env` から読む） |
-| `conf/competition/titanic/training/lgbm.yaml` | LightGBM ハイパーパラメータ |
+| `conf/competition/titanic/training/lgbm.yaml` | LightGBM ハイパーパラメータ（`titanic` は `conf/config.yaml` のデフォルト competition） |
 
 このコマンドの内部処理:
 
@@ -174,7 +182,7 @@ uv run python -m src usecase=inference recipe=titanic_ensemble
 | ファイル | 役割 |
 |---------|------|
 | `conf/usecase/inference.yaml` | 推論 usecase の基本設定 |
-| `conf/competition/titanic/inference/titanic_ensemble.yaml` | モデルパス・特徴量・アンサンブル戦略 |
+| `conf/competition/titanic/inference/titanic_ensemble.yaml` | モデルパス・特徴量・アンサンブル戦略（`titanic` は `conf/config.yaml` のデフォルト competition） |
 
 ### 4-2. コード（src + conf）を Kaggle Dataset に push
 
@@ -212,7 +220,7 @@ uv run python -m src usecase=push_vertex_notebook
 | ファイル | 役割 | 主な設定項目 |
 |---------|------|------------|
 | `conf/usecase/push_vertex_notebook.yaml` | Notebook push 設定 | `kernel_slug`, `recipe`, `extra_datasets` |
-| `conf/competition/titanic/pipeline/inference_only.yaml` | 推論のみパイプライン（Notebook 内で実行される） |
+| `conf/competition/titanic/pipeline/inference_only.yaml` | 推論のみパイプライン（`titanic` は `conf/config.yaml` のデフォルト competition） |
 | `templates/notebook/pipeline.ipynb.j2` | Notebook テンプレート |
 
 ### 4-5. フル自動パイプライン（前処理〜提出まで一括）
@@ -225,15 +233,15 @@ uv run python -m src usecase=pipeline recipe=vertex_to_kaggle
 
 | ファイル | 役割 |
 |---------|------|
-| `conf/competition/titanic/pipeline/vertex_to_kaggle.yaml` | パイプライン定義 |
+| `conf/competition/titanic/pipeline/vertex_to_kaggle.yaml` | パイプライン定義（`titanic` は `conf/config.yaml` のデフォルト competition） |
 
 パイプライン内容:
 
 | Step | 内容 | 使用 config |
 |------|------|------------|
-| ① preprocess | 前処理 | `conf/competition/titanic/preprocess/base.yaml` |
-| ② vertex_train | Vertex AI で学習 | `conf/competition/titanic/training/lgbm.yaml` |
-| ③ inference | 推論（submission.csv 生成） | `conf/competition/titanic/inference/titanic_ensemble.yaml` |
+| ① preprocess | 前処理 | `conf/competition/{name}/preprocess/base.yaml` |
+| ② vertex_train | Vertex AI で学習 | `conf/competition/{name}/training/lgbm.yaml` |
+| ③ inference | 推論（submission.csv 生成） | `conf/competition/{name}/inference/titanic_ensemble.yaml` |
 | ④ update_source_dataset | コードを `mlops-pipeline-src` に push | `conf/usecase/update_source_dataset.yaml` |
 | ⑤ update_source_dataset | モデルを `titanic-vertex-models` に push | ⑤ は pipeline yaml 内で直接定義 |
 | ⑥ push_notebook | `titanic-vertex-inference` を push（推論のみ） | ⑥ は pipeline yaml 内で直接定義 |
