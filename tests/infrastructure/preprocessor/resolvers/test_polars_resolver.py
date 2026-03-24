@@ -256,7 +256,9 @@ class TestBayesianTargetEncode:
         )
         # prior_weight 小 → raw mean (1.0) 寄り
         # prior_weight 大 → global_mean (0.5) 寄り
-        assert encoder_small["Sex"]["male"].posterior_mean > encoder_large["Sex"]["male"].posterior_mean
+        small_mean = encoder_small["Sex"]["male"].posterior_mean
+        large_mean = encoder_large["Sex"]["male"].posterior_mean
+        assert small_mean > large_mean
 
     def test_binary_min_samples_leaf(self, resolver: PolarsResolver) -> None:
         """min_samples_leaf 未満のカテゴリは global_mean にフォールバックすること。
@@ -280,7 +282,8 @@ class TestBayesianTargetEncode:
         )
         global_mean_stats = encoder["Cat"]["__prior__"]
         # rare_cat (N=2) は min_samples_leaf=3 未満 → global_mean にフォールバック
-        assert abs(encoder["Cat"]["rare_cat"].posterior_mean - global_mean_stats.posterior_mean) < 1e-6
+        rare_mean = encoder["Cat"]["rare_cat"].posterior_mean
+        assert abs(rare_mean - global_mean_stats.posterior_mean) < 1e-6
 
     def test_binary_oof_no_leak(self, resolver: PolarsResolver) -> None:
         """OOF CV でデータリークしないこと。
@@ -576,9 +579,7 @@ class TestTimeSeriesTargetEncode:
         # 行3 の TE は行0-2 のみから計算。行4,5 の target=100 は使わない
         # もしリークなら値が大幅に上がる
         row3_value = result["Sex_te"][3]
-        assert row3_value < 10.0, (
-            f"未来リークの疑い: 行3 の TE 値が大きすぎる ({row3_value})"
-        )
+        assert row3_value < 10.0, f"未来リークの疑い: 行3 の TE 値が大きすぎる ({row3_value})"
 
     def test_first_row_uses_prior(self, resolver: PolarsResolver) -> None:
         """履歴がない最初の行は global_mean（事前分布の平均）で埋められること。"""

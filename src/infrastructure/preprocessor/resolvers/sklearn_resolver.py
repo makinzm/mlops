@@ -124,6 +124,8 @@ class SklearnResolver:
         n_splits: int = 5,
         seed: int = 42,
         smoothing: float = 1.0,
+        suffix: str = "",
+        prefix: str = "",
     ) -> tuple[pl.DataFrame, TargetEncoder]:
         """OOF CV ベースの Target Encoding を行い、(oof_encoded_df, full_encoder) を返す。
 
@@ -143,11 +145,14 @@ class SklearnResolver:
             n_splits: KFold の分割数
             seed: KFold のシード
             smoothing: smoothing 係数（デフォルト 1.0）
+            suffix: 出力カラム名の接尾辞（例: "_te" → Sex_te）。空文字で元カラム上書き
+            prefix: 出力カラム名の接頭辞（例: "enc_" → enc_Sex）。空文字で接頭辞なし
 
         Returns:
             (oof_encoded_df, full_encoder)
             - oof_encoded_df: OOF エンコード済み DataFrame（columns の dtype が Float64）
-            - full_encoder: 全 train で fit した encoder
+              suffix/prefix 指定時は新カラムが追加され、元カラムは保持される
+            - full_encoder: 全 train で fit した encoder（キーは元カラム名）
                             Test には transform_target_encode() に渡す
         """
         target = df[target_col].cast(pl.Float64).to_numpy()
@@ -189,7 +194,8 @@ class SklearnResolver:
                         encoded = fold_global_mean
                     oof_encoded[i] = encoded
 
-            result = result.with_columns(pl.Series(col, oof_encoded))
+            output_col = f"{prefix}{col}{suffix}" if (suffix or prefix) else col
+            result = result.with_columns(pl.Series(output_col, oof_encoded))
 
             # full_encoder: 全 train で fit
             full_cat_stats: dict[str, tuple[float, int]] = {}
@@ -213,6 +219,8 @@ class SklearnResolver:
         df: pl.DataFrame,
         encoder: TargetEncoder,
         columns: list[str],
+        suffix: str = "",
+        prefix: str = "",
     ) -> pl.DataFrame:
         """full_encoder を使って df（Test データ）を Target Encoding する。
 
@@ -222,6 +230,8 @@ class SklearnResolver:
             df: Test DataFrame
             encoder: target_encode() が返した full_encoder
             columns: エンコード対象カラム名リスト
+            suffix: 出力カラム名の接尾辞（空文字で元カラム上書き）
+            prefix: 出力カラム名の接頭辞（空文字で接頭辞なし）
 
         Returns:
             エンコード済み DataFrame（columns の dtype が Float64）
@@ -231,5 +241,6 @@ class SklearnResolver:
             col_encoder = encoder[col]
             global_mean = col_encoder["__global_mean__"]
             encoded = [col_encoder.get(cat, global_mean) for cat in df[col].to_list()]
-            result = result.with_columns(pl.Series(col, encoded, dtype=pl.Float64))
+            output_col = f"{prefix}{col}{suffix}" if (suffix or prefix) else col
+            result = result.with_columns(pl.Series(output_col, encoded, dtype=pl.Float64))
         return result
