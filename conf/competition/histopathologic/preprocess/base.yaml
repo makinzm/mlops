@@ -1,0 +1,87 @@
+# @package _global_
+# Histopathologic Cancer Detection 前処理パイプライン
+#
+# train_labels.csv を読み込み、image_path を構築し、
+# stratified_subsample でデータを削減（small_set 実験用）後、
+# CV split して fold_N/train.parquet, fold_N/test.parquet に出力する。
+#
+# 実行例:
+#   uv run python -m src usecase=preprocess competition=histopathologic recipe=base
+
+usecase: preprocess
+job_id: histopathologic_preprocess
+
+inputs:
+  - id: raw_labels
+    path: data/2026/Q1/raw/histopathologic-cancer-detection/train_labels.csv
+    format: csv
+  - id: raw_test
+    path: data/2026/Q1/raw/histopathologic-cancer-detection/sample_submission.csv
+    format: csv
+
+output_dir: data/2026/Q1/processed
+
+cv:
+  strategy: stratified_kfold
+  n_splits: 3
+  target_col: label
+
+# ----------------------------------------------------------------
+# DAG ステップ
+#
+#   raw_labels --> train_with_path --> train_subsampled --> train_out (CV=true)
+#   raw_test   --> test_with_path  --> test_out (CV=false)
+# ----------------------------------------------------------------
+
+steps:
+  # ── Train ブランチ ──
+
+  # image_path カラムを構築: id → data/.../train/{id}.tif
+  - id: train_with_path
+    from: raw_labels
+    polars:
+      method: format_column
+      template: data/2026/Q1/raw/histopathologic-cancer-detection/train/{id}.tif
+      source_col: id
+      output_col: image_path
+
+  # small_set: データを 1/10 に削減（ラベル分布維持）
+  # fraction を 1.0 にすれば全データで実行
+  - id: train_subsampled
+    polars:
+      method: stratified_subsample
+      fraction: 0.1
+      stratify_col: label
+      seed: 42
+
+  # ── Test ブランチ ──
+
+  - id: test_with_path
+    from: raw_test
+    polars:
+      method: format_column
+      template: data/2026/Q1/raw/histopathologic-cancer-detection/test/{id}.tif
+      source_col: id
+      output_col: image_path
+
+  # ── 出力 ──
+
+  - id: train_out
+    from: train_subsampled
+    output:
+      columns: [id, label, image_path]
+      format: parquet
+      cv: true
+
+  - id: test_out
+    from: test_with_path
+    output:
+      columns: [id, label, image_path]
+      format: parquet
+      cv: false
+
+targets:
+  - train_out
+  - test_out
+
+seed: 42

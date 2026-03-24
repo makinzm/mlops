@@ -48,6 +48,8 @@ class PolarsResolver:
             "join",
             "bayesian_target_encode",
             "time_series_target_encode",
+            "format_column",
+            "stratified_subsample",
         }
 
     def execute(self, df: pl.DataFrame, method: str, **kwargs: object) -> pl.DataFrame:
@@ -84,6 +86,22 @@ class PolarsResolver:
             on = str(kwargs.get("on", ""))
             how = str(kwargs.get("how", "left"))
             return self.join(dfs, on=on, how=how)  # ty:ignore[invalid-argument-type]
+
+        if method == "format_column":
+            template = str(kwargs.get("template", ""))
+            source_col = str(kwargs.get("source_col", ""))
+            output_col = str(kwargs.get("output_col", ""))
+            return self.format_column(
+                df, template=template, source_col=source_col, output_col=output_col
+            )
+
+        if method == "stratified_subsample":
+            fraction = float(kwargs.get("fraction", 1.0))  # ty:ignore[invalid-argument-type]
+            stratify_col = str(kwargs.get("stratify_col", ""))
+            seed = int(kwargs.get("seed", 42))  # ty:ignore[invalid-argument-type]
+            return self.stratified_subsample(
+                df, fraction=fraction, stratify_col=stratify_col, seed=seed
+            )
 
         raise ValueError(f"Unknown method: {method!r}")
 
@@ -597,3 +615,58 @@ class PolarsResolver:
             full_encoder[col_name] = col_encoder
 
         return result, full_encoder
+
+    # -------------------------------------------------------------------
+    # format_column / stratified_subsample
+    # -------------------------------------------------------------------
+
+    @staticmethod
+    def format_column(
+        df: pl.DataFrame,
+        template: str,
+        source_col: str,
+        output_col: str,
+    ) -> pl.DataFrame:
+        """テンプレート文字列でカラム値を埋め込んだ新カラムを作成する。
+
+        テンプレート内の {source_col} を各行の値で置換する。
+        例: template="data/train/{id}.tif", source_col="id"
+            → "data/train/abc.tif"
+
+        時間計算量: O(N)
+        空間計算量: O(N)
+        """
+        values = df[source_col].to_list()
+        placeholder = "{" + source_col + "}"
+        formatted = [template.replace(placeholder, str(v)) for v in values]
+        return df.with_columns(pl.Series(output_col, formatted))
+
+    @staticmethod
+    def stratified_subsample(
+        df: pl.DataFrame,
+        fraction: float,
+        stratify_col: str,
+        seed: int = 42,
+    ) -> pl.DataFrame:
+        """層化サブサンプリングでデータを削減する。
+
+        各クラスから fraction の割合でサンプリングし、
+        元のラベル分布を維持する。
+
+        時間計算量: O(N)
+        空間計算量: O(N * fraction)
+        """
+        if fraction >= 1.0:
+            return df
+
+        rng = np.random.default_rng(seed)
+        indices: list[int] = []
+
+        for label in sorted(df[stratify_col].unique().to_list()):
+            mask = df[stratify_col] == label
+            label_indices = [i for i, m in enumerate(mask.to_list()) if m]
+            n_sample = max(1, int(len(label_indices) * fraction))
+            sampled = rng.choice(label_indices, size=n_sample, replace=False)
+            indices.extend(sorted(sampled.tolist()))
+
+        return df[sorted(indices)]

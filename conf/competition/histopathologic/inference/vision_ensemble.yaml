@@ -1,0 +1,41 @@
+# @package _global_
+# Histopathologic Cancer Detection 推論設定 — Custom CNN + ViT アンサンブル
+#
+# 2 モデルの予測を平均して submission.csv を生成する。
+# AUC 評価のため確率値で提出（threshold: null）。
+#
+# 実行例:
+#   uv run python -m src usecase=inference competition=histopathologic recipe=vision_ensemble
+
+usecase: inference
+job_id: histopathologic_inference
+inferencer_type: vision
+
+# ── テストデータ ──────────────────────────────────
+test_path: data/2026/Q1/processed/histopathologic_preprocess/latest/test_out/test.parquet
+
+# ── 特徴量 ────────────────────────────────────────
+feature_cols:
+  - image_path
+
+passenger_id_col: id
+target_col_name: label
+
+# ── アンサンブル対象モデル ──────────────────────────
+# Custom CNN + ViT の 2 モデル
+models:
+  - models/histopathologic/histopathologic_custom_cnn/latest
+  - models/histopathologic/histopathologic_vit/latest
+
+# ── アンサンブル戦略 ──────────────────────────────
+ensemble: mean
+
+# ── 出力 ──────────────────────────────────────────
+output_dir: data/2026/Q1/inference/${competition.name}/${job_id}
+
+# ── 提出フォーマット ──────────────────────────────
+# AUC 評価なので確率値で提出（threshold は null）
+submission:
+  threshold: null
+
+seed: 42

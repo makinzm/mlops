@@ -113,6 +113,7 @@ class InferenceUseCase:
 
         feature_cols: list[str] = list(cfg.feature_cols)
         passenger_id_col: str = str(cfg.get("passenger_id_col", "PassengerId"))
+        target_col_name: str = str(cfg.get("target_col_name", "Survived"))
         submission_path: Path | None = None
         predictions: list[np.ndarray] = []
         n_test = 0
@@ -154,15 +155,15 @@ class InferenceUseCase:
                 # binary: submission.csv = 0/1、submission_proba.csv = 確率
                 binary_pred = (final_pred >= threshold).astype(int)
                 pl.DataFrame(
-                    {passenger_id_col: passenger_ids, "Survived": final_pred.tolist()}
+                    {passenger_id_col: passenger_ids, target_col_name: final_pred.tolist()}
                 ).write_csv(str(ts_dir / "submission_proba.csv"))
                 pl.DataFrame(
-                    {passenger_id_col: passenger_ids, "Survived": binary_pred.tolist()}
+                    {passenger_id_col: passenger_ids, target_col_name: binary_pred.tolist()}
                 ).write_csv(str(ts_dir / "submission.csv"))
             else:
                 # 後方互換: submission.csv = 確率
                 pl.DataFrame(
-                    {passenger_id_col: passenger_ids, "Survived": final_pred.tolist()}
+                    {passenger_id_col: passenger_ids, target_col_name: final_pred.tolist()}
                 ).write_csv(str(ts_dir / "submission.csv"))
             submission_path = ts_dir / "submission.csv"
 
