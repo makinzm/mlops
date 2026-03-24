@@ -1,0 +1,41 @@
+# @package _global_
+# Histopathologic パイプライン — ダウンロードから Notebook 提出まで
+#
+# 1 コマンドで全ステップを実行する:
+#   ダウンロード → 前処理 → CNN 学習 → ViT 学習 → 推論 → Dataset 更新 → Notebook push
+#
+# 実行例:
+#   uv run python -m src usecase=pipeline competition=histopathologic recipe=full
+
+usecase: pipeline
+job_id: histopathologic_full
+
+steps:
+  # ① データダウンロード（Kaggle competition）
+  - usecase: download_dataset
+    kaggle:
+      mode: competition
+      competition: histopathologic-cancer-detection
+
+  # ② 前処理（image_path 構築 + 1/10 サブサンプリング + 3-fold CV split）
+  - usecase: preprocess
+    recipe: base
+
+  # ③ Custom CNN 学習（ResNet-like skip connection）
+  - usecase: train
+    recipe: vision_custom_cnn
+
+  # ④ ViT 学習（vit_b_32）
+  - usecase: train
+    recipe: vision_vit
+
+  # ⑤ アンサンブル推論（CNN + ViT → submission.csv）
+  - usecase: inference
+    recipe: vision_ensemble
+
+  # ⑥ ソースコード + モデル重みを Kaggle Dataset にアップロード
+  - usecase: update_source_dataset
+
+  # ⑦ 推論用 Notebook を Kaggle に push
+  - usecase: push_notebook
+    notebook: histopathologic_inference

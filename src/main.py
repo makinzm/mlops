@@ -98,6 +98,19 @@ def _resolve_analyzers(cfg: DictConfig) -> list[object]:
     return analyzers
 
 
+def _run_download(cfg: DictConfig) -> None:
+    """ダウンロード UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
+
+    logger = logging.getLogger(__name__)
+    try:
+        downloader = _resolve_downloader(cfg)
+    except Exception:
+        logger.error("ダウンローダーの初期化に失敗しました", exc_info=True)
+        raise
+    DownloadDatasetUseCase(downloader, logger).execute()  # ty:ignore[invalid-argument-type]
+
+
 def _run_preprocess(cfg: DictConfig) -> None:
     """前処理 UseCase を実行する（Pipeline から呼ばれる）。"""
     from src.infrastructure.executor.factory import ExecutorFactory
@@ -322,6 +335,7 @@ def main(cfg: DictConfig) -> None:
             run_remote_train=_run_remote_train,
             run_update_source_dataset=_run_update_source_dataset_pipeline,
             run_push_notebook=_run_push_notebook_pipeline,
+            run_download_dataset=_run_download,
         ).run(pipeline_cfg)
         logger.info(f"パイプライン完了[{pipeline_cfg.get('job_id', '?')}]")
 

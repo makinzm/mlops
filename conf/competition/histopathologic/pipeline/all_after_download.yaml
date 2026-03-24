@@ -1,8 +1,5 @@
 # @package _global_
-# Histopathologic パイプライン — ダウンロード後の全ステップ
-#
-# 前処理 → Custom CNN 学習 → ViT 学習 → アンサンブル推論 を一括実行する。
-# 2 モデルの学習が完了してから推論を実行する。
+# Histopathologic パイプライン — 前処理から推論まで（ダウンロード済み前提）
 #
 # 実行例:
 #   uv run python -m src usecase=pipeline competition=histopathologic recipe=all_after_download
