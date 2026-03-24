@@ -48,7 +48,7 @@ class NotebookPipelineRunner:
     """Kaggle Notebook 上でパイプラインを実行するランナー。
 
     Args:
-        competition_slug: Kaggle の competition slug（例: "titanic"）。
+        competition_slug: competition slug（例: "my-competition"）。
         recipe: conf/competition/{slug}/pipeline/ 以下の yaml ファイル名
                 （例: "all_after_download"）。
         conf_dir: conf/ ディレクトリのパス（デフォルト: "/kaggle/input/mlops-pipeline-src/conf"）。

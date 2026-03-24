@@ -10,7 +10,7 @@ recipe: null
 # push_notebook usecase 用パラメータ（usecase=push_notebook 時に上書きされる）
 # caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
 notebook: null
-kaggle_username: null
+platform_username: null
 
 # create/update_source_dataset usecase 用パラメータ
 source_dataset: null
@@ -18,5 +18,5 @@ staging_dir: null
 
 # vertex_train usecase 用パラメータ
 # caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
-gcp: null
+cloud: null
 job_id: null

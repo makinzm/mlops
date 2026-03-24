@@ -42,10 +42,10 @@ def _make_cfg(
                 "dataset_slug": "mlops-pipeline-src",
                 "title": "mlops-pipeline-src",
                 "license_name": "CC0-1.0",
-                "kaggleignore": str(kaggleignore_path) if kaggleignore_path else None,
+                "ignorefile": str(kaggleignore_path) if kaggleignore_path else None,
             },
             "staging_dir": str(tmp_path / ".staging"),
-            "kaggle_username": "testuser",
+            "platform_username": "testuser",
         }
     )
 

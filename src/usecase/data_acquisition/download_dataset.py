@@ -2,7 +2,7 @@
 データセットダウンロードのユースケース。
 
 DataDownloader Protocol に依存し、具体的なインフラ実装を知らない。
-DI により Kaggle / GCS / HuggingFace 等を差し替え可能にする。
+DI によりプラットフォーム実装を差し替え可能にする。
 ログの責務も UseCase に閉じ、AppLogger を DI する。
 """
 

@@ -73,7 +73,8 @@ class KaggleDownloader:
     def _download_competition(self) -> DownloadResult:
         if not self.cfg.kaggle.competition:
             raise ValueError(
-                "competition が未指定です。 例: uv run python -m src kaggle.competition=titanic"
+                "competition が未指定です。"
+                " 例: uv run python -m src kaggle.competition=my-competition"
             )
         output_dir = Path(self.cfg.output_dir)
         self.git_repo.setup_data_dir(output_dir)

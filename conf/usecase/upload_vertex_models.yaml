@@ -10,7 +10,7 @@ source_dataset:
   dataset_slug: titanic-vertex-models
   title: titanic-vertex-models
   license_name: CC0-1.0
-  kaggleignore: .kaggleignore
+  ignorefile: .kaggleignore
   extra_dirs: []
   version_message: "vertex AI trained model"
 

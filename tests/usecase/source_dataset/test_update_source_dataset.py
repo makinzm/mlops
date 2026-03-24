@@ -32,11 +32,11 @@ def _make_cfg(tmp_path: Path, version_message: str = "update source code") -> ob
                 "dataset_slug": "mlops-pipeline-src",
                 "title": "mlops-pipeline-src",
                 "license_name": "CC0-1.0",
-                "kaggleignore": None,
+                "ignorefile": None,
                 "version_message": version_message,
             },
             "staging_dir": str(tmp_path / ".staging"),
-            "kaggle_username": "testuser",
+            "platform_username": "testuser",
         }
     )
 

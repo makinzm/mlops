@@ -16,7 +16,7 @@ Trainer Protocol と GitRepository Protocol を受け取り、
         ├── train_result.yaml
         ├── README.md
         ├── fold_0/
-        │   ├── model.lgbm
+        │   ├── model.{ext}
         │   ├── oof_train.parquet
         │   ├── error_analysis.parquet
         │   └── feature_importance.parquet
@@ -51,8 +51,8 @@ def resolve_preprocess_dir(path_str: str) -> Path:
     NOTE: `_utils.resolve_latest_dir()` への薄いラッパー。後方互換性のために残す。
 
     例）
-      .../titanic_preprocess/latest/train_out
-      → .../titanic_preprocess/20260315T180000/train_out
+      .../{job_id}_preprocess/latest/train_out
+      → .../{job_id}_preprocess/20260315T180000/train_out
     """
     return resolve_latest_dir(path_str)
 

@@ -47,8 +47,8 @@ class KaggleEnvironment:
         """input データのルートパスを返す。
 
         Args:
-            dataset_slug: Kaggle の competition/dataset の slug 名。
-                          例: "titanic", "house-prices-advanced-regression-techniques"
+            dataset_slug: competition/dataset の slug 名。
+                          例: "my-competition", "house-prices-advanced-regression-techniques"
 
         Returns:
             Kaggle 環境なら /kaggle/input/competitions/{slug}、

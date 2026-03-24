@@ -39,7 +39,7 @@ def _make_cfg(tmp_path: Path) -> DictConfig:
             "recipe": "lgbm",
             "output_dir": str(tmp_path / "models" / "titanic"),
             "seed": 42,
-            "gcp": {
+            "cloud": {
                 "project": "test-project",
                 "region": "asia-northeast1",
                 "staging_bucket": "gs://test-bucket",
@@ -80,8 +80,8 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         usecase = RemoteTrainUseCase(
             cfg=cfg,
-            gcs=_make_mock_gcs(),
-            vertex=_make_mock_vertex(),
+            object_storage=_make_mock_gcs(),
+            training_job=_make_mock_vertex(),
             git_repo=_make_mock_git_repo(),
         )
         result = usecase.execute()
@@ -92,7 +92,10 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         mock_gcs = _make_mock_gcs()
         usecase = RemoteTrainUseCase(
-            cfg=cfg, gcs=mock_gcs, vertex=_make_mock_vertex(), git_repo=_make_mock_git_repo()
+            cfg=cfg,
+            object_storage=mock_gcs,
+            training_job=_make_mock_vertex(),
+            git_repo=_make_mock_git_repo(),
         )
         usecase.execute()
 
@@ -109,7 +112,10 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
         usecase = RemoteTrainUseCase(
-            cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
+            cfg=cfg,
+            object_storage=_make_mock_gcs(),
+            training_job=mock_vertex,
+            git_repo=_make_mock_git_repo(),
         )
         usecase.execute()
 
@@ -123,7 +129,10 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
         usecase = RemoteTrainUseCase(
-            cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
+            cfg=cfg,
+            object_storage=_make_mock_gcs(),
+            training_job=mock_vertex,
+            git_repo=_make_mock_git_repo(),
         )
         usecase.execute()
 
@@ -134,7 +143,10 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         mock_gcs = _make_mock_gcs()
         usecase = RemoteTrainUseCase(
-            cfg=cfg, gcs=mock_gcs, vertex=_make_mock_vertex(), git_repo=_make_mock_git_repo()
+            cfg=cfg,
+            object_storage=mock_gcs,
+            training_job=_make_mock_vertex(),
+            git_repo=_make_mock_git_repo(),
         )
         result = usecase.execute()
 
@@ -150,8 +162,8 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         usecase = RemoteTrainUseCase(
             cfg=cfg,
-            gcs=_make_mock_gcs(),
-            vertex=_make_mock_vertex(),
+            object_storage=_make_mock_gcs(),
+            training_job=_make_mock_vertex(),
             git_repo=_make_mock_git_repo(),
         )
         usecase.execute()
@@ -167,7 +179,10 @@ class TestRemoteTrainUseCaseExecute:
             resource_name=_FAKE_JOB_NAME, state="FAILED", error_message="OOM error"
         )
         usecase = RemoteTrainUseCase(
-            cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
+            cfg=cfg,
+            object_storage=_make_mock_gcs(),
+            training_job=mock_vertex,
+            git_repo=_make_mock_git_repo(),
         )
 
         with pytest.raises(RuntimeError, match="OOM error"):
@@ -178,8 +193,8 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         usecase = RemoteTrainUseCase(
             cfg=cfg,
-            gcs=_make_mock_gcs(),
-            vertex=_make_mock_vertex(),
+            object_storage=_make_mock_gcs(),
+            training_job=_make_mock_vertex(),
             git_repo=_make_mock_git_repo(),
         )
         result = usecase.execute()
@@ -190,8 +205,8 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         usecase = RemoteTrainUseCase(
             cfg=cfg,
-            gcs=_make_mock_gcs(),
-            vertex=_make_mock_vertex(),
+            object_storage=_make_mock_gcs(),
+            training_job=_make_mock_vertex(),
             git_repo=_make_mock_git_repo(),
         )
         result = usecase.execute()
@@ -203,7 +218,10 @@ class TestRemoteTrainUseCaseExecute:
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
         usecase = RemoteTrainUseCase(
-            cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
+            cfg=cfg,
+            object_storage=_make_mock_gcs(),
+            training_job=mock_vertex,
+            git_repo=_make_mock_git_repo(),
         )
         usecase.execute()
 
@@ -214,14 +232,17 @@ class TestRemoteTrainUseCaseExecute:
         bootstrap = command[2]
         assert "google.cloud" in bootstrap
         assert "pip install" in bootstrap
-        assert "vertex_entrypoint.py" in bootstrap
+        assert "remote_entrypoint.py" in bootstrap
 
     def test_env_vars_contain_gcs_uris(self, tmp_path: Path) -> None:
         """リモート学習ジョブの env_vars に GCS_DATA_URI と GCS_MODEL_URI が含まれること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
         usecase = RemoteTrainUseCase(
-            cfg=cfg, gcs=_make_mock_gcs(), vertex=mock_vertex, git_repo=_make_mock_git_repo()
+            cfg=cfg,
+            object_storage=_make_mock_gcs(),
+            training_job=mock_vertex,
+            git_repo=_make_mock_git_repo(),
         )
         usecase.execute()
 

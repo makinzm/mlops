@@ -167,16 +167,16 @@ def _run_remote_train(cfg: DictConfig) -> None:
     trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
     # remote_train は一度に 1 レシピを実行する（最初の設定を使用）
     trainer_cfg = trainer_cfgs[0]
-    gcs = GCSRepositoryImpl(project=str(trainer_cfg.gcp.project))
+    gcs = GCSRepositoryImpl(project=str(trainer_cfg.cloud.project))
     vertex = VertexAIRepositoryImpl(
-        project=str(trainer_cfg.gcp.project),
-        region=str(trainer_cfg.gcp.region),
-        staging_bucket=str(trainer_cfg.gcp.staging_bucket),
+        project=str(trainer_cfg.cloud.project),
+        region=str(trainer_cfg.cloud.region),
+        staging_bucket=str(trainer_cfg.cloud.staging_bucket),
     )
     result = RemoteTrainUseCase(
         cfg=trainer_cfg,
-        gcs=gcs,
-        vertex=vertex,
+        object_storage=gcs,
+        training_job=vertex,
         git_repo=git_repo,
     ).execute()
     logger.info(
@@ -234,7 +234,7 @@ def _run_push_notebook_pipeline(cfg: DictConfig) -> None:
             "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
         ) from e
 
-    result = PushNotebookUseCase(cfg=cfg, kaggle_api=kaggle_api).execute()
+    result = PushNotebookUseCase(cfg=cfg, platform_api=kaggle_api).execute()
     logging.getLogger(__name__).info(f"Notebook push 完了: notebook={result.notebook_path}")
 
 
@@ -265,9 +265,9 @@ def main(cfg: DictConfig) -> None:
 
     # presentation 層で KAGGLE_USERNAME を解決して cfg に注入する
     # usecase 層は os に依存できないため、ここで一括処理する（caution.md: struct mode 回避）
-    if not cfg.get("kaggle_username"):
+    if not cfg.get("platform_username"):
         cfg = cast(DictConfig, OmegaConf.create(OmegaConf.to_container(cfg, resolve=True)))
-        cfg.kaggle_username = os.environ.get("KAGGLE_USERNAME", "")
+        cfg.platform_username = os.environ.get("KAGGLE_USERNAME", "")
 
     if usecase_name == "download_dataset":
         from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
@@ -332,7 +332,7 @@ def main(cfg: DictConfig) -> None:
                 "Kaggle 認証に失敗しました。~/.kaggle/access_token を確認してください。"
             ) from e
 
-        result = PushNotebookUseCase(cfg=cfg, kaggle_api=kaggle_api).execute()
+        result = PushNotebookUseCase(cfg=cfg, platform_api=kaggle_api).execute()
         logger.info(f"Notebook push 完了: notebook={result.notebook_path}")
 
     elif usecase_name in ("create_source_dataset", "update_source_dataset"):

@@ -39,8 +39,9 @@ class NotebookRenderer:
         """テンプレートを描画して ipynb ファイルを書き出す。
 
         Args:
-            output_path: 出力先ファイルパス（例: outputs/push_notebook/titanic/notebook.ipynb）
-            competition: コンペティションの slug（例: "titanic"）
+            output_path: 出力先ファイルパス
+                （例: outputs/push_notebook/{competition}/notebook.ipynb）
+            competition: コンペティションの slug（例: "my-competition"）
             src_dataset: コードを格納する Dataset の slug（例: "mlops-pipeline-src"）
             enable_internet: False のとき pip install をスキップする（オフラインコンペ用）
             recipe: パイプラインレシピ名（例: "inference_only"）
