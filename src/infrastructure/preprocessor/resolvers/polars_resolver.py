@@ -317,7 +317,7 @@ class PolarsResolver:
     def _fit_bayesian_encoder(
         self,
         group_values: list[str],
-        target_values: np.ndarray,  # ty:ignore[unresolved-reference]
+        target_values: np.ndarray,
         target_type: Literal["binary", "continuous"],
         prior_weight: float,
         min_samples_leaf: int,
