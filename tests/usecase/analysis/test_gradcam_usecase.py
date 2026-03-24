@@ -18,7 +18,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 import yaml
 
 from src.domain.model.gradcam import GradCAMResult

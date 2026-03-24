@@ -24,10 +24,9 @@ import torch
 from PIL import Image
 from torch import nn
 
+from src.domain.model.backbone import BackboneConfig
 from src.infrastructure.inference.vision_inferencer import VisionInferencer
 from src.infrastructure.trainer.backbone_registry import build_backbone, build_classifier
-
-from src.domain.model.backbone import BackboneConfig
 
 
 def _create_synthetic_images(image_dir: Path, num_images: int, seed: int = 42) -> list[str]:

@@ -140,6 +140,8 @@ googleapis-common-protos==1.72.0
     #   google-api-core
     #   grpc-google-iam-v1
     #   grpcio-status
+grad-cam==1.5.5
+    # via mlops
 graphene==3.4.3
     # via mlflow
 graphql-core==3.2.7
@@ -218,6 +220,7 @@ markupsafe==3.0.3
     #   werkzeug
 matplotlib==3.10.8
     # via
+    #   grad-cam
     #   mlflow
     #   mlops
     #   seaborn
@@ -244,15 +247,18 @@ networkx==3.6.1
 numpy==2.4.1
     # via
     #   contourpy
+    #   grad-cam
     #   lightgbm
     #   matplotlib
     #   mlflow
     #   mlops
+    #   opencv-python
     #   pandas
     #   scikit-learn
     #   scipy
     #   seaborn
     #   torchmetrics
+    #   torchvision
 nvidia-cublas-cu12==12.8.4.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cudnn-cu12
@@ -296,6 +302,8 @@ omegaconf==2.3.0
     # via
     #   hydra-core
     #   mlops
+opencv-python==4.13.0.92
+    # via grad-cam
 opentelemetry-api==1.39.1
     # via
     #   mlflow-skinny
@@ -336,7 +344,11 @@ pathspec==1.0.3
     #   black
     #   mypy
 pillow==12.1.0
-    # via matplotlib
+    # via
+    #   grad-cam
+    #   matplotlib
+    #   mlops
+    #   torchvision
 platformdirs==4.5.1
     # via black
 polars==1.38.1
@@ -432,6 +444,7 @@ rsa==4.9.1
     # via google-auth
 scikit-learn==1.8.0
     # via
+    #   grad-cam
     #   mlflow
     #   mlops
 scipy==1.16.3
@@ -471,17 +484,26 @@ threadpoolctl==3.6.0
     # via scikit-learn
 torch==2.9.1
     # via
+    #   grad-cam
     #   mlops
     #   pytorch-lightning
     #   torchmetrics
+    #   torchvision
 torchmetrics==1.8.2
     # via pytorch-lightning
+torchvision==0.24.1
+    # via
+    #   grad-cam
+    #   mlops
 tqdm==4.67.1
     # via
+    #   grad-cam
     #   kaggle
     #   pytorch-lightning
 triton==3.5.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
+ttach==0.0.3
+    # via grad-cam
 types-requests==2.32.4.20260107
     # via
     #   kaggle

@@ -20,3 +20,6 @@ staging_dir: null
 # caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
 cloud: null
 job_id: null
+
+# gradcam usecase 用パラメータ
+gradcam: null

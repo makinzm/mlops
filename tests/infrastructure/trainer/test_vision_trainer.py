@@ -106,9 +106,7 @@ _FAKE_COMMIT = "c" * 40
 
 
 class TestVisionTrainerFitFolds:
-    def _run(
-        self, vision_fold_dir: Path, tmp_path: Path, cfg_dict: dict[str, Any]
-    ) -> TrainResult:
+    def _run(self, vision_fold_dir: Path, tmp_path: Path, cfg_dict: dict[str, Any]) -> TrainResult:
         output_dir = tmp_path / "models" / "test_vision" / "20260324T120000"
         output_dir.mkdir(parents=True, exist_ok=True)
         trainer = VisionTrainer(cfg_dict)
