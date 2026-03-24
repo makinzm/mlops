@@ -40,7 +40,7 @@ from src.infrastructure.trainer.backbone_registry import build_backbone, build_c
 logger = logging.getLogger(__name__)
 
 
-class ImageClassificationDataset(Dataset):  # ty:ignore[invalid-argument-type]
+class ImageClassificationDataset(Dataset):
     """画像分類用 PyTorch Dataset。
 
     image_path カラムから画像を読み込み、transform を適用する。
@@ -146,8 +146,8 @@ class VisionTrainer:
 
             # seed 固定（再現性）
             torch.manual_seed(seed)
-            torch.backends.cudnn.deterministic = True  # ty:ignore[possibly-unbound]
-            torch.backends.cudnn.benchmark = False  # ty:ignore[possibly-unbound]
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
             np.random.seed(seed)
 
             train_df = pl.read_parquet(fold_dir / "train.parquet")

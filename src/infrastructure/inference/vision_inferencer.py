@@ -107,7 +107,7 @@ class VisionInferencer:
             with torch.no_grad():
                 for img_path in image_paths:
                     image = Image.open(img_path).convert("RGB")
-                    tensor = transform(image).unsqueeze(0).to(device)  # ty:ignore[unresolved-attribute]
+                    tensor = transform(image).unsqueeze(0).to(device)
                     output = model(tensor)
                     probs = torch.softmax(output, dim=1).cpu().numpy()[0]
                     # binary: class 1 の確率

@@ -21,8 +21,8 @@ from pathlib import Path
 import numpy as np
 import torch
 from PIL import Image
-from pytorch_grad_cam import GradCAM  # ty:ignore[unresolved-import]
-from pytorch_grad_cam.utils.image import show_cam_on_image  # ty:ignore[unresolved-import]
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
 from torch import nn
 from torchvision import transforms
 
@@ -42,7 +42,7 @@ def _find_target_layer(model: nn.Module, backbone_name: str) -> list[nn.Module]:
     if backbone_name.startswith("vit"):
         # ViT: encoder の最終ブロックの LayerNorm
         encoder = model[0].encoder  # ty:ignore[not-subscriptable]
-        return [encoder.layers[-1].ln_1]  # ty:ignore[not-subscriptable]
+        return [encoder.layers[-1].ln_1]
 
     # CNN 系: 最終 Conv2d レイヤーを探す
     last_conv = None
@@ -113,7 +113,7 @@ class GradCAMAnalyzerImpl:
 
         for img_path in image_paths:
             image = Image.open(img_path).convert("RGB")
-            input_tensor = transform(image).unsqueeze(0).to(device)  # ty:ignore[unresolved-attribute]
+            input_tensor = transform(image).unsqueeze(0).to(device)
 
             # GradCAM 生成
             grayscale_cam = cam(input_tensor=input_tensor)

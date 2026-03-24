@@ -71,7 +71,7 @@ def _build_resnet(
     weights = "DEFAULT" if pretrained else None
     model = model_fn(weights=weights)
     num_features = model.fc.in_features
-    model.fc = nn.Identity()  # ty:ignore[invalid-assignment]
+    model.fc = nn.Identity()
     return model, num_features
 
 
@@ -86,7 +86,7 @@ def _build_vit(
     weights = "DEFAULT" if pretrained else None
     model = model_fn(weights=weights)
     num_features = model.heads.head.in_features  # ty:ignore[unresolved-attribute]
-    model.heads = nn.Identity()  # ty:ignore[invalid-assignment]
+    model.heads = nn.Identity()
     return model, num_features  # ty:ignore[invalid-return-type]
 
 
@@ -98,8 +98,8 @@ def _build_mobilenet_v2(pretrained: bool) -> tuple[nn.Module, int]:
     """
     weights = "DEFAULT" if pretrained else None
     model = models.mobilenet_v2(weights=weights)
-    num_features = model.classifier[1].in_features  # ty:ignore[not-subscriptable, unresolved-attribute]
-    model.classifier = nn.Identity()  # ty:ignore[invalid-assignment]
+    num_features = model.classifier[1].in_features
+    model.classifier = nn.Identity()
     return model, num_features
 
 
@@ -114,7 +114,7 @@ def _build_mobilenet_v3(
     weights = "DEFAULT" if pretrained else None
     model = model_fn(weights=weights)
     num_features = model.classifier[0].in_features  # ty:ignore[not-subscriptable, unresolved-attribute]
-    model.classifier = nn.Identity()  # ty:ignore[invalid-assignment]
+    model.classifier = nn.Identity()
     return model, num_features
 
 

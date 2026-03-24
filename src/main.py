@@ -148,7 +148,7 @@ def _run_train(cfg: DictConfig) -> None:
             from src.infrastructure.trainer.vision_trainer import VisionTrainer
 
             raw_cfg: dict[str, Any] = OmegaConf.to_container(trainer_cfg, resolve=True)  # ty:ignore[invalid-assignment]
-            trainer = VisionTrainer(raw_cfg)  # ty:ignore[invalid-argument-type]
+            trainer = VisionTrainer(raw_cfg)
         else:
             raise ValueError(
                 f"trainer.type='{trainer_type}' は未登録です。 登録済み: ['lgbm', 'vision']"
@@ -260,7 +260,7 @@ def _run_inference(cfg: DictConfig) -> None:
         if inferencer_type == "vision":
             from src.infrastructure.inference.vision_inferencer import VisionInferencer
 
-            inferencer = VisionInferencer()  # ty:ignore[invalid-assignment]
+            inferencer = VisionInferencer()
         else:
             inferencer = LightGBMInferencer()
         submission_path = InferenceUseCase(inferencer=inferencer, git_repo=git_repo).run(
