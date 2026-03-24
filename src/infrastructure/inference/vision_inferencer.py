@@ -4,10 +4,7 @@ VisionInferencer — Vision モデルによる推論実装。
 model_dir 配下の fold_N/model.pt を全て読み込み、
 各 fold の予測値（class 1 の確率）を平均して返す。
 
-設計上の注意:
-- model_dir は fold_N/ サブディレクトリを持つルートディレクトリ。
-- model.pt には model_state_dict と backbone_config が保存されている。
-- 複数 fold の予測値は単純平均する（アンサンブル戦略は UseCase 層で担う）。
+torch_utils/model_builder の load_checkpoint() でチェックポイント形式を統一。
 
 時間計算量: O(F * N * C) — F: fold 数, N: テストサンプル数, C: モデル計算量
 空間計算量: O(F * N + P) — 予測結果 + モデルパラメータ
@@ -21,11 +18,9 @@ import numpy as np
 import polars as pl
 import torch
 from PIL import Image
-from torch import nn
 from torchvision import transforms
 
-from src.domain.model.backbone import BackboneConfig
-from src.infrastructure.trainer.backbone_registry import build_backbone, build_classifier
+from src.infrastructure.trainer.torch_utils.model_builder import load_checkpoint
 
 
 class VisionInferencer:
@@ -41,21 +36,18 @@ class VisionInferencer:
     ) -> np.ndarray:
         """全 fold のモデルで予測し、fold 間の平均を返す。
 
-        Vision モデルの場合、feature_cols は ["image_path"] を期待する。
-        test_df の最初のカラム（image_path）から画像を読み込んで推論する。
-
         Args:
             model_dir: fold_N/ サブディレクトリを持つモデルルートディレクトリ
             test_df: 予測対象 DataFrame（image_path カラムを持つ）
             feature_cols: ["image_path"] を期待
 
         Returns:
-            shape=(n_test,) の予測値 ndarray（fold 間の平均、class 1 の確率）
+            shape=(n_test,) の予測値 ndarray
 
         Raises:
             ValueError: fold ディレクトリが存在しない場合
 
-        時間計算量: O(F * N * C) — F: fold数, N: テスト画像数, C: 1 画像の推論
+        時間計算量: O(F * N * C)
         空間計算量: O(F * N + P)
         """
         fold_dirs = sorted(
@@ -70,7 +62,6 @@ class VisionInferencer:
 
         image_col = feature_cols[0] if feature_cols else "image_path"
         image_paths: list[str] = test_df[image_col].to_list()
-
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         fold_preds: list[np.ndarray] = []
 
@@ -79,22 +70,15 @@ class VisionInferencer:
             if not model_path.exists():
                 continue
 
-            checkpoint = torch.load(model_path, map_location=device, weights_only=True)
-            backbone_cfg = checkpoint["backbone_config"]
-
-            config = BackboneConfig(
-                backbone_name=backbone_cfg["backbone_name"],
-                num_classes=backbone_cfg["num_classes"],
-                pretrained=False,
-                image_size=backbone_cfg.get("image_size", 32),
-            )
-            backbone, num_features = build_backbone(config)
-            classifier = build_classifier(num_features, config.num_classes)
-            model = nn.Sequential(backbone, nn.Flatten(), classifier).to(device)
-            model.load_state_dict(checkpoint["model_state_dict"])
+            model = load_checkpoint(model_path, device=device)
             model.eval()
 
-            image_size = config.image_size
+            # チェックポイントから image_size を読む
+            checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+            backbone_cfg = checkpoint["backbone_config"]
+            image_size = backbone_cfg.get("image_size", 32)
+            num_classes = backbone_cfg["num_classes"]
+
             transform = transforms.Compose(
                 [
                     transforms.Resize((image_size, image_size)),
@@ -110,8 +94,7 @@ class VisionInferencer:
                     tensor = transform(image).unsqueeze(0).to(device)
                     output = model(tensor)
                     probs = torch.softmax(output, dim=1).cpu().numpy()[0]
-                    # binary: class 1 の確率
-                    if config.num_classes == 2:
+                    if num_classes == 2:
                         predictions.append(float(probs[1]))
                     else:
                         predictions.append(float(probs.max()))

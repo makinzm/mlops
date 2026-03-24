@@ -22,7 +22,6 @@ from PIL import Image
 
 from src.domain.model.backbone import BackboneConfig
 from src.infrastructure.trainer.torch_utils.validation import (
-    ValidationIssue,
     validate_training_inputs,
 )
 
@@ -54,15 +53,19 @@ def _make_fold_data(
     train_paths = _create_images(tmp_path / "images" / "train", num_train, image_size)
     valid_paths = _create_images(tmp_path / "images" / "valid", num_valid, image_size)
 
-    pl.DataFrame({
-        "image_path": train_paths,
-        "label": rng.integers(labels_range[0], labels_range[1], num_train).tolist(),
-    }).write_parquet(fold_dir / "train.parquet")
+    pl.DataFrame(
+        {
+            "image_path": train_paths,
+            "label": rng.integers(labels_range[0], labels_range[1], num_train).tolist(),
+        }
+    ).write_parquet(fold_dir / "train.parquet")
 
-    pl.DataFrame({
-        "image_path": valid_paths,
-        "label": rng.integers(labels_range[0], labels_range[1], num_valid).tolist(),
-    }).write_parquet(fold_dir / "test.parquet")
+    pl.DataFrame(
+        {
+            "image_path": valid_paths,
+            "label": rng.integers(labels_range[0], labels_range[1], num_valid).tolist(),
+        }
+    ).write_parquet(fold_dir / "test.parquet")
 
     return tmp_path / "preprocess"
 
@@ -71,7 +74,12 @@ class TestValidateTrainingInputs:
     def test_valid_inputs_return_no_errors(self, tmp_path: Path) -> None:
         """正しい入力ではエラーが返らないこと。"""
         preprocess_dir = _make_fold_data(tmp_path)
-        config = BackboneConfig(backbone_name="simple_cnn", num_classes=2, pretrained=False, image_size=32)
+        config = BackboneConfig(
+            backbone_name="simple_cnn",
+            num_classes=2,
+            pretrained=False,
+            image_size=32,
+        )
         issues = validate_training_inputs(
             preprocess_output_dir=preprocess_dir,
             backbone_config=config,
@@ -102,14 +110,18 @@ class TestValidateTrainingInputs:
         """存在しない画像パスがある場合にエラーを検出すること。"""
         fold_dir = tmp_path / "preprocess" / "fold_0"
         fold_dir.mkdir(parents=True)
-        pl.DataFrame({
-            "image_path": ["/nonexistent/image.png"],
-            "label": [0],
-        }).write_parquet(fold_dir / "train.parquet")
-        pl.DataFrame({
-            "image_path": ["/nonexistent/image2.png"],
-            "label": [1],
-        }).write_parquet(fold_dir / "test.parquet")
+        pl.DataFrame(
+            {
+                "image_path": ["/nonexistent/image.png"],
+                "label": [0],
+            }
+        ).write_parquet(fold_dir / "train.parquet")
+        pl.DataFrame(
+            {
+                "image_path": ["/nonexistent/image2.png"],
+                "label": [1],
+            }
+        ).write_parquet(fold_dir / "test.parquet")
 
         config = BackboneConfig(backbone_name="simple_cnn", num_classes=2, pretrained=False)
         issues = validate_training_inputs(
@@ -141,7 +153,12 @@ class TestValidateTrainingInputs:
     def test_image_size_mismatch_warning(self, tmp_path: Path) -> None:
         """画像サイズとモデル期待サイズが大きく異なる場合に警告すること。"""
         preprocess_dir = _make_fold_data(tmp_path, image_size=512)
-        config = BackboneConfig(backbone_name="simple_cnn", num_classes=2, pretrained=False, image_size=32)
+        config = BackboneConfig(
+            backbone_name="simple_cnn",
+            num_classes=2,
+            pretrained=False,
+            image_size=32,
+        )
         issues = validate_training_inputs(
             preprocess_output_dir=preprocess_dir,
             backbone_config=config,
@@ -156,7 +173,12 @@ class TestValidateTrainingInputs:
     def test_error_message_contains_fix_suggestion(self, tmp_path: Path) -> None:
         """エラーメッセージに修正方法が含まれること。"""
         preprocess_dir = _make_fold_data(tmp_path, image_size=512)
-        config = BackboneConfig(backbone_name="simple_cnn", num_classes=2, pretrained=False, image_size=32)
+        config = BackboneConfig(
+            backbone_name="simple_cnn",
+            num_classes=2,
+            pretrained=False,
+            image_size=32,
+        )
         issues = validate_training_inputs(
             preprocess_output_dir=preprocess_dir,
             backbone_config=config,

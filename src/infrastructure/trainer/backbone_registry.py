@@ -143,8 +143,23 @@ BACKBONE_REGISTRY: dict[str, _BuilderFn] = {
 }
 
 
+def register_backbone(name: str, builder: _BuilderFn) -> None:
+    """カスタム backbone をレジストリに登録する。
+
+    Args:
+        name: backbone 名
+        builder: (pretrained: bool) -> (nn.Module, int) のビルダー関数
+
+    時間計算量: O(1)
+    空間計算量: O(1)
+    """
+    BACKBONE_REGISTRY[name] = builder
+
+
 def build_backbone(config: BackboneConfig) -> tuple[nn.Module, int]:
     """BackboneConfig から backbone を構築し、(module, 出力特徴量次元) を返す。
+
+    custom_cnn の場合は CustomCNNModule を構築する。
 
     時間計算量: O(1) — モデル構築のみ
     空間計算量: O(P) — P はモデルパラメータ数
@@ -153,6 +168,14 @@ def build_backbone(config: BackboneConfig) -> tuple[nn.Module, int]:
         ValueError: 未登録の backbone 名の場合
     """
     name = config.backbone_name
+
+    # custom_cnn は特別扱い: CustomCNNConfig から動的に構築
+    if name == "custom_cnn" and config.custom_cnn_config is not None:
+        from src.infrastructure.trainer.custom_cnn import CustomCNNModule
+
+        module = CustomCNNModule(config.custom_cnn_config)  # ty:ignore[invalid-argument-type]
+        return module, module.output_features
+
     if name not in BACKBONE_REGISTRY:
         registered = sorted(BACKBONE_REGISTRY.keys())
         raise ValueError(f"未登録の backbone: '{name}'. 登録済み: {registered}")

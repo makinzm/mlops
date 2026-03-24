@@ -9,18 +9,22 @@ RESOLVER_REGISTRY に登録されていない Resolver / Method への呼び出�
 import polars as pl
 
 from src.domain.data.preprocessor import StepResult
+from src.infrastructure.preprocessor.resolvers.image_resolver import ImageResolver
 from src.infrastructure.preprocessor.resolvers.output_resolver import OutputResolver
 from src.infrastructure.preprocessor.resolvers.polars_resolver import PolarsResolver
 from src.infrastructure.preprocessor.resolvers.sklearn_resolver import SklearnResolver
 
 # Resolver 名 → Resolver クラスのマッピング
 # 新しい Resolver を追加する場合はここに登録する
-ResolverType = type[PolarsResolver] | type[SklearnResolver] | type[OutputResolver]
+ResolverType = (
+    type[PolarsResolver] | type[SklearnResolver] | type[OutputResolver] | type[ImageResolver]
+)
 
 RESOLVER_REGISTRY: dict[str, ResolverType] = {
     "polars": PolarsResolver,
     "sklearn": SklearnResolver,
     "output": OutputResolver,
+    "image": ImageResolver,
 }
 
 

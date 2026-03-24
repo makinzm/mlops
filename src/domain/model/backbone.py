@@ -29,6 +29,7 @@ class BackboneConfig:
     num_classes: int
     pretrained: bool = True
     image_size: int = 224
+    custom_cnn_config: object | None = None  # CustomCNNConfig（循環 import 回避のため object）
 
 
 @dataclass

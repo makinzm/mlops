@@ -13,7 +13,6 @@ Custom CNN のテスト。
 
 from __future__ import annotations
 
-import pytest
 import torch
 from torch import nn
 
@@ -122,6 +121,7 @@ class TestCustomCNNModule:
 class TestRegisterBackbone:
     def test_register_and_build(self) -> None:
         """register_backbone() で登録した backbone が build_backbone() で構築できること。"""
+
         def my_builder(pretrained: bool) -> tuple[nn.Module, int]:
             return nn.Sequential(nn.Conv2d(3, 8, 3, padding=1), nn.AdaptiveAvgPool2d(1)), 8
 

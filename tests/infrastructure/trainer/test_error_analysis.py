@@ -17,7 +17,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import polars as pl
 
 from src.infrastructure.trainer.error_analysis import write_error_analysis
 
@@ -49,7 +48,15 @@ class TestWriteErrorAnalysis:
             output_path=out_path,
         )
         df = pd.read_parquet(out_path)
-        for col in ["target", "predicted_proba", "predicted_label", "is_correct", "error_magnitude", "sample_type"]:
+        required = [
+            "target",
+            "predicted_proba",
+            "predicted_label",
+            "is_correct",
+            "error_magnitude",
+            "sample_type",
+        ]
+        for col in required:
             assert col in df.columns, f"カラム '{col}' が存在しません"
 
     def test_sample_types_are_valid(self, tmp_path: Path) -> None:

@@ -27,7 +27,8 @@ image_path_col: image_path
 
 # ── backbone ──────────────────────────────────────
 # 利用可能: resnet18, resnet34, resnet50, vit_b_16, vit_b_32,
-#           mobilenet_v2, mobilenet_v3_small, mobilenet_v3_large, simple_cnn
+#           mobilenet_v2, mobilenet_v3_small, mobilenet_v3_large,
+#           simple_cnn, custom_cnn
 backbone:
   name: resnet50
   pretrained: true
@@ -58,6 +59,25 @@ uv run python -m src usecase=train recipe=vision_resnet50
 
 # 全レシピ実行（training/ 配下の全 YAML）
 uv run python -m src usecase=train
+```
+
+### 入力バリデーション
+
+学習開始前に自動的に以下が検証されます:
+
+- fold ディレクトリの存在
+- parquet ファイルの存在と必要カラム
+- 画像パスの存在（サンプルチェック）
+- ラベルの範囲（0 から num_classes-1）
+- 画像サイズとモデル期待サイズの比較
+- backbone 出力次元の整合性
+
+エラー時は修正方法を含むメッセージが表示されます:
+
+```
+[image_path] fold_0/train.parquet: 3/10 枚の画像が見つかりません。
+例: /data/images/missing.png
+修正: 画像ファイルのパスが正しいか確認してください。
 ```
 
 ### 出力ディレクトリ
@@ -129,7 +149,6 @@ data/2026/Q1/gradcam/titanic/
 ├── metainfo.yaml
 ├── README.md
 ├── gradcam_image_0001.png
-├── gradcam_image_0002.png
 └── ...
 ```
 
@@ -146,10 +165,169 @@ data/2026/Q1/gradcam/titanic/
 | `mobilenet_v2` | 3.4M | 224 | モバイル向け軽量 |
 | `mobilenet_v3_small` | 2.5M | 224 | MobileNetV3 Small |
 | `mobilenet_v3_large` | 5.5M | 224 | MobileNetV3 Large |
+| `custom_cnn` | 設定依存 | 設定依存 | Config-driven カスタム CNN |
 
-## 6. seed 再現性
+## 6. Custom CNN の作り方
 
-以下の設定により再現性が保証される:
+### 方法 A: Config で定義
+
+```yaml
+backbone:
+  name: custom_cnn
+  image_size: 64
+  custom_cnn:
+    layers:
+      - {out_channels: 32, kernel_size: 3, padding: 1, batch_norm: true, pool: max}
+      - {out_channels: 64, kernel_size: 3, padding: 1, batch_norm: true, pool: null}
+      - {out_channels: 64, kernel_size: 3, padding: 1, batch_norm: true, pool: max}
+    skip_connections:
+      - {type: residual, from_layer: 0, to_layer: 1}
+    adaptive_pool_size: 1
+```
+
+#### ConvBlockConfig パラメータ
+
+| パラメータ | デフォルト | 説明 |
+|-----------|-----------|------|
+| `out_channels` | (必須) | 出力チャネル数 |
+| `kernel_size` | 3 | カーネルサイズ |
+| `stride` | 1 | ストライド |
+| `padding` | 1 | パディング |
+| `activation` | "relu" | 活性化関数（"relu", "silu", "gelu"）|
+| `batch_norm` | true | BatchNorm を使うか |
+| `pool` | "max" | プーリング（"max", "avg", null） |
+
+#### SkipConnectionConfig パラメータ
+
+| パラメータ | デフォルト | 説明 |
+|-----------|-----------|------|
+| `type` | (必須) | "residual" or "inverted_bottleneck" |
+| `from_layer` | 0 | 接続元レイヤーインデックス |
+| `to_layer` | 1 | 接続先レイヤーインデックス |
+| `expansion_factor` | 1 | inverted_bottleneck の拡張係数 |
+
+#### ResNet ライクな構成例
+
+```yaml
+backbone:
+  name: custom_cnn
+  image_size: 64
+  custom_cnn:
+    layers:
+      - {out_channels: 64, kernel_size: 7, stride: 2, padding: 3, pool: max}
+      - {out_channels: 64, kernel_size: 3, pool: null}
+      - {out_channels: 64, kernel_size: 3, pool: null}
+      - {out_channels: 128, kernel_size: 3, pool: max}
+    skip_connections:
+      - {type: residual, from_layer: 0, to_layer: 1}
+      - {type: residual, from_layer: 1, to_layer: 2}
+```
+
+#### MobileNet ライクな構成例（Inverted Bottleneck）
+
+```yaml
+backbone:
+  name: custom_cnn
+  image_size: 64
+  custom_cnn:
+    layers:
+      - {out_channels: 16, kernel_size: 3}
+      - {out_channels: 24, kernel_size: 3, pool: null}
+      - {out_channels: 32, kernel_size: 3}
+    skip_connections:
+      - {type: inverted_bottleneck, from_layer: 0, to_layer: 1, expansion_factor: 6}
+```
+
+### 方法 B: Python コードで登録
+
+```python
+from torch import nn
+from src.infrastructure.trainer.backbone_registry import register_backbone
+
+def my_custom_backbone(pretrained: bool) -> tuple[nn.Module, int]:
+    """カスタム backbone を返す。(module, output_features) のタプル。"""
+    model = nn.Sequential(
+        nn.Conv2d(3, 64, 3, padding=1),
+        nn.ReLU(),
+        nn.AdaptiveAvgPool2d(1),
+    )
+    return model, 64
+
+register_backbone("my_backbone", my_custom_backbone)
+```
+
+その後、設定ファイルで `backbone.name: my_backbone` を指定して使用できます。
+
+## 7. Data Augmentation
+
+Albumentations を使った Data Augmentation に対応しています。
+
+### 設定例
+
+```yaml
+augmentation:
+  train:
+    - {name: HorizontalFlip, probability: 0.5}
+    - {name: RandomBrightnessContrast, probability: 0.3,
+       params: {brightness_limit: 0.2}}
+    - {name: ShiftScaleRotate, probability: 0.3}
+    - {name: CoarseDropout, probability: 0.2,
+       params: {max_holes: 8, max_height: 8, max_width: 8}}
+  valid: []  # 空 = Resize + Normalize のみ
+```
+
+### 利用可能な transform
+
+Albumentations の全 transform が利用可能です。
+`name` には Albumentations のクラス名を、`params` にはコンストラクタ引数を指定します。
+
+よく使う transform:
+
+| name | 説明 | 主なパラメータ |
+|------|------|--------------|
+| `HorizontalFlip` | 左右反転 | - |
+| `VerticalFlip` | 上下反転 | - |
+| `RandomBrightnessContrast` | 明度・コントラスト | brightness_limit, contrast_limit |
+| `ShiftScaleRotate` | 移動・拡縮・回転 | shift_limit, scale_limit, rotate_limit |
+| `CoarseDropout` | ランダムマスク | max_holes, max_height, max_width |
+| `GaussNoise` | ガウスノイズ | var_limit |
+| `Blur` | ぼかし | blur_limit |
+
+### Albumentations 未インストール時
+
+torchvision の Resize + ToTensor + Normalize にフォールバックします（警告表示）。
+
+## 8. 画像前処理（Preprocessing）
+
+前処理パイプラインで `image` resolver を使って画像のバリデーションとメタデータ取得ができます。
+
+### 設定例
+
+```yaml
+# conf/competition/<name>/preprocess/image_base.yaml
+steps:
+  - resolver: image
+    method: validate_images
+    kwargs:
+      column: image_path
+
+  - resolver: image
+    method: create_image_metadata
+    kwargs:
+      column: image_path
+```
+
+### メソッド一覧
+
+| メソッド | 説明 | 追加カラム |
+|---------|------|----------|
+| `validate_images` | 画像パスの存在確認 | `__image_valid__` (bool) |
+| `create_image_metadata` | 画像のサイズ・チャネル取得 | `__image_width__`, `__image_height__`, `__image_channels__` |
+
+## 9. seed 再現性
+
+以下の設定により再現性が保証されます（`torch_utils/seed.py` で一括管理）:
+
 - `torch.manual_seed(seed)`: PyTorch の乱数シード
 - `torch.backends.cudnn.deterministic = True`: cuDNN の決定性
 - `torch.backends.cudnn.benchmark = False`: cuDNN ベンチマーク無効化

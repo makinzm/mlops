@@ -43,9 +43,23 @@ _MODELS_DIR_GITIGNORE = """\
 !*/
 """
 
-# プロジェクトルート（src/ の親ディレクトリ）
-# src/usecase/training/remote_train.py → .parent x4 → プロジェクトルート
-_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+
+def _find_project_root() -> Path:
+    """pyproject.toml を含むディレクトリを走査して project root を検出する。
+
+    時間計算量: O(D) — D: ディレクトリ深度
+    空間計算量: O(1)
+    """
+    current = Path(__file__).resolve().parent
+    for _ in range(10):
+        if (current / "pyproject.toml").exists():
+            return current
+        current = current.parent
+    # フォールバック: 従来の相対パス
+    return Path(__file__).parent.parent.parent.parent
+
+
+_PROJECT_ROOT = _find_project_root()
 
 
 @dataclass
@@ -150,6 +164,7 @@ class RemoteTrainUseCase:
         bootstrap = (
             f'python -c "{gcs_download_py}"'
             " && pip install -q hydra-core omegaconf python-dotenv pydantic jinja2 mlflow"
+            " torch torchvision albumentations grad-cam Pillow lightgbm polars"
             " && python /app/scripts/remote_entrypoint.py"
         )
         # run_custom_job は送信 + 完了待機を1メソッドで行う

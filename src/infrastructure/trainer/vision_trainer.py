@@ -1,21 +1,19 @@
 """
 VisionTrainer — Trainer Protocol の Vision モデル実装。
 
-設計:
-  fit_folds() が fold ごとに以下を実行する:
-    1. preprocess_output_dir/fold_{N}/train.parquet / test.parquet を読み込み
-    2. ImageClassificationDataset で画像をオンデマンドに読み込む
-    3. backbone_registry で backbone + classifier を構築
-    4. PyTorch の訓練ループ（epoch × batch）
-    5. fold_{N}/model.pt に保存
-    6. validation セットで予測 → oof_train.parquet
-    7. error_analysis.parquet（TP/TN/FP/FN サンプリング）
-  CV スコアを集計して TrainResult を返す。
+torch_utils/ のユーティリティを使って fold ごとの学習を実行する。
+  1. 入力バリデーション（validate_training_inputs）
+  2. seed 固定（fix_seed）
+  3. Dataset 構築（ImageClassificationDataset）
+  4. モデル構築（build_vision_model）
+  5. 学習ループ（run_training_loop）
+  6. チェックポイント保存（save_checkpoint）
+  7. OOF 予測 + error_analysis（write_error_analysis）
 
-  timestamp / commit_hash は TrainUseCase が生成して cfg に含めて渡す。
+timestamp / commit_hash は TrainUseCase が生成して cfg に含めて渡す。
 
-時間計算量: O(E * N * (C_fwd + C_bwd)) — E: エポック数, N: サンプル数, C: モデル計算量
-空間計算量: O(P + B * C * H * W) — P: パラメータ数, B: バッチサイズ, C*H*W: 画像サイズ
+時間計算量: O(F * E * N * C) — F: fold, E: epoch, N: sample, C: model computation
+空間計算量: O(P + B * C * H * W)
 """
 
 from __future__ import annotations
@@ -28,50 +26,26 @@ from typing import Any
 import numpy as np
 import polars as pl
 import torch
-from PIL import Image
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
+from torch.utils.data import DataLoader
 
 from src.domain.model.backbone import BackboneConfig
 from src.domain.model.trainer import FoldResult, TrainResult
-from src.infrastructure.trainer.backbone_registry import build_backbone, build_classifier
+from src.infrastructure.trainer.error_analysis import write_error_analysis
+from src.infrastructure.trainer.torch_utils.augmentation import (
+    build_augmentation_pipeline,
+    build_default_transform,
+)
+from src.infrastructure.trainer.torch_utils.dataset import ImageClassificationDataset
+from src.infrastructure.trainer.torch_utils.model_builder import (
+    build_vision_model,
+    save_checkpoint,
+)
+from src.infrastructure.trainer.torch_utils.seed import fix_seed
+from src.infrastructure.trainer.torch_utils.training_loop import run_training_loop
+from src.infrastructure.trainer.torch_utils.validation import validate_training_inputs
 
 logger = logging.getLogger(__name__)
-
-
-class ImageClassificationDataset(Dataset):
-    """画像分類用 PyTorch Dataset。
-
-    image_path カラムから画像を読み込み、transform を適用する。
-
-    時間計算量: __getitem__ は O(H * W) — 画像読み込み + transform
-    空間計算量: O(C * H * W) — 1 画像分
-    """
-
-    def __init__(
-        self,
-        image_paths: list[str],
-        labels: list[int],
-        transform: transforms.Compose | None = None,
-    ) -> None:
-        self._image_paths = image_paths
-        self._labels = labels
-        self._transform = transform or transforms.Compose(
-            [
-                transforms.Resize((32, 32)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
-
-    def __len__(self) -> int:
-        return len(self._image_paths)
-
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:  # ty:ignore[invalid-method-override]
-        image = Image.open(self._image_paths[idx]).convert("RGB")
-        tensor = self._transform(image)
-        return tensor, self._labels[idx]
 
 
 class VisionTrainer:
@@ -91,14 +65,10 @@ class VisionTrainer:
     ) -> TrainResult:
         """fold ごとに学習し TrainResult を返す。
 
-        時間計算量: O(F * E * N * C) — F: fold数, E: エポック, N: サンプル, C: モデル計算
+        時間計算量: O(F * E * N * C)
         空間計算量: O(P + B * C * H * W)
         """
         dcfg = self._cfg
-        fold_dirs = sorted(preprocess_output_dir.glob("fold_*"))
-        if not fold_dirs:
-            raise ValueError(f"fold ディレクトリが見つかりません: {preprocess_output_dir}")
-
         timestamp: str = cfg.get("_timestamp", datetime.now().strftime("%Y%m%dT%H%M%S"))
         commit_hash: str = cfg.get("_commit_hash", "unknown")
         job_id: str = cfg.get("job_id", "vision")
@@ -108,35 +78,80 @@ class VisionTrainer:
         num_classes: int = int(dcfg["num_classes"])
         n_error: int = int(dcfg.get("report", {}).get("n_error_samples", 50))
 
-        # backbone 設定
         backbone_cfg = dcfg.get("backbone", {})
         backbone_name: str = backbone_cfg.get("name", "simple_cnn")
         pretrained: bool = backbone_cfg.get("pretrained", False)
         image_size: int = int(backbone_cfg.get("image_size", 32))
 
-        # 学習設定
         training_cfg = dcfg.get("training", {})
         num_epochs: int = int(training_cfg.get("num_epochs", 10))
         batch_size: int = int(training_cfg.get("batch_size", 32))
         learning_rate: float = float(training_cfg.get("learning_rate", 0.001))
         num_workers: int = int(training_cfg.get("num_workers", 0))
 
+        # CustomCNNConfig の構築
+        custom_cnn_config = None
+        if backbone_name == "custom_cnn" and backbone_cfg.get("custom_cnn"):
+            from src.domain.model.custom_cnn import (
+                ConvBlockConfig,
+                CustomCNNConfig,
+                SkipConnectionConfig,
+            )
+
+            raw_cnn = backbone_cfg["custom_cnn"]
+            layers = [ConvBlockConfig(**layer) for layer in raw_cnn.get("layers", [])]
+            skip_connections = None
+            if raw_cnn.get("skip_connections"):
+                skip_connections = [
+                    SkipConnectionConfig(**sc) for sc in raw_cnn["skip_connections"]
+                ]
+            custom_cnn_config = CustomCNNConfig(
+                layers=layers,
+                skip_connections=skip_connections,
+                adaptive_pool_size=raw_cnn.get("adaptive_pool_size", 1),
+            )
+
         backbone_config = BackboneConfig(
             backbone_name=backbone_name,
             num_classes=num_classes,
             pretrained=pretrained,
             image_size=image_size,
+            custom_cnn_config=custom_cnn_config,
         )
 
-        transform = transforms.Compose(
-            [
-                transforms.Resize((image_size, image_size)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
+        # 入力バリデーション
+        issues = validate_training_inputs(
+            preprocess_output_dir=preprocess_output_dir,
+            backbone_config=backbone_config,
+            target_col=target_col,
+            image_path_col=image_path_col,
+            num_classes=num_classes,
         )
+        errors = [i for i in issues if i.severity == "error"]
+        if errors:
+            msg = "\n".join(f"[{e.field}] {e.message}" for e in errors)
+            raise ValueError(f"入力バリデーションエラー:\n{msg}")
+        for w in [i for i in issues if i.severity == "warning"]:
+            logger.warning(f"[{w.field}] {w.message}")
+
+        # Augmentation
+        aug_cfg = dcfg.get("augmentation")
+        if aug_cfg:
+            from src.domain.model.augmentation import AugmentationConfig, AugmentTransformConfig
+
+            train_transforms = [AugmentTransformConfig(**t) for t in aug_cfg.get("train", [])]
+            valid_transforms = [AugmentTransformConfig(**t) for t in aug_cfg.get("valid", [])]
+            aug_config = AugmentationConfig(
+                train_transforms=train_transforms,
+                valid_transforms=valid_transforms,
+            )
+            train_transform, valid_transform = build_augmentation_pipeline(aug_config, image_size)
+        else:
+            train_transform = build_default_transform(image_size)
+            valid_transform = build_default_transform(image_size)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        fold_dirs = sorted(preprocess_output_dir.glob("fold_*"))
         fold_results: list[FoldResult] = []
 
         for fold_dir in fold_dirs:
@@ -144,11 +159,7 @@ class VisionTrainer:
             fold_out = output_dir / f"fold_{fold_idx}"
             fold_out.mkdir(parents=True, exist_ok=True)
 
-            # seed 固定（再現性）
-            torch.manual_seed(seed)
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
-            np.random.seed(seed)
+            fix_seed(seed)
 
             train_df = pl.read_parquet(fold_dir / "train.parquet")
             valid_df = pl.read_parquet(fold_dir / "test.parquet")
@@ -158,8 +169,12 @@ class VisionTrainer:
             valid_paths = valid_df[image_path_col].to_list()
             valid_labels = valid_df[target_col].to_list()
 
-            train_dataset = ImageClassificationDataset(train_paths, train_labels, transform)
-            valid_dataset = ImageClassificationDataset(valid_paths, valid_labels, transform)
+            train_dataset = ImageClassificationDataset(
+                train_paths, train_labels, torchvision_transform=train_transform
+            )
+            valid_dataset = ImageClassificationDataset(
+                valid_paths, valid_labels, torchvision_transform=valid_transform
+            )
 
             train_loader = DataLoader(
                 train_dataset,
@@ -175,72 +190,26 @@ class VisionTrainer:
                 num_workers=num_workers,
             )
 
-            # モデル構築
-            backbone, num_features = build_backbone(backbone_config)
-            classifier = build_classifier(num_features, num_classes)
-            model = nn.Sequential(backbone, nn.Flatten(), classifier).to(device)
-
+            model = build_vision_model(backbone_config).to(device)
             criterion = nn.CrossEntropyLoss()
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-            # 学習ループ
-            best_valid_acc = 0.0
-            for epoch in range(num_epochs):
-                model.train()
-                train_loss = 0.0
-                train_correct = 0
-                train_total = 0
+            metrics = run_training_loop(
+                model=model,
+                train_loader=train_loader,
+                valid_loader=valid_loader,
+                criterion=criterion,
+                optimizer=optimizer,
+                num_epochs=num_epochs,
+                device=device,
+            )
 
-                for images, labels in train_loader:
-                    images, labels = images.to(device), labels.to(device)
-                    optimizer.zero_grad()
-                    outputs = model(images)
-                    loss = criterion(outputs, labels)
-                    loss.backward()
-                    optimizer.step()
+            # ベストモデル保存
+            model.load_state_dict(metrics.best_model_state_dict)
+            model_path = fold_out / "model.pt"
+            save_checkpoint(model, backbone_config, model_path)
 
-                    train_loss += loss.item() * images.size(0)
-                    _, predicted = outputs.max(1)
-                    train_correct += predicted.eq(labels).sum().item()
-                    train_total += labels.size(0)
-
-                # Validation
-                model.eval()
-                valid_correct = 0
-                valid_total = 0
-                with torch.no_grad():
-                    for images, labels in valid_loader:
-                        images, labels = images.to(device), labels.to(device)
-                        outputs = model(images)
-                        _, predicted = outputs.max(1)
-                        valid_correct += predicted.eq(labels).sum().item()
-                        valid_total += labels.size(0)
-
-                valid_acc = valid_correct / max(valid_total, 1)
-                if valid_acc >= best_valid_acc:
-                    best_valid_acc = valid_acc
-                    # ベストモデル保存
-                    model_path = fold_out / "model.pt"
-                    torch.save(
-                        {
-                            "model_state_dict": model.state_dict(),
-                            "backbone_config": {
-                                "backbone_name": backbone_name,
-                                "num_classes": num_classes,
-                                "pretrained": pretrained,
-                                "image_size": image_size,
-                            },
-                        },
-                        model_path,
-                    )
-
-                train_acc = train_correct / max(train_total, 1)
-                logger.info(
-                    f"Fold {fold_idx} Epoch {epoch + 1}/{num_epochs}: "
-                    f"train_acc={train_acc:.4f}, valid_acc={valid_acc:.4f}"
-                )
-
-            # OOF 予測保存
+            # OOF 予測
             model.eval()
             all_probs: list[np.ndarray] = []
             with torch.no_grad():
@@ -251,35 +220,28 @@ class VisionTrainer:
                     all_probs.append(probs)
 
             valid_probs = np.concatenate(all_probs, axis=0)
-            # binary の場合は class 1 の確率
-            if num_classes == 2:
-                predicted_proba = valid_probs[:, 1]
-            else:
-                predicted_proba = valid_probs.max(axis=1)
+            predicted_proba = valid_probs[:, 1] if num_classes == 2 else valid_probs.max(axis=1)
 
             oof_df = valid_df.select([target_col, image_path_col]).to_pandas()
             oof_df["predicted_proba"] = predicted_proba
             oof_path = fold_out / "oof_train.parquet"
             pl.from_pandas(oof_df).write_parquet(oof_path)
 
-            # error_analysis 生成
+            # error_analysis
             ea_path = fold_out / "error_analysis.parquet"
-            _write_error_analysis(
-                valid_df.to_pandas(),
-                predicted_proba,
-                valid_labels,
-                target_col,
-                image_path_col,
-                n_error,
-                ea_path,
+            write_error_analysis(
+                predictions=predicted_proba,
+                labels=np.array(valid_labels),
+                n_samples=n_error,
+                output_path=ea_path,
+                extra_columns={image_path_col: valid_paths},
             )
 
-            model_path = fold_out / "model.pt"
             fold_results.append(
                 FoldResult(
                     fold_idx=fold_idx,
-                    train_score=train_acc,
-                    valid_score=best_valid_acc,
+                    train_score=metrics.final_train_accuracy,
+                    valid_score=metrics.best_valid_accuracy,
                     metric="accuracy",
                     model_path=model_path,
                     oof_path=oof_path,
@@ -291,9 +253,6 @@ class VisionTrainer:
             )
 
         scores = [f.valid_score for f in fold_results]
-        cv_mean = float(np.mean(scores))
-        cv_std = float(np.std(scores))
-
         return TrainResult(
             job_id=job_id,
             timestamp=timestamp,
@@ -301,63 +260,8 @@ class VisionTrainer:
             trainer_type="vision",
             output_dir=output_dir,
             fold_results=fold_results,
-            cv_mean_score=cv_mean,
-            cv_std_score=cv_std,
+            cv_mean_score=float(np.mean(scores)),
+            cv_std_score=float(np.std(scores)),
             metric="accuracy",
             seed=seed,
         )
-
-
-def _write_error_analysis(
-    df: object,
-    preds: np.ndarray,
-    labels: list[int],
-    target_col: str,
-    image_path_col: str,
-    n_samples: int,
-    out_path: Path,
-) -> None:
-    """4 種サンプリング（TP/TN/FP/FN）を out_path に保存する。
-
-    時間計算量: O(N log N) — ソートあり
-    空間計算量: O(N)
-    """
-    import pandas as pd
-
-    y = np.array(labels)
-    threshold = 0.5
-    pred_label = (preds >= threshold).astype(int)
-
-    result = pd.DataFrame(
-        {
-            image_path_col: pd.DataFrame(df)[image_path_col].values,
-            "target": y,
-            "predicted_proba": preds,
-            "predicted_label": pred_label,
-            "is_correct": (pred_label == y).astype(int),
-            "error_magnitude": np.abs(preds - y),
-        }
-    )
-
-    def _label(t: int, p: int) -> str:
-        if t == 1 and p == 1:
-            return "TP"
-        if t == 0 and p == 0:
-            return "TN"
-        if t == 0 and p == 1:
-            return "FP"
-        return "FN"
-
-    result["sample_type"] = [_label(int(t), int(p)) for t, p in zip(y, pred_label)]
-
-    samples: list[pd.DataFrame] = []
-    for stype in ("TP", "TN", "FP", "FN"):
-        subset = result[result["sample_type"] == stype]
-        if stype in ("FP", "FN"):
-            subset = subset.sort_values("error_magnitude", ascending=False)
-        else:
-            subset = subset.sort_values("error_magnitude", ascending=True)
-        samples.append(subset.head(n_samples))
-
-    combined = pd.concat(samples, ignore_index=True)
-    pl.from_pandas(combined).write_parquet(out_path)

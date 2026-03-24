@@ -44,10 +44,12 @@ class TestImageClassificationDataset:
     def test_getitem_returns_tensor_and_label(self, tmp_path: Path) -> None:
         """__getitem__ が (Tensor, int) を返すこと。"""
         paths = _create_images(tmp_path / "imgs", 3)
-        transform = transforms.Compose([
-            transforms.Resize((32, 32)),
-            transforms.ToTensor(),
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.Resize((32, 32)),
+                transforms.ToTensor(),
+            ]
+        )
         ds = ImageClassificationDataset(paths, [0, 1, 0], torchvision_transform=transform)
         tensor, label = ds[0]
         assert isinstance(tensor, torch.Tensor)
@@ -63,11 +65,13 @@ class TestImageClassificationDataset:
             return  # albumentations 未インストール時はスキップ
 
         paths = _create_images(tmp_path / "imgs", 3)
-        album_transform = A.Compose([
-            A.Resize(32, 32),
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ToTensorV2(),
-        ])
+        album_transform = A.Compose(
+            [
+                A.Resize(32, 32),
+                A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # ty:ignore[invalid-argument-type]
+                ToTensorV2(),
+            ]
+        )
         ds = ImageClassificationDataset(paths, [0, 1, 0], albumentations_transform=album_transform)
         tensor, label = ds[0]
         assert isinstance(tensor, torch.Tensor)

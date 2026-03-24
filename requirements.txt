@@ -6,6 +6,10 @@ aiohttp==3.13.3
     # via fsspec
 aiosignal==1.4.0
     # via aiohttp
+albucore==0.0.24
+    # via albumentations
+albumentations==2.0.8
+    # via mlops
 alembic==1.18.0
     # via mlflow
 annotated-doc==0.0.4
@@ -246,6 +250,8 @@ networkx==3.6.1
     # via torch
 numpy==2.4.1
     # via
+    #   albucore
+    #   albumentations
     #   contourpy
     #   grad-cam
     #   lightgbm
@@ -253,6 +259,7 @@ numpy==2.4.1
     #   mlflow
     #   mlops
     #   opencv-python
+    #   opencv-python-headless
     #   pandas
     #   scikit-learn
     #   scipy
@@ -304,6 +311,10 @@ omegaconf==2.3.0
     #   mlops
 opencv-python==4.13.0.92
     # via grad-cam
+opencv-python-headless==4.13.0.92
+    # via
+    #   albucore
+    #   albumentations
 opentelemetry-api==1.39.1
     # via
     #   mlflow-skinny
@@ -391,6 +402,7 @@ pycparser==2.23 ; implementation_name != 'PyPy' and platform_python_implementati
     # via cffi
 pydantic==2.12.5
     # via
+    #   albumentations
     #   fastapi
     #   google-cloud-aiplatform
     #   google-genai
@@ -424,6 +436,7 @@ pywin32==311 ; sys_platform == 'win32'
     # via docker
 pyyaml==6.0.3
     # via
+    #   albumentations
     #   mlflow-skinny
     #   mlops
     #   omegaconf
@@ -449,6 +462,7 @@ scikit-learn==1.8.0
     #   mlops
 scipy==1.16.3
     # via
+    #   albumentations
     #   lightgbm
     #   mlflow
     #   scikit-learn
@@ -458,6 +472,8 @@ setuptools==80.9.0
     # via
     #   lightning-utilities
     #   torch
+simsimd==6.5.16
+    # via albucore
 six==1.17.0
     # via
     #   kaggle
@@ -474,6 +490,8 @@ sqlparse==0.5.5
     # via mlflow-skinny
 starlette==0.50.0
     # via fastapi
+stringzilla==4.6.0
+    # via albucore
 sympy==1.14.0
     # via torch
 tenacity==9.1.2
