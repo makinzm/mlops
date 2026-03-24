@@ -65,13 +65,13 @@ class PushNotebookUseCase:
             - cfg.notebook.src_dataset: src/ を格納する Dataset slug
             - cfg.notebook.enable_gpu: GPU 有効化フラグ
             - cfg.notebook.enable_internet: インターネット接続フラグ
-            - cfg.kaggle_username: ユーザー名
-        kaggle_api: NotebookPlatformPort を実装したオブジェクト。
+            - cfg.platform_username: ユーザー名
+        platform_api: NotebookPlatformPort を実装したオブジェクト。
     """
 
-    def __init__(self, cfg: DictConfig, kaggle_api: NotebookPlatformPort) -> None:
+    def __init__(self, cfg: DictConfig, platform_api: NotebookPlatformPort) -> None:
         self._cfg = cfg
-        self._api = kaggle_api
+        self._api = platform_api
         self._renderer = NotebookRenderer()
 
     def execute(self) -> PushResult:
@@ -104,7 +104,7 @@ class PushNotebookUseCase:
     def _render_notebook(self, output_dir: Path, competition: str) -> Path:
         """Jinja2 テンプレートから notebook.ipynb を生成する。"""
         src_dataset: str = str(self._cfg.notebook.src_dataset)
-        kaggle_username: str = str(self._cfg.get("kaggle_username", ""))
+        platform_username: str = str(self._cfg.get("platform_username", ""))
         enable_internet: bool = bool(self._cfg.notebook.enable_internet)
         notebook_path = output_dir / "notebook.ipynb"
         recipe: str = str(self._cfg.notebook.get("recipe", "all_after_download"))
@@ -116,7 +116,7 @@ class PushNotebookUseCase:
             output_path=notebook_path,
             competition=competition,
             src_dataset=src_dataset,
-            kaggle_username=kaggle_username,
+            kaggle_username=platform_username,
             enable_internet=enable_internet,
             recipe=recipe,
             extra_datasets=extra_datasets,
@@ -129,7 +129,7 @@ class PushNotebookUseCase:
 
         Notebook プラットフォームの kernels push コマンドが要求するフォーマットに従う。
         """
-        username: str = str(self._cfg.get("kaggle_username", ""))
+        username: str = str(self._cfg.get("platform_username", ""))
         kernel_slug: str = str(self._cfg.notebook.kernel_slug)
         src_dataset: str = str(self._cfg.notebook.src_dataset)
         enable_gpu: bool = bool(self._cfg.notebook.enable_gpu)

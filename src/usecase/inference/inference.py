@@ -134,7 +134,7 @@ class InferenceUseCase:
                 # "latest" を含むパスを最新タイムスタンプに解決
                 model_dir = resolve_latest_dir(str(model_path_str))
                 # モデルパスが fold_N/model.* の場合は親ディレクトリを渡す
-                if model_dir.suffix == ".lgbm":
+                if model_dir.is_file():
                     model_dir = model_dir.parent.parent
                 pred = self._inferencer.predict_folds(model_dir, test_df, feature_cols)
                 predictions.append(pred)

@@ -1,8 +1,8 @@
 """
 SourceDatasetRepository — ソースコード Dataset のリポジトリ操作プロトコル。
 
-Kaggle 固有の実装を usecase 層から隠蔽し、
-将来 HuggingFace Hub / GCS 等への差し替えをこの Protocol を実装するだけで対応できるようにする。
+プラットフォーム固有の実装を usecase 層から隠蔽し、
+将来別のプラットフォームへの差し替えをこの Protocol を実装するだけで対応できるようにする。
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ class DatasetMetadata:
     """Dataset のメタデータ。
 
     Attributes:
-        title: Dataset のタイトル（Kaggle 上での表示名）。
-        owner_slug: Dataset を所有する Kaggle ユーザー名。
+        title: Dataset のタイトル（プラットフォーム上での表示名）。
+        owner_slug: Dataset を所有するユーザー名。
         dataset_slug: Dataset の URL slug（例: "mlops-pipeline-src"）。
         license_name: ライセンス名（デフォルト: CC0-1.0）。
     """
@@ -30,7 +30,7 @@ class DatasetMetadata:
 
     @property
     def full_id(self) -> str:
-        """Kaggle Dataset の完全 ID（owner_slug/dataset_slug 形式）を返す。"""
+        """Dataset の完全 ID（owner_slug/dataset_slug 形式）を返す。"""
         return f"{self.owner_slug}/{self.dataset_slug}"
 
 
@@ -39,7 +39,7 @@ class SourceDatasetRepository(Protocol):
     """ソースコードの Dataset リポジトリ操作の抽象インターフェース。
 
     UseCase 層はこの Protocol にのみ依存し、
-    Kaggle / HuggingFace / GCS などの具体的な実装を知らない。
+    具体的なプラットフォーム実装を知らない。
     """
 
     def create(self, staging_dir: Path, metadata: DatasetMetadata) -> None:

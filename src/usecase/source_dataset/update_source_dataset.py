@@ -1,13 +1,13 @@
 """
-UpdateSourceDatasetUseCase — 既存 Kaggle Dataset のバージョンを更新する。
+UpdateSourceDatasetUseCase — 既存 Dataset のバージョンを更新する。
 
 処理フロー:
 1. .staging/source_dataset_{timestamp}/ を作成する
-2. src/ を .kaggleignore でフィルタしながらステージングにコピーする
+2. src/ を ignore パターンでフィルタしながらステージングにコピーする
 3. SourceDatasetRepository.update_version() を呼ぶ
 4. 成功したらステージングを削除する（失敗時は残す）
 
-UseCase 層は SourceDatasetRepository Protocol にのみ依存し、Kaggle を知らない。
+UseCase 層は SourceDatasetRepository Protocol にのみ依存し、プラットフォームを知らない。
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class UpdateSourceDatasetUseCase:
-    """既存 Kaggle Dataset の新バージョンを作成するユースケース。
+    """既存 Dataset の新バージョンを作成するユースケース。
 
     Args:
         cfg: Hydra DictConfig。以下のキーを使用する:
@@ -38,10 +38,10 @@ class UpdateSourceDatasetUseCase:
             - cfg.source_dataset.dataset_slug: Dataset の slug
             - cfg.source_dataset.title: Dataset のタイトル
             - cfg.source_dataset.license_name: ライセンス名
-            - cfg.source_dataset.kaggleignore: .kaggleignore ファイルパス（省略可）
+            - cfg.source_dataset.ignorefile: ignore ファイルパス（省略可）
             - cfg.source_dataset.version_message: バージョンの説明
             - cfg.staging_dir: ステージングルートディレクトリ
-            - cfg.kaggle_username: Kaggle ユーザー名
+            - cfg.platform_username: プラットフォームのユーザー名
         repository: SourceDatasetRepository を実装したオブジェクト。
     """
 
@@ -50,7 +50,7 @@ class UpdateSourceDatasetUseCase:
         self._repository = repository
 
     def execute(self) -> None:
-        """src/ と conf/ を Kaggle Dataset の新バージョンとしてアップロードする。
+        """src/ と conf/ を Dataset の新バージョンとしてアップロードする。
 
         Raises:
             RuntimeError: repository.update_version() が失敗した場合（ステージングを残す）。
@@ -61,7 +61,7 @@ class UpdateSourceDatasetUseCase:
             resolve_latest_dir(str(conf_dir_raw)) if conf_dir_raw else src_dir.parent / "conf"
         )
         staging_root = Path(str(self._cfg.staging_dir))
-        ignore_file_raw = self._cfg.source_dataset.get("kaggleignore")
+        ignore_file_raw = self._cfg.source_dataset.get("ignorefile")
         ignore_file_path = Path(str(ignore_file_raw)) if ignore_file_raw else None
         version_message: str = str(
             self._cfg.source_dataset.get("version_message", "update source code")
@@ -69,7 +69,7 @@ class UpdateSourceDatasetUseCase:
 
         metadata = DatasetMetadata(
             title=str(self._cfg.source_dataset.title),
-            owner_slug=str(self._cfg.get("kaggle_username") or ""),
+            owner_slug=str(self._cfg.get("platform_username") or ""),
             dataset_slug=str(self._cfg.source_dataset.dataset_slug),
             license_name=str(self._cfg.source_dataset.get("license_name", "CC0-1.0")),
         )
@@ -85,7 +85,7 @@ class UpdateSourceDatasetUseCase:
         logger.info("Staging src/ and conf/ to %s", staging_dir)
         copy_to_staging(src_dir, conf_dir, staging_dir, patterns, requirements_path, extra_dirs)
 
-        logger.info("Updating Kaggle Dataset: %s (version: %s)", metadata.full_id, version_message)
+        logger.info("Updating Dataset: %s (version: %s)", metadata.full_id, version_message)
         try:
             self._repository.update_version(
                 staging_dir=staging_dir,

@@ -7,8 +7,8 @@ def resolve_latest_dir(path_str: str) -> Path:
     """パス文字列中の 'latest' を最新タイムスタンプディレクトリに解決する。
 
     例）
-      .../titanic_preprocess/latest/train_out
-      → .../titanic_preprocess/20260315T180000/train_out
+      .../{job_id}_preprocess/latest/train_out
+      → .../{job_id}_preprocess/20260315T180000/train_out
 
     'latest' が含まれない場合はそのまま Path に変換して返す。
 

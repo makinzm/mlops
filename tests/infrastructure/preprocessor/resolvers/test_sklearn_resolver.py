@@ -274,3 +274,120 @@ class TestTargetEncode:
     def test_supported_methods_includes_target_encode(self, resolver: SklearnResolver) -> None:
         """supported_methods() に target_encode が含まれること。"""
         assert "target_encode" in resolver.supported_methods()
+
+
+class TestTargetEncodeSuffix:
+    """
+    なぜこのテストが必要か:
+    - 既存の target_encode は元カラム名を上書きするため、
+      前処理後に元のカテゴリカラムと TE カラムを区別できない。
+    - suffix/prefix を追加することで `Sex` → `Sex_te` のように区別可能にする。
+    - デフォルト（空文字）で後方互換を保証し、既存パイプラインが壊れないことを確認する。
+    - encoder dict のキーは元カラム名のまま保持し、transform 時に suffix を適用する。
+    """
+
+    def test_suffix_renames_columns(self, resolver: SklearnResolver) -> None:
+        """suffix="_te" で Sex_te カラムが生成されること。
+
+        suffix 指定時は元カラム Sex は保持されたまま、
+        新しいカラム Sex_te が追加される。
+        """
+        df = pl.DataFrame(
+            {
+                "Sex": ["male", "female", "male", "female"],
+                "Survived": [0, 1, 0, 1],
+            }
+        )
+        result, _ = resolver.target_encode(
+            df, columns=["Sex"], target_col="Survived", n_splits=2, seed=42, suffix="_te"
+        )
+        assert "Sex_te" in result.columns
+        assert "Sex" in result.columns
+        assert result["Sex_te"].dtype in (pl.Float32, pl.Float64)
+        assert result["Sex_te"].null_count() == 0
+
+    def test_prefix_renames_columns(self, resolver: SklearnResolver) -> None:
+        """prefix="enc_" で enc_Sex カラムが生成されること。"""
+        df = pl.DataFrame(
+            {
+                "Sex": ["male", "female", "male", "female"],
+                "Survived": [0, 1, 0, 1],
+            }
+        )
+        result, _ = resolver.target_encode(
+            df, columns=["Sex"], target_col="Survived", n_splits=2, seed=42, prefix="enc_"
+        )
+        assert "enc_Sex" in result.columns
+        assert "Sex" in result.columns
+
+    def test_suffix_and_prefix_combined(self, resolver: SklearnResolver) -> None:
+        """prefix="te_" + suffix="_v1" で te_Sex_v1 カラムが生成されること。"""
+        df = pl.DataFrame(
+            {
+                "Sex": ["male", "female", "male", "female"],
+                "Survived": [0, 1, 0, 1],
+            }
+        )
+        result, _ = resolver.target_encode(
+            df,
+            columns=["Sex"],
+            target_col="Survived",
+            n_splits=2,
+            seed=42,
+            suffix="_v1",
+            prefix="te_",
+        )
+        assert "te_Sex_v1" in result.columns
+        assert "Sex" in result.columns
+
+    def test_no_suffix_backward_compatible(self, resolver: SklearnResolver) -> None:
+        """デフォルト（suffix/prefix なし）で元カラム上書きの既存動作が維持されること。"""
+        df = pl.DataFrame(
+            {
+                "Sex": ["male", "female", "male", "female"],
+                "Survived": [0, 1, 0, 1],
+            }
+        )
+        result, _ = resolver.target_encode(
+            df, columns=["Sex"], target_col="Survived", n_splits=2, seed=42
+        )
+        # suffix/prefix なし → 元カラムが float に上書きされる（既存動作）
+        assert result["Sex"].dtype in (pl.Float32, pl.Float64)
+        assert result["Sex"].null_count() == 0
+
+    def test_transform_suffix_applied(self, resolver: SklearnResolver) -> None:
+        """transform_target_encode でも suffix が適用されること。"""
+        train_df = pl.DataFrame(
+            {
+                "Sex": ["male", "female", "male", "female"],
+                "Survived": [0, 1, 0, 1],
+            }
+        )
+        test_df = pl.DataFrame({"Sex": ["male", "female"]})
+        _, full_encoder = resolver.target_encode(
+            train_df, columns=["Sex"], target_col="Survived", n_splits=2, seed=42, suffix="_te"
+        )
+        result = resolver.transform_target_encode(
+            test_df, encoder=full_encoder, columns=["Sex"], suffix="_te"
+        )
+        assert "Sex_te" in result.columns
+        assert "Sex" in result.columns
+        assert result["Sex_te"].dtype in (pl.Float32, pl.Float64)
+
+    def test_encoder_keys_unchanged(self, resolver: SklearnResolver) -> None:
+        """suffix 指定しても encoder dict のキーは元カラム名のままであること。
+
+        encoder のキーが変わると transform 時にキー不一致で壊れるため、
+        suffix はカラム名出力のみに影響し、encoder 内部は変更しない。
+        """
+        df = pl.DataFrame(
+            {
+                "Sex": ["male", "female", "male", "female"],
+                "Survived": [0, 1, 0, 1],
+            }
+        )
+        _, encoder = resolver.target_encode(
+            df, columns=["Sex"], target_col="Survived", n_splits=2, seed=42, suffix="_te"
+        )
+        assert "Sex" in encoder
+        assert "Sex_te" not in encoder

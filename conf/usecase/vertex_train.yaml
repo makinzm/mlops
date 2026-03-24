@@ -2,4 +2,4 @@
 usecase: remote_train
 
 defaults:
-  - /gcp: vertex
+  - /cloud: vertex

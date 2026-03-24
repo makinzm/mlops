@@ -34,7 +34,7 @@ def _make_cfg(tmp_path: Path) -> object:
                 "enable_internet": True,
             },
             "output_dir": str(tmp_path / "push_notebook"),
-            "kaggle_username": "testuser",
+            "platform_username": "testuser",
         }
     )
 
@@ -46,7 +46,7 @@ class TestNotebookGeneration:
         """execute() が notebook.ipynb を生成すること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         assert result.notebook_path.exists(), "notebook.ipynb が生成されていない"
         assert result.notebook_path.name == "notebook.ipynb"
@@ -55,7 +55,7 @@ class TestNotebookGeneration:
         """生成された Notebook が3セルで構成されること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cells = notebook["cells"]
@@ -65,7 +65,7 @@ class TestNotebookGeneration:
         """全セルが code タイプであること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         for i, cell in enumerate(notebook["cells"]):
@@ -77,7 +77,7 @@ class TestNotebookGeneration:
         """セル1に pip install が含まれること（環境セットアップセル）。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell1_source = "".join(notebook["cells"][0]["source"])
@@ -93,7 +93,7 @@ class TestNotebookGeneration:
         生成するため、strip() 後の startswith('#') で判定しないと pip に渡されてしまう。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell1_source = "".join(notebook["cells"][0]["source"])
@@ -107,7 +107,7 @@ class TestNotebookGeneration:
         """セル2に competition slug（titanic）が含まれること（設定上書きセル）。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell2_source = "".join(notebook["cells"][1]["source"])
@@ -119,7 +119,7 @@ class TestNotebookGeneration:
         """セル3に NotebookPipelineRunner の呼び出しが含まれること（実行セル）。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell3_source = "".join(notebook["cells"][2]["source"])
@@ -135,7 +135,7 @@ class TestKernelMetadataGeneration:
         """execute() が kernel-metadata.json を生成すること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         assert result.metadata_path.exists(), "kernel-metadata.json が生成されていない"
         assert result.metadata_path.name == "kernel-metadata.json"
@@ -144,7 +144,7 @@ class TestKernelMetadataGeneration:
         """kernel-metadata.json に必須フィールドが含まれること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         metadata = json.loads(result.metadata_path.read_text())
         for field in ("id", "language", "kernel_type", "is_private", "code_file"):
@@ -154,7 +154,7 @@ class TestKernelMetadataGeneration:
         """kernel-metadata.json の competition_sources に competition slug が設定されること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         metadata = json.loads(result.metadata_path.read_text())
         assert metadata.get("competition_sources") == ["titanic"], (
@@ -165,7 +165,7 @@ class TestKernelMetadataGeneration:
         """kernel-metadata.json の dataset_sources に src_dataset が設定されること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         metadata = json.loads(result.metadata_path.read_text())
         assert "testuser/mlops-pipeline-src" in metadata.get("dataset_sources", []), (
@@ -180,7 +180,7 @@ class TestKaggleApiInteraction:
         """execute() が kernels_push() を1回呼ぶこと。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         usecase.execute()
         mock_api.kernels_push.assert_called_once()
 
@@ -189,7 +189,7 @@ class TestKaggleApiInteraction:
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
         mock_api.kernels_push.side_effect = SystemExit(1)
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         with pytest.raises(RuntimeError):
             usecase.execute()
 
@@ -201,7 +201,7 @@ class TestOutputFiles:
         """execute() が per-directory .gitignore を生成すること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         gitignore = result.notebook_path.parent / ".gitignore"
         assert gitignore.exists(), ".gitignore が生成されていない"
@@ -210,7 +210,7 @@ class TestOutputFiles:
         """execute() が README.md を生成すること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         readme = result.notebook_path.parent / "README.md"
         assert readme.exists(), "README.md が生成されていない"
@@ -230,7 +230,7 @@ class TestNoPipNotebook:
         """enable_internet=True（デフォルト）のとき Cell 1 に _smart_install が含まれること。"""
         cfg = _make_cfg(tmp_path)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)  # ty:ignore[invalid-argument-type]
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)  # ty:ignore[invalid-argument-type]
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell1_source = "".join(notebook["cells"][0]["source"])
@@ -252,11 +252,11 @@ class TestNoPipNotebook:
                 "enable_internet": False,  # ← オフライン
             },
             "output_dir": str(tmp_path / "push_notebook"),
-            "kaggle_username": "testuser",
+            "platform_username": "testuser",
         }
         cfg = OmegaConf.create(raw)
         mock_api = MagicMock()
-        usecase = PushNotebookUseCase(cfg=cfg, kaggle_api=mock_api)
+        usecase = PushNotebookUseCase(cfg=cfg, platform_api=mock_api)
         result = usecase.execute()
         notebook = json.loads(result.notebook_path.read_text())
         cell1_source = "".join(notebook["cells"][0]["source"])

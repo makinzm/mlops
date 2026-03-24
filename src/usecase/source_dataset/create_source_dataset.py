@@ -1,13 +1,13 @@
 """
-CreateSourceDatasetUseCase — src/ を Kaggle Dataset として新規作成する。
+CreateSourceDatasetUseCase — src/ を Dataset として新規作成する。
 
 処理フロー:
 1. .staging/source_dataset_{timestamp}/ を作成する
-2. src/ を .kaggleignore でフィルタしながらステージングにコピーする
+2. src/ を ignore パターンでフィルタしながらステージングにコピーする
 3. SourceDatasetRepository.create() を呼ぶ
 4. 成功したらステージングを削除する（失敗時は残す）
 
-UseCase 層は SourceDatasetRepository Protocol にのみ依存し、Kaggle を知らない。
+UseCase 層は SourceDatasetRepository Protocol にのみ依存し、プラットフォームを知らない。
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class CreateSourceDatasetUseCase:
-    """src/ を Kaggle Dataset として新規作成するユースケース。
+    """src/ を Dataset として新規作成するユースケース。
 
     Args:
         cfg: Hydra DictConfig。以下のキーを使用する:
@@ -38,9 +38,9 @@ class CreateSourceDatasetUseCase:
             - cfg.source_dataset.dataset_slug: Dataset の slug
             - cfg.source_dataset.title: Dataset のタイトル
             - cfg.source_dataset.license_name: ライセンス名
-            - cfg.source_dataset.kaggleignore: .kaggleignore ファイルパス（省略可）
+            - cfg.source_dataset.ignorefile: ignore ファイルパス（省略可）
             - cfg.staging_dir: ステージングルートディレクトリ
-            - cfg.kaggle_username: Kaggle ユーザー名
+            - cfg.platform_username: プラットフォームのユーザー名
         repository: SourceDatasetRepository を実装したオブジェクト。
     """
 
@@ -49,7 +49,7 @@ class CreateSourceDatasetUseCase:
         self._repository = repository
 
     def execute(self) -> None:
-        """src/ と conf/ を Kaggle Dataset として新規作成する。
+        """src/ と conf/ を Dataset として新規作成する。
 
         Raises:
             RuntimeError: repository.create() が失敗した場合（ステージングを残す）。
@@ -60,12 +60,12 @@ class CreateSourceDatasetUseCase:
             resolve_latest_dir(str(conf_dir_raw)) if conf_dir_raw else src_dir.parent / "conf"
         )
         staging_root = Path(str(self._cfg.staging_dir))
-        ignore_file_raw = self._cfg.source_dataset.get("kaggleignore")
+        ignore_file_raw = self._cfg.source_dataset.get("ignorefile")
         ignore_file_path = Path(str(ignore_file_raw)) if ignore_file_raw else None
 
         metadata = DatasetMetadata(
             title=str(self._cfg.source_dataset.title),
-            owner_slug=str(self._cfg.get("kaggle_username") or ""),
+            owner_slug=str(self._cfg.get("platform_username") or ""),
             dataset_slug=str(self._cfg.source_dataset.dataset_slug),
             license_name=str(self._cfg.source_dataset.get("license_name", "CC0-1.0")),
         )
@@ -77,7 +77,7 @@ class CreateSourceDatasetUseCase:
         logger.info("Staging src/ and conf/ to %s", staging_dir)
         copy_to_staging(src_dir, conf_dir, staging_dir, patterns, requirements_path)
 
-        logger.info("Creating Kaggle Dataset: %s", metadata.full_id)
+        logger.info("Creating Dataset: %s", metadata.full_id)
         # 失敗時はステージングを残すため try/except で囲む
         try:
             self._repository.create(staging_dir=staging_dir, metadata=metadata)

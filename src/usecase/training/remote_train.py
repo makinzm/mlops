@@ -70,32 +70,32 @@ class RemoteTrainUseCase:
             - cfg.preprocess_output_dir: 前処理済みデータのパス
             - cfg.output_dir: モデル出力先のルートディレクトリ
             - cfg.recipe: 使用する学習レシピ名
-            - cfg.gcp.project: クラウドプロジェクト ID
-            - cfg.gcp.staging_bucket: オブジェクトストレージバケット URI
-            - cfg.gcp.container_uri: Docker イメージ URI
-            - cfg.gcp.machine_type: マシンタイプ
-            - cfg.gcp.service_account: 学習 SA のメールアドレス
-        gcs: ObjectStorageRepository の実装。
-        vertex: TrainingJobRepository の実装。
+            - cfg.cloud.project: クラウドプロジェクト ID
+            - cfg.cloud.staging_bucket: オブジェクトストレージバケット URI
+            - cfg.cloud.container_uri: Docker イメージ URI
+            - cfg.cloud.machine_type: マシンタイプ
+            - cfg.cloud.service_account: 学習 SA のメールアドレス
+        object_storage: ObjectStorageRepository の実装。
+        training_job: TrainingJobRepository の実装。
         git_repo: GitRepository の実装。
     """
 
     def __init__(
         self,
         cfg: DictConfig,
-        gcs: ObjectStorageRepository,
-        vertex: TrainingJobRepository,
+        object_storage: ObjectStorageRepository,
+        training_job: TrainingJobRepository,
         git_repo: GitRepository,
     ) -> None:
         self._cfg = cfg
-        self._gcs = gcs
-        self._vertex = vertex
+        self._object_storage = object_storage
+        self._training_job = training_job
         self._git_repo = git_repo
 
     def execute(self) -> RemoteTrainResult:
         cfg = self._cfg
         job_id = str(cfg.job_id)
-        recipe = str(cfg.get("recipe", "lgbm"))
+        recipe = str(cfg.get("recipe", "base"))
         competition = str(cfg.competition.name)
         timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
         commit_hash = self._git_repo.get_commit_hash()
@@ -104,7 +104,8 @@ class RemoteTrainUseCase:
         preprocess_dir = resolve_latest_dir(str(cfg.preprocess_output_dir))
 
         # 2. オブジェクトストレージ URI を確定
-        bucket_base = str(cfg.gcp.staging_bucket).rstrip("/")
+        cloud_cfg = cfg.cloud
+        bucket_base = str(cloud_cfg.staging_bucket).rstrip("/")
         gcs_code_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/code"
         gcs_data_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/data"
         gcs_model_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/models"
@@ -112,13 +113,13 @@ class RemoteTrainUseCase:
         # 3. src/ + conf/ + scripts/ をオブジェクトストレージにアップロード
         #    Docker イメージにはコードを含めず、オブジェクトストレージ経由で渡す
         logger.info(f"Uploading code to {gcs_code_uri}")
-        self._gcs.upload_dir(_PROJECT_ROOT / "src", f"{gcs_code_uri}/src")
-        self._gcs.upload_dir(_PROJECT_ROOT / "conf", f"{gcs_code_uri}/conf")
-        self._gcs.upload_dir(_PROJECT_ROOT / "scripts", f"{gcs_code_uri}/scripts")
+        self._object_storage.upload_dir(_PROJECT_ROOT / "src", f"{gcs_code_uri}/src")
+        self._object_storage.upload_dir(_PROJECT_ROOT / "conf", f"{gcs_code_uri}/conf")
+        self._object_storage.upload_dir(_PROJECT_ROOT / "scripts", f"{gcs_code_uri}/scripts")
 
         # 4. オブジェクトストレージにデータをアップロード
         logger.info(f"Uploading preprocessed data to {gcs_data_uri}")
-        self._gcs.upload_dir(preprocess_dir, gcs_data_uri)
+        self._object_storage.upload_dir(preprocess_dir, gcs_data_uri)
 
         # 5. リモート学習ジョブを送信
         #    コンテナイメージを使う場合、command で:
@@ -149,17 +150,17 @@ class RemoteTrainUseCase:
         bootstrap = (
             f'python -c "{gcs_download_py}"'
             " && pip install -q hydra-core omegaconf python-dotenv pydantic jinja2 mlflow"
-            " && python /app/scripts/vertex_entrypoint.py"
+            " && python /app/scripts/remote_entrypoint.py"
         )
         # run_custom_job は送信 + 完了待機を1メソッドで行う
-        result = self._vertex.run_custom_job(
+        result = self._training_job.run_custom_job(
             display_name=f"{job_id}-{timestamp}",
-            container_uri=str(cfg.gcp.container_uri),
+            container_uri=str(cloud_cfg.container_uri),
             command=["bash", "-c", bootstrap],
             args=[],
-            machine_type=str(cfg.gcp.machine_type),
+            machine_type=str(cloud_cfg.machine_type),
             env_vars=env_vars,
-            service_account=str(cfg.gcp.service_account),
+            service_account=str(cloud_cfg.service_account),
         )
         remote_job_name = result.resource_name
         logger.info(f"Remote training job completed: {remote_job_name} ({result.state})")
@@ -175,7 +176,7 @@ class RemoteTrainUseCase:
         local_model_dir = job_dir / timestamp
         local_model_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Downloading model artifacts from {gcs_model_uri} to {local_model_dir}")
-        self._gcs.download_dir(gcs_model_uri, local_model_dir)
+        self._object_storage.download_dir(gcs_model_uri, local_model_dir)
 
         # 8. per-job .gitignore を配置
         gitignore_path = job_dir / ".gitignore"
