@@ -188,7 +188,7 @@ class RemoteSubmitUseCase:
         history_base = str(cfg.get("remote_jobs_history_dir", "remote_jobs_history"))
         if not Path(history_base).is_absolute():
             history_base = str(_PROJECT_ROOT / history_base)
-        history_dir = Path(history_base) / competition / f"{job_id}_{timestamp}"
+        history_dir = Path(history_base) / competition / job_id / timestamp
         manifest = JobManifest(
             job_id=job_id,
             competition=competition,
@@ -223,8 +223,7 @@ class RemoteSubmitUseCase:
             f"Remote job submitted: {remote_job_name}\n"
             f"  Console: {console_url}\n"
             f"  manifest: {manifest_path}\n"
-            f"  Download: uv run python -m src usecase=remote_download "
-            f"manifest_path={manifest_path}"
+            f"  Download: uv run python -m src usecase=remote_download"
         )
 
         return RemoteSubmitResult(

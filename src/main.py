@@ -276,6 +276,26 @@ def _run_vertex_submit(cfg: DictConfig) -> None:
     )
 
 
+def _resolve_manifest_path(cfg: DictConfig) -> Path:
+    """manifest_path を解決する。
+
+    manifest_path が指定されていればそのまま返す。
+    未指定の場合は competition + job_id + latest から自動解決する。
+    """
+    from src.usecase._utils import resolve_latest_dir
+
+    explicit = cfg.get("manifest_path")
+    if explicit is not None and str(explicit) != "None":
+        return Path(str(explicit))
+
+    # config から自動解決
+    competition = str(cfg.competition.name)
+    job_id = str(cfg.job_id)
+    history_base = str(cfg.get("remote_jobs_history_dir", "remote_jobs_history"))
+    latest_dir = resolve_latest_dir(f"{history_base}/{competition}/{job_id}/latest")
+    return Path(latest_dir) / "job_manifest.yaml"
+
+
 def _run_vertex_download(cfg: DictConfig) -> None:
     """Vertex AI モデルダウンロード UseCase を実行する（Pipeline から呼ばれる）。"""
     from src.infrastructure.gcp.storage import GCSRepositoryImpl
@@ -290,7 +310,8 @@ def _run_vertex_download(cfg: DictConfig) -> None:
         region=str(cfg.cloud.region),
         staging_bucket=str(cfg.cloud.staging_bucket),
     )
-    manifest_path = Path(str(cfg.manifest_path))
+    manifest_path = _resolve_manifest_path(cfg)
+    logger.info(f"Using manifest: {manifest_path}")
     output_dir = Path(str(cfg.output_dir))
     result = RemoteDownloadUseCase(
         manifest_path=manifest_path,

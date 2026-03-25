@@ -54,8 +54,9 @@ uv run python -m src usecase=pipeline recipe=vertex_fire_and_forget
 ```
 
 実行後、以下が出力される:
-- `remote_jobs_history/{competition}/{job_id}_{timestamp}/job_manifest.yaml` — ジョブ情報
-- `remote_jobs_history/{competition}/{job_id}_{timestamp}/.gitignore` — データ除外設定
+- `remote_jobs_history/{competition}/{job_id}/{timestamp}/job_manifest.yaml` — ジョブ情報
+- `remote_jobs_history/{competition}/{job_id}/{timestamp}/.gitignore` — データ除外設定
+- `remote_jobs_history/{competition}/{job_id}/{timestamp}/.gitkeep` — git 追跡用
 
 ### Step 2: 通知を待つ
 
@@ -69,16 +70,19 @@ Slack/Email 通知が届くまで待機する。通知には以下が含まれ�
 ### Step 3: モデルダウンロード
 
 ```bash
-# manifest_path を指定してダウンロード（パスはジョブ投入時のログに表示される）
+# manifest_path 未指定 → competition + job_id + latest から自動解決
+uv run python -m src usecase=vertex_download
+
+# 特定のジョブを指定する場合
 uv run python -m src usecase=vertex_download \
-  manifest_path=remote_jobs_history/titanic/titanic_lgbm_20260325T143000/job_manifest.yaml
+  manifest_path=remote_jobs_history/titanic/titanic_lgbm/20260325T143000/job_manifest.yaml
 ```
 
 ### Step 4: 推論 -> Kaggle 提出（パイプライン）
 
 ```bash
-uv run python -m src usecase=pipeline recipe=vertex_download_and_push \
-  manifest_path=remote_jobs_history/titanic/titanic_lgbm_20260325T143000/job_manifest.yaml
+# manifest_path 未指定で最新ジョブを自動解決
+uv run python -m src usecase=pipeline recipe=vertex_download_and_push
 ```
 
 このパイプラインは以下を順に実行する:

@@ -166,6 +166,8 @@ class TestRemoteSubmitUseCaseExecute:
         result = usecase.execute()
         assert result.manifest_path.endswith("job_manifest.yaml")
         assert "remote_jobs_history" in result.manifest_path
+        # {job_id}/{timestamp}/ 形式であること（resolve_latest_dir 互換）
+        assert "/titanic_lgbm/" in result.manifest_path
 
     def test_creates_gitignore_and_gitkeep_in_history_dir(self, tmp_path: Path) -> None:
         """remote_jobs_history ディレクトリに .gitignore と .gitkeep が作成されること。"""
