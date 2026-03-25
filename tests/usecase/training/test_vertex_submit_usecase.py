@@ -37,6 +37,7 @@ def _make_cfg(tmp_path: Path) -> DictConfig:
             "preprocess_output_dir": str(processed_dir),
             "recipe": "lgbm",
             "output_dir": str(tmp_path / "models" / "titanic"),
+            "remote_jobs_history_dir": str(tmp_path / "remote_jobs_history"),
             "seed": 42,
             "cloud": {
                 "project": "test-project",
@@ -162,9 +163,10 @@ class TestRemoteSubmitUseCaseExecute:
         )
         result = usecase.execute()
         assert result.manifest_path.endswith("job_manifest.yaml")
+        assert "remote_jobs_history" in result.manifest_path
 
-    def test_creates_gitignore_in_job_dir(self, tmp_path: Path) -> None:
-        """job_id ディレクトリに .gitignore が作成されること。"""
+    def test_creates_gitignore_in_history_dir(self, tmp_path: Path) -> None:
+        """remote_jobs_history ディレクトリに .gitignore が作成されること。"""
         cfg = _make_cfg(tmp_path)
         usecase = RemoteSubmitUseCase(
             cfg=cfg,
@@ -172,7 +174,7 @@ class TestRemoteSubmitUseCaseExecute:
             training_job=_make_mock_vertex(),
             git_repo=_make_mock_git_repo(),
         )
-        usecase.execute()
+        result = usecase.execute()
 
-        job_dir = tmp_path / "models" / "titanic" / "titanic_lgbm"
-        assert (job_dir / ".gitignore").exists()
+        history_dir = Path(result.manifest_path).parent
+        assert (history_dir / ".gitignore").exists()

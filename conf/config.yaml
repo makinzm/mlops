@@ -25,6 +25,7 @@ job_id: null
 # caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
 notification: null
 manifest_path: null
+remote_jobs_history_dir: remote_jobs_history
 
 # gradcam usecase 用パラメータ
 gradcam: null

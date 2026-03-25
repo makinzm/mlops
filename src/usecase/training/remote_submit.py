@@ -194,8 +194,13 @@ class RemoteSubmitUseCase:
         )
         remote_job_name = result.resource_name
 
-        # 7. job_manifest.yaml を保存
-        job_dir = Path(str(cfg.output_dir)) / job_id
+        # 7. job_manifest.yaml を remote_jobs_history/ に保存
+        #    models/ はモデル成果物専用。ジョブ管理情報は分離する。
+        #    タイムスタンプ付きディレクトリで上書き問題を防ぐ。
+        history_base = str(cfg.get("remote_jobs_history_dir", "remote_jobs_history"))
+        if not Path(history_base).is_absolute():
+            history_base = str(_PROJECT_ROOT / history_base)
+        history_dir = Path(history_base) / competition / f"{job_id}_{timestamp}"
         manifest = JobManifest(
             job_id=job_id,
             competition=competition,
@@ -209,19 +214,20 @@ class RemoteSubmitUseCase:
             gcs_model_uri=gcs_model_uri,
             submitted_at=datetime.now().isoformat(),
         )
-        manifest_path = job_dir / "job_manifest.yaml"
+        manifest_path = history_dir / "job_manifest.yaml"
         manifest.save(manifest_path)
         logger.info(f"Job manifest saved: {manifest_path}")
 
-        # 8. per-job .gitignore を配置
-        gitignore_path = job_dir / ".gitignore"
+        # 8. per-directory .gitignore を配置
+        gitignore_path = history_dir / ".gitignore"
         if not gitignore_path.exists():
             gitignore_path.write_text(_MODELS_DIR_GITIGNORE)
 
         logger.info(
             f"Remote job submitted: {remote_job_name}\n"
             f"  manifest: {manifest_path}\n"
-            f"  Download: uv run python -m src usecase=remote_download job_id={job_id}"
+            f"  Download: uv run python -m src usecase=remote_download "
+            f"manifest_path={manifest_path}"
         )
 
         return RemoteSubmitResult(
