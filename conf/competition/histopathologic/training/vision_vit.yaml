@@ -1,7 +1,7 @@
 # @package _global_
 # Histopathologic Cancer Detection — ViT 学習設定
 #
-# vit_b_32 で二値分類する。画像サイズ 96x96（patch_size=32 で 3x3 パッチ）。
+# vit_b_32 で二値分類する。画像サイズ 224x224（torchvision ViT のデフォルト）。
 # pretrained=false（ローカル学習で ImageNet 重みは不要）。
 #
 # 実行例:
@@ -21,7 +21,7 @@ image_path_col: image_path
 backbone:
   name: vit_b_32
   pretrained: false
-  image_size: 96
+  image_size: 224
 
 # ── 学習パラメータ ────────────────────────────────
 training:

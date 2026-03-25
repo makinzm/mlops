@@ -28,6 +28,7 @@ import polars as pl
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from torchvision import transforms
 
 from src.domain.model.backbone import BackboneConfig
 from src.domain.model.trainer import FoldResult, TrainResult
@@ -135,6 +136,7 @@ class VisionTrainer:
             logger.warning(f"[{w.field}] {w.message}")
 
         # Augmentation
+        use_albumentations = False
         aug_cfg = dcfg.get("augmentation")
         if aug_cfg:
             from src.domain.model.augmentation import AugmentationConfig, AugmentTransformConfig
@@ -146,6 +148,8 @@ class VisionTrainer:
                 valid_transforms=valid_transforms,
             )
             train_transform, valid_transform = build_augmentation_pipeline(aug_config, image_size)
+            # albumentations が使われたかを判定（torchvision.transforms.Compose でなければ album）
+            use_albumentations = not isinstance(train_transform, transforms.Compose)
         else:
             train_transform = build_default_transform(image_size)
             valid_transform = build_default_transform(image_size)
@@ -169,12 +173,20 @@ class VisionTrainer:
             valid_paths = valid_df[image_path_col].to_list()
             valid_labels = valid_df[target_col].to_list()
 
-            train_dataset = ImageClassificationDataset(
-                train_paths, train_labels, torchvision_transform=train_transform
-            )
-            valid_dataset = ImageClassificationDataset(
-                valid_paths, valid_labels, torchvision_transform=valid_transform
-            )
+            if use_albumentations:
+                train_dataset = ImageClassificationDataset(
+                    train_paths, train_labels, albumentations_transform=train_transform
+                )
+                valid_dataset = ImageClassificationDataset(
+                    valid_paths, valid_labels, albumentations_transform=valid_transform
+                )
+            else:
+                train_dataset = ImageClassificationDataset(
+                    train_paths, train_labels, torchvision_transform=train_transform
+                )
+                valid_dataset = ImageClassificationDataset(
+                    valid_paths, valid_labels, torchvision_transform=valid_transform
+                )
 
             train_loader = DataLoader(
                 train_dataset,
