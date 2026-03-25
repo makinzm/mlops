@@ -320,7 +320,15 @@ def _run_vertex_download(cfg: DictConfig) -> None:
     )
     manifest_path = _resolve_manifest_path(cfg)
     logger.info(f"Using manifest: {manifest_path}")
-    output_dir = Path(str(cfg.output_dir))
+    # output_dir は trainer config に定義されている。cfg に無ければ trainer config から取得。
+    output_dir_raw = cfg.get("output_dir")
+    if output_dir_raw is None or str(output_dir_raw) == "None":
+        from src.usecase.training.trainer_loader import load_trainer_cfgs
+
+        trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+        output_dir = Path(str(trainer_cfgs[0].output_dir))
+    else:
+        output_dir = Path(str(output_dir_raw))
     result = RemoteDownloadUseCase(
         manifest_path=manifest_path,
         object_storage=gcs,
