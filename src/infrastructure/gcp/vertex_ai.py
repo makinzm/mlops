@@ -109,10 +109,14 @@ class VertexAIRepositoryImpl:
     ) -> TrainingJobResult:
         """カスタムトレーニングジョブを送信し、即座に返す（完了を待たない）。
 
-        run(sync=False) を使用し、ジョブ送信後に即座に戻る。
-        state='SUBMITTED' の TrainingJobResult を返す。
-        ref: https://cloud.google.com/python/docs/reference/aiplatform/latest/google.cloud.aiplatform.CustomJob
+        aiplatform_v1.JobServiceClient.create_custom_job() を直接使用する。
+        高レベル API の job.run() はバックグラウンドスレッドで完了ポーリングを
+        開始するため、プロセスが終了しない。低レベル API なら送信のみで即座に返る。
+
+        ref: https://cloud.google.com/python/docs/reference/aiplatform/latest/google.cloud.aiplatform_v1.services.job_service.JobServiceClient
         """
+        from google.cloud import aiplatform_v1
+
         container_spec: dict[str, object] = {
             "image_uri": container_uri,
             "env": [{"name": k, "value": v} for k, v in env_vars.items()],
@@ -121,29 +125,30 @@ class VertexAIRepositoryImpl:
             container_spec["command"] = command
         if args:
             container_spec["args"] = args
-        worker_pool_specs = [
-            {
-                "machine_spec": {"machine_type": machine_type},
-                "replica_count": 1,
-                "container_spec": container_spec,
-            }
-        ]
-        job = aiplatform.CustomJob(
-            display_name=display_name,
-            worker_pool_specs=worker_pool_specs,
+
+        custom_job = {
+            "display_name": display_name,
+            "job_spec": {
+                "worker_pool_specs": [
+                    {
+                        "machine_spec": {"machine_type": machine_type},
+                        "replica_count": 1,
+                        "container_spec": container_spec,
+                    }
+                ],
+                "service_account": service_account,
+            },
+        }
+
+        client = aiplatform_v1.JobServiceClient(
+            client_options={"api_endpoint": f"{self._region}-aiplatform.googleapis.com"}
         )
-        logger.info(f"Submitting Vertex AI job (async): {display_name}")
+        parent = f"projects/{self._project}/locations/{self._region}"
 
-        # sync=False: ジョブ送信をバックグラウンドスレッドで開始する（完了は待たない）
-        job.run(service_account=service_account, sync=False)
+        logger.info(f"Submitting Vertex AI job: {display_name}")
+        response = client.create_custom_job(request={"parent": parent, "custom_job": custom_job})
 
-        # wait_for_resource_creation(): API がリソースを作成するまで待機する。
-        # sync=False ではバックグラウンドスレッドが API を呼ぶため、
-        # resource_name にアクセスする前にリソース作成完了を待つ必要がある。
-        # ジョブの完了は待たない。
-        job.wait_for_resource_creation()
-
-        resource_name: str = job.resource_name
+        resource_name: str = response.name
         logger.info(f"Job submitted: {resource_name}")
         return TrainingJobResult(
             resource_name=resource_name,
