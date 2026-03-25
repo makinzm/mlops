@@ -304,7 +304,10 @@ def _resolve_manifest_path(cfg: DictConfig) -> Path:
             return Path(latest_dir) / "job_manifest.yaml"
 
     # cfg.job_id が無い or 対応 dir が無い → trainer config から取得
-    trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+    # recipe が pipeline recipe の場合があるため、一時的に除外して全 trainer をロードする
+    cfg_for_trainer = DictConfig(OmegaConf.to_container(cfg, resolve=True))
+    cfg_for_trainer.recipe = None
+    trainer_cfgs = load_trainer_cfgs(cfg_for_trainer, Path(_CONF_DIR))
     job_id = str(trainer_cfgs[0].job_id)
     latest_dir = resolve_latest_dir(f"{history_base}/{competition}/{job_id}/latest")
     return Path(latest_dir) / "job_manifest.yaml"
