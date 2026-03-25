@@ -63,6 +63,11 @@ def _make_mock_vertex() -> MagicMock:
     mock.run_custom_job.return_value = TrainingJobResult(
         resource_name=_FAKE_JOB_NAME, state="SUCCEEDED"
     )
+    mock.build_bootstrap_command.return_value = [
+        "bash",
+        "-c",
+        "echo download && pip install -q deps && python /app/scripts/entrypoint.py",
+    ]
     return mock
 
 
@@ -213,8 +218,8 @@ class TestRemoteTrainUseCaseExecute:
         assert result.gcs_data_uri.startswith("gs://")
         assert result.gcs_model_uri.startswith("gs://")
 
-    def test_command_contains_bootstrap(self, tmp_path: Path) -> None:
-        """command に bootstrap スクリプトが含まれること。"""
+    def test_command_uses_bootstrap_from_infra(self, tmp_path: Path) -> None:
+        """build_bootstrap_command の戻り値が command に渡されること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
         usecase = RemoteTrainUseCase(
@@ -225,14 +230,10 @@ class TestRemoteTrainUseCaseExecute:
         )
         usecase.execute()
 
+        mock_vertex.build_bootstrap_command.assert_called_once()
         submit_call = mock_vertex.run_custom_job.call_args
         command: list[str] = submit_call.kwargs["command"]
-        assert command[0] == "bash"
-        assert command[1] == "-c"
-        bootstrap = command[2]
-        assert "google.cloud" in bootstrap
-        assert "pip install" in bootstrap
-        assert "remote_entrypoint.py" in bootstrap
+        assert command == mock_vertex.build_bootstrap_command.return_value
 
     def test_env_vars_contain_gcs_uris(self, tmp_path: Path) -> None:
         """リモート学習ジョブの env_vars に GCS_DATA_URI と GCS_MODEL_URI が含まれること。"""

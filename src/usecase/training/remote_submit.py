@@ -73,6 +73,7 @@ class RemoteSubmitResult:
     commit_hash: str
     remote_job_name: str
     manifest_path: str
+    console_url: str
 
 
 class RemoteSubmitUseCase:
@@ -168,26 +169,12 @@ class RemoteSubmitUseCase:
                         env_vars[f"SMTP_{key.upper()}"] = str(value)
 
         # 6. ジョブ送信（非同期）
-        gcs_download_py = (
-            "import os; from google.cloud import storage; "
-            f"uri='{gcs_code_uri}'; "
-            "bkt,pfx=uri[5:].split('/',1); "
-            "c=storage.Client(); "
-            "[("
-            "  os.makedirs(os.path.dirname(f'/app/{b.name[len(pfx)+1:]}'),exist_ok=True),"
-            "  b.download_to_filename(f'/app/{b.name[len(pfx)+1:]}')"
-            ") for b in c.list_blobs(bkt,prefix=pfx) if b.name[len(pfx)+1:]]"
-        )
-        bootstrap = (
-            f'python -c "{gcs_download_py}"'
-            " && pip install -q hydra-core omegaconf python-dotenv pydantic jinja2 mlflow"
-            " torch torchvision albumentations grad-cam Pillow lightgbm polars"
-            " && python /app/scripts/remote_entrypoint.py"
-        )
+        #    bootstrap コマンド構築は Infrastructure 層の責務
+        command = self._training_job.build_bootstrap_command(gcs_code_uri)
         result = self._training_job.submit_custom_job(
             display_name=f"{job_id}-{timestamp}",
             container_uri=str(cloud_cfg.container_uri),
-            command=["bash", "-c", bootstrap],
+            command=command,
             args=[],
             machine_type=str(cloud_cfg.machine_type),
             env_vars=env_vars,
@@ -229,8 +216,12 @@ class RemoteSubmitUseCase:
         if not gitkeep_path.exists():
             gitkeep_path.touch()
 
+        # Console URL を TrainingJobRepository 経由で生成
+        console_url = self._training_job.build_console_url(remote_job_name)
+
         logger.info(
             f"Remote job submitted: {remote_job_name}\n"
+            f"  Console: {console_url}\n"
             f"  manifest: {manifest_path}\n"
             f"  Download: uv run python -m src usecase=remote_download "
             f"manifest_path={manifest_path}"
@@ -242,4 +233,5 @@ class RemoteSubmitUseCase:
             commit_hash=commit_hash,
             remote_job_name=remote_job_name,
             manifest_path=str(manifest_path),
+            console_url=console_url,
         )

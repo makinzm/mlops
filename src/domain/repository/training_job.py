@@ -57,6 +57,17 @@ class TrainingJobRepository(Protocol):
         """ジョブの現在のステータスを取得する。"""
         ...
 
+    def build_bootstrap_command(self, code_uri: str) -> list[str]:
+        """コンテナ起動時のブートストラップコマンドを生成する。
+
+        コードダウンロード・依存インストール・エントリーポイント実行を含む。
+        """
+        ...
+
+    def build_console_url(self, job_name: str) -> str:
+        """ジョブの管理コンソール URL を生成する。"""
+        ...
+
     def cancel_job(self, job_name: str) -> None:
         """実行中のジョブをキャンセルする。"""
         ...

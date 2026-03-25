@@ -65,6 +65,8 @@ def _make_mock_vertex() -> MagicMock:
     mock.submit_custom_job.return_value = TrainingJobResult(
         resource_name=_FAKE_JOB_NAME, state="SUBMITTED"
     )
+    mock.build_bootstrap_command.return_value = ["bash", "-c", "echo bootstrap"]
+    mock.build_console_url.return_value = "https://console.example.com/jobs/999"
     return mock
 
 

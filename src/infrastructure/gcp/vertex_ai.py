@@ -179,6 +179,56 @@ class VertexAIRepositoryImpl:
             error_message=error_msg,
         )
 
+    def build_bootstrap_command(self, code_uri: str) -> list[str]:
+        """GCS からコードをダウンロードし、依存をインストールしてエントリーポイントを実行する
+        ブートストラップコマンドを生成する。
+
+        Args:
+            code_uri: コードが格納された GCS URI（例: gs://bucket/jobs/.../code）
+
+        Returns:
+            ["bash", "-c", "<bootstrap script>"]
+
+        時間計算量: O(1)
+        空間計算量: O(1)
+        """
+        gcs_download_py = (
+            "import os; from google.cloud import storage; "
+            f"uri='{code_uri}'; "
+            "bkt,pfx=uri[5:].split('/',1); "
+            "c=storage.Client(); "
+            "[("
+            "  os.makedirs(os.path.dirname(f'/app/{b.name[len(pfx)+1:]}'),exist_ok=True),"
+            "  b.download_to_filename(f'/app/{b.name[len(pfx)+1:]}')"
+            ") for b in c.list_blobs(bkt,prefix=pfx) if b.name[len(pfx)+1:]]"
+        )
+        bootstrap = (
+            f'python -c "{gcs_download_py}"'
+            " && pip install -q hydra-core omegaconf python-dotenv pydantic jinja2 mlflow"
+            " torch torchvision albumentations grad-cam Pillow lightgbm polars"
+            " && python /app/scripts/remote_entrypoint.py"
+        )
+        return ["bash", "-c", bootstrap]
+
+    def build_console_url(self, job_name: str) -> str:
+        """Vertex AI ジョブの Cloud Console URL を生成する。
+
+        Args:
+            job_name: projects/{number}/locations/{region}/customJobs/{id}
+
+        Returns:
+            Cloud Console URL
+
+        時間計算量: O(1)
+        空間計算量: O(1)
+        """
+        parts = job_name.split("/")
+        return (
+            f"https://console.cloud.google.com/vertex-ai/training/custom-jobs"
+            f"/{parts[-1]}"
+            f"?project={parts[1]}&region={parts[3]}"
+        )
+
     def cancel_job(self, job_name: str) -> None:
         """実行中のジョブをキャンセルする。"""
         job = aiplatform.CustomJob.get(job_name)

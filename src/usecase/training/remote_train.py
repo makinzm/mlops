@@ -150,28 +150,13 @@ class RemoteTrainUseCase:
             "MLOPS_COMMIT_HASH": commit_hash,
             "PYTHONPATH": "/app",
         }
-        # オブジェクトストレージからコードをダウンロードする Python ワンライナー
-        gcs_download_py = (
-            "import os; from google.cloud import storage; "
-            f"uri='{gcs_code_uri}'; "
-            "bkt,pfx=uri[5:].split('/',1); "
-            "c=storage.Client(); "
-            "[("
-            "  os.makedirs(os.path.dirname(f'/app/{b.name[len(pfx)+1:]}'),exist_ok=True),"
-            "  b.download_to_filename(f'/app/{b.name[len(pfx)+1:]}')"
-            ") for b in c.list_blobs(bkt,prefix=pfx) if b.name[len(pfx)+1:]]"
-        )
-        bootstrap = (
-            f'python -c "{gcs_download_py}"'
-            " && pip install -q hydra-core omegaconf python-dotenv pydantic jinja2 mlflow"
-            " torch torchvision albumentations grad-cam Pillow lightgbm polars"
-            " && python /app/scripts/remote_entrypoint.py"
-        )
+        # bootstrap コマンド構築は Infrastructure 層の責務
+        command = self._training_job.build_bootstrap_command(gcs_code_uri)
         # run_custom_job は送信 + 完了待機を1メソッドで行う
         result = self._training_job.run_custom_job(
             display_name=f"{job_id}-{timestamp}",
             container_uri=str(cloud_cfg.container_uri),
-            command=["bash", "-c", bootstrap],
+            command=command,
             args=[],
             machine_type=str(cloud_cfg.machine_type),
             env_vars=env_vars,
