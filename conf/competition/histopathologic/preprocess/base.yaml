@@ -13,10 +13,10 @@ job_id: histopathologic_preprocess
 
 inputs:
   - id: raw_labels
-    path: data/2026/Q1/raw/histopathologic-cancer-detection/train_labels.csv
+    path: data/2026/Q1/raw/histopathologic/train_labels.csv
     format: csv
   - id: raw_test
-    path: data/2026/Q1/raw/histopathologic-cancer-detection/sample_submission.csv
+    path: data/2026/Q1/raw/histopathologic/sample_submission.csv
     format: csv
 
 output_dir: data/2026/Q1/processed
@@ -41,7 +41,7 @@ steps:
     from: raw_labels
     polars:
       method: format_column
-      template: data/2026/Q1/raw/histopathologic-cancer-detection/train/{id}.tif
+      template: data/2026/Q1/raw/histopathologic/train/{id}.tif
       source_col: id
       output_col: image_path
 
@@ -60,7 +60,7 @@ steps:
     from: raw_test
     polars:
       method: format_column
-      template: data/2026/Q1/raw/histopathologic-cancer-detection/test/{id}.tif
+      template: data/2026/Q1/raw/histopathologic/test/{id}.tif
       source_col: id
       output_col: image_path
 
