@@ -1,0 +1,27 @@
+commit_hash: 8c8da25fc49fa75b4128f0edeca148ed6085fe34
+dag_path: pipeline_dag.html
+executor_used: local
+job_id: histopathologic_preprocess
+output_dir: data/2026/Q1/processed/histopathologic_preprocess/20260325T130228
+step_results:
+- method: format_column
+  reason: null
+  resolver: polars
+  status: ok
+- method: format_column
+  reason: null
+  resolver: polars
+  status: ok
+- method: stratified_subsample
+  reason: null
+  resolver: polars
+  status: ok
+- method: output
+  reason: null
+  resolver: output
+  status: ok
+- method: output
+  reason: null
+  resolver: output
+  status: ok
+timestamp: '2026-03-25T13:02:28.681763'

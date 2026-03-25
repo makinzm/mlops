@@ -1,0 +1,27 @@
+job_id: histopathologic_custom_cnn
+timestamp: 20260325T130230
+commit_hash: 8c8da25fc49fa75b4128f0edeca148ed6085fe34
+trainer_type: vision
+metric: accuracy
+cv_mean_score: 0.847778897850837
+cv_std_score: 0.011698003056293833
+seed: 42
+folds:
+- fold_idx: 0
+  train_score: 0.8268221176791437
+  valid_score: 0.8573766021270793
+  best_iteration: null
+  n_train: 14667
+  n_valid: 7334
+- fold_idx: 1
+  train_score: 0.8277766414399673
+  valid_score: 0.8546495773111535
+  best_iteration: null
+  n_train: 14667
+  n_valid: 7334
+- fold_idx: 2
+  train_score: 0.8364466866648487
+  valid_score: 0.8313105141142779
+  best_iteration: null
+  n_train: 14668
+  n_valid: 7333
