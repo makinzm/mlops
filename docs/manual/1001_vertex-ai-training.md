@@ -102,7 +102,7 @@ uv run python -m src usecase=vertex_train recipe=lgbm
 
 | ファイル | 役割 |
 |---------|------|
-| `conf/usecase/vertex_train.yaml` | vertex_train usecase の設定 |
+| `conf/usecase/remote_train.yaml` | remote_train usecase の設定（`vertex_train` はエイリアス） |
 | `conf/gcp/vertex.yaml` | GCP プロジェクト・リージョン・マシンタイプ等（`.env` から読む） |
 | `conf/competition/titanic/training/lgbm.yaml` | LightGBM ハイパーパラメータ（`titanic` は `conf/config.yaml` のデフォルト competition） |
 
@@ -240,7 +240,7 @@ uv run python -m src usecase=pipeline recipe=vertex_to_kaggle
 | Step | 内容 | 使用 config |
 |------|------|------------|
 | ① preprocess | 前処理 | `conf/competition/{name}/preprocess/base.yaml` |
-| ② vertex_train | Vertex AI で学習 | `conf/competition/{name}/training/lgbm.yaml` |
+| ② remote_train | Vertex AI で学習 | `conf/competition/{name}/training/lgbm.yaml` |
 | ③ inference | 推論（submission.csv 生成） | `conf/competition/{name}/inference/titanic_ensemble.yaml` |
 | ④ update_source_dataset | コードを `mlops-pipeline-src` に push | `conf/usecase/update_source_dataset.yaml` |
 | ⑤ update_source_dataset | モデルを `titanic-vertex-models` に push | ⑤ は pipeline yaml 内で直接定義 |
@@ -260,7 +260,7 @@ Kaggle プリビルトイメージで不足するパッケージがある場合�
 
 | ファイル | 役割 |
 |---------|------|
-| `Dockerfile` | カスタムイメージ定義 |
+| `docker/Dockerfile` | カスタムイメージ定義 |
 | `scripts/docker_push.sh` | ビルド + push スクリプト |
 
 push 後、`conf/gcp/vertex.yaml` の `container_uri` を変更:

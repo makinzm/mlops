@@ -31,7 +31,7 @@ IMAGE_URI="${REGION}-docker.pkg.dev/${GCP_PROJECT}/mlops/training:latest"
 
 echo "=== Docker build ==="
 echo "Image: ${IMAGE_URI}"
-docker build -t "$IMAGE_URI" "$PROJECT_ROOT"
+docker build -f "$PROJECT_ROOT/docker/Dockerfile" -t "$IMAGE_URI" "$PROJECT_ROOT"
 
 echo ""
 echo "=== Docker push ==="
