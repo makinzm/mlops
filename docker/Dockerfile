@@ -24,10 +24,10 @@ COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --no-dev --no-install-project
 
 # エントリーポイントだけコピー（これは固定なのでイメージに含める）
-COPY scripts/vertex_entrypoint.py ./scripts/vertex_entrypoint.py
+COPY scripts/remote_entrypoint.py ./scripts/remote_entrypoint.py
 
 # src/ は GCS から取得するため PYTHONPATH で解決する
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-ENTRYPOINT ["uv", "run", "python", "/app/scripts/vertex_entrypoint.py"]
+ENTRYPOINT ["uv", "run", "python", "/app/scripts/remote_entrypoint.py"]
