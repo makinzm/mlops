@@ -290,16 +290,22 @@ def _resolve_manifest_path(cfg: DictConfig) -> Path:
     if explicit is not None and str(explicit) != "None":
         return Path(str(explicit))
 
-    # job_id を解決: cfg に無ければ trainer config から取得
-    job_id = cfg.get("job_id")
-    if job_id is None or str(job_id) == "None":
-        trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
-        job_id = str(trainer_cfgs[0].job_id)
-    else:
-        job_id = str(job_id)
-
     competition = str(cfg.competition.name)
     history_base = str(cfg.get("remote_jobs_history_dir", "remote_jobs_history"))
+
+    # job_id を解決: cfg の job_id が使えなければ trainer config から取得
+    # pipeline 経由だと cfg.job_id が pipeline 自体の ID になるため、
+    # 実際の history ディレクトリが存在するかで判定する
+    job_id = cfg.get("job_id")
+    if job_id is not None and str(job_id) != "None":
+        candidate = Path(history_base) / competition / str(job_id)
+        if candidate.is_dir():
+            latest_dir = resolve_latest_dir(f"{candidate}/latest")
+            return Path(latest_dir) / "job_manifest.yaml"
+
+    # cfg.job_id が無い or 対応 dir が無い → trainer config から取得
+    trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+    job_id = str(trainer_cfgs[0].job_id)
     latest_dir = resolve_latest_dir(f"{history_base}/{competition}/{job_id}/latest")
     return Path(latest_dir) / "job_manifest.yaml"
 
