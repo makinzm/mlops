@@ -1,8 +1,8 @@
 """
-VertexDownloadUseCase の単体テスト。
+RemoteDownloadUseCase の単体テスト。
 
 なぜこのテストが必要か:
-  - VertexDownloadUseCase は manifest を読み込み、Vertex AI ジョブのステータスを確認し、
+  - RemoteDownloadUseCase は manifest を読み込み、Vertex AI ジョブのステータスを確認し、
     成功していれば GCS からモデルをダウンロードして manifest を更新する。
   - ジョブ未完了・失敗時の適切なエラーハンドリングを保証する。
   - ダウンロード後に manifest の status が DOWNLOADED に更新されることを保証する。
@@ -17,8 +17,7 @@ import pytest
 
 from src.domain.data.job_manifest import JobManifest
 from src.domain.repository.training_job import TrainingJobResult
-from src.usecase.training.vertex_download import VertexDownloadResult, VertexDownloadUseCase
-
+from src.usecase.training.remote_download import RemoteDownloadResult, RemoteDownloadUseCase
 
 _FAKE_JOB_NAME = "projects/123/locations/asia-northeast1/customJobs/999"
 
@@ -32,7 +31,7 @@ def _make_manifest(tmp_path: Path, status: str = "SUBMITTED") -> tuple[JobManife
         timestamp="20260325T143000",
         commit_hash="d" * 40,
         status=status,
-        vertex_job_name=_FAKE_JOB_NAME,
+        remote_job_name=_FAKE_JOB_NAME,
         gcs_code_uri="gs://test-bucket/jobs/titanic_lgbm/20260325T143000/code",
         gcs_data_uri="gs://test-bucket/jobs/titanic_lgbm/20260325T143000/data",
         gcs_model_uri="gs://test-bucket/jobs/titanic_lgbm/20260325T143000/models",
@@ -59,26 +58,26 @@ def _make_mock_gcs() -> MagicMock:
     return mock
 
 
-class TestVertexDownloadUseCaseExecute:
-    """VertexDownloadUseCase.execute() のテスト。"""
+class TestRemoteDownloadUseCaseExecute:
+    """RemoteDownloadUseCase.execute() のテスト。"""
 
     def test_returns_download_result_on_success(self, tmp_path: Path) -> None:
-        """ジョブ成功時に VertexDownloadResult を返すこと。"""
+        """ジョブ成功時に RemoteDownloadResult を返すこと。"""
         _, manifest_path = _make_manifest(tmp_path)
-        usecase = VertexDownloadUseCase(
+        usecase = RemoteDownloadUseCase(
             manifest_path=manifest_path,
             object_storage=_make_mock_gcs(),
             training_job=_make_mock_vertex("SUCCEEDED"),
             output_dir=tmp_path / "models" / "titanic",
         )
         result = usecase.execute()
-        assert isinstance(result, VertexDownloadResult)
+        assert isinstance(result, RemoteDownloadResult)
 
     def test_downloads_model_from_gcs(self, tmp_path: Path) -> None:
         """GCS からモデルがダウンロードされること。"""
         _, manifest_path = _make_manifest(tmp_path)
         mock_gcs = _make_mock_gcs()
-        usecase = VertexDownloadUseCase(
+        usecase = RemoteDownloadUseCase(
             manifest_path=manifest_path,
             object_storage=mock_gcs,
             training_job=_make_mock_vertex("SUCCEEDED"),
@@ -90,7 +89,7 @@ class TestVertexDownloadUseCaseExecute:
     def test_updates_manifest_to_downloaded(self, tmp_path: Path) -> None:
         """ダウンロード後に manifest の status が DOWNLOADED に更新されること。"""
         _, manifest_path = _make_manifest(tmp_path)
-        usecase = VertexDownloadUseCase(
+        usecase = RemoteDownloadUseCase(
             manifest_path=manifest_path,
             object_storage=_make_mock_gcs(),
             training_job=_make_mock_vertex("SUCCEEDED"),
@@ -109,7 +108,7 @@ class TestVertexDownloadUseCaseExecute:
         mock_vertex.get_job_status.return_value = TrainingJobResult(
             resource_name=_FAKE_JOB_NAME, state="RUNNING"
         )
-        usecase = VertexDownloadUseCase(
+        usecase = RemoteDownloadUseCase(
             manifest_path=manifest_path,
             object_storage=_make_mock_gcs(),
             training_job=mock_vertex,
@@ -121,7 +120,7 @@ class TestVertexDownloadUseCaseExecute:
     def test_raises_on_job_failed(self, tmp_path: Path) -> None:
         """ジョブが FAILED の場合に RuntimeError が送出されること。"""
         _, manifest_path = _make_manifest(tmp_path)
-        usecase = VertexDownloadUseCase(
+        usecase = RemoteDownloadUseCase(
             manifest_path=manifest_path,
             object_storage=_make_mock_gcs(),
             training_job=_make_mock_vertex("FAILED"),
@@ -131,10 +130,10 @@ class TestVertexDownloadUseCaseExecute:
             usecase.execute()
 
     def test_checks_job_status_via_vertex(self, tmp_path: Path) -> None:
-        """get_job_status が vertex_job_name で呼ばれること。"""
+        """get_job_status が remote_job_name で呼ばれること。"""
         _, manifest_path = _make_manifest(tmp_path)
         mock_vertex = _make_mock_vertex("SUCCEEDED")
-        usecase = VertexDownloadUseCase(
+        usecase = RemoteDownloadUseCase(
             manifest_path=manifest_path,
             object_storage=_make_mock_gcs(),
             training_job=mock_vertex,
@@ -144,9 +143,9 @@ class TestVertexDownloadUseCaseExecute:
         mock_vertex.get_job_status.assert_called_once_with(_FAKE_JOB_NAME)
 
     def test_result_contains_local_model_dir(self, tmp_path: Path) -> None:
-        """VertexDownloadResult に local_model_dir が記録されること。"""
+        """RemoteDownloadResult に local_model_dir が記録されること。"""
         _, manifest_path = _make_manifest(tmp_path)
-        usecase = VertexDownloadUseCase(
+        usecase = RemoteDownloadUseCase(
             manifest_path=manifest_path,
             object_storage=_make_mock_gcs(),
             training_job=_make_mock_vertex("SUCCEEDED"),
@@ -159,7 +158,7 @@ class TestVertexDownloadUseCaseExecute:
         """manifest が既に DOWNLOADED の場合はダウンロードをスキップすること。"""
         _, manifest_path = _make_manifest(tmp_path, status="DOWNLOADED")
         mock_gcs = _make_mock_gcs()
-        usecase = VertexDownloadUseCase(
+        usecase = RemoteDownloadUseCase(
             manifest_path=manifest_path,
             object_storage=mock_gcs,
             training_job=_make_mock_vertex("SUCCEEDED"),
@@ -167,4 +166,4 @@ class TestVertexDownloadUseCaseExecute:
         )
         result = usecase.execute()
         mock_gcs.download_dir.assert_not_called()
-        assert isinstance(result, VertexDownloadResult)
+        assert isinstance(result, RemoteDownloadResult)

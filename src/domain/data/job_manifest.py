@@ -1,5 +1,5 @@
 """
-JobManifest — Vertex AI ジョブの submit/download 間でパス情報を共有する dataclass。
+JobManifest — Remote training ジョブの submit/download 間でパス情報を共有する dataclass。
 
 なぜここに定義するか:
   JobManifest は domain 層のデータ構造であり、UseCase 層が直接使う。
@@ -16,16 +16,16 @@ import yaml
 
 @dataclass
 class JobManifest:
-    """Vertex AI ジョブのメタ情報。submit 時に YAML 保存し、download 時に読み込む。
+    """Remote training ジョブのメタ情報。submit 時に YAML 保存し、download 時に読み込む。
 
     Attributes:
-        job_id: ジョブ識別子（例: titanic_lgbm）
-        competition: コンペティション名（例: titanic）
-        recipe: 学習レシピ名（例: lgbm）
+        job_id: ジョブ識別子（例: my_job）
+        competition: コンペティション名（例: my_competition）
+        recipe: 学習レシピ名（例: base）
         timestamp: ジョブ投入時のタイムスタンプ（YYYYMMDDTHHMMSS）
         commit_hash: Git コミットハッシュ
         status: ジョブ状態 (SUBMITTED / SUCCEEDED / FAILED / DOWNLOADED)
-        vertex_job_name: Vertex AI ジョブのリソース名
+        remote_job_name: Remote training ジョブのリソース名
         gcs_code_uri: コードの GCS URI
         gcs_data_uri: データの GCS URI
         gcs_model_uri: モデルの GCS URI
@@ -41,7 +41,7 @@ class JobManifest:
     timestamp: str
     commit_hash: str
     status: str = "SUBMITTED"
-    vertex_job_name: str = ""
+    remote_job_name: str = ""
     gcs_code_uri: str = ""
     gcs_data_uri: str = ""
     gcs_model_uri: str = ""
@@ -71,7 +71,7 @@ class JobManifest:
             "timestamp": self.timestamp,
             "commit_hash": self.commit_hash,
             "status": self.status,
-            "vertex_job_name": self.vertex_job_name,
+            "remote_job_name": self.remote_job_name,
             "gcs_code_uri": self.gcs_code_uri,
             "gcs_data_uri": self.gcs_data_uri,
             "gcs_model_uri": self.gcs_model_uri,
@@ -100,7 +100,7 @@ class JobManifest:
             timestamp=data["timestamp"],
             commit_hash=data["commit_hash"],
             status=data.get("status", "SUBMITTED"),
-            vertex_job_name=data.get("vertex_job_name", ""),
+            remote_job_name=data.get("remote_job_name", ""),
             gcs_code_uri=data.get("gcs_code_uri", ""),
             gcs_data_uri=data.get("gcs_data_uri", ""),
             gcs_model_uri=data.get("gcs_model_uri", ""),

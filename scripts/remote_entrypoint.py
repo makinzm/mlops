@@ -75,6 +75,72 @@ def upload_to_gcs(local_dir: Path, gcs_uri: str) -> None:
     logger.info(f"Upload complete: {gcs_uri}")
 
 
+def _send_notification(
+    job_id: str,
+    competition: str,
+    recipe: str,
+    commit_hash: str,
+) -> None:
+    """環境変数から通知設定を読み取り、Slack/Email で通知を送信する。
+
+    軽量なインライン実装で、src/infrastructure の import は不要。
+    環境変数が未設定の場合はスキップする。
+    """
+    import json
+    from urllib.request import Request, urlopen
+
+    slack_url = os.environ.get("SLACK_WEBHOOK_URL", "")
+    if slack_url:
+        text = (
+            f"*Training Job Completed*\n"
+            f"Job: `{job_id}` | Competition: `{competition}` | Recipe: `{recipe}`\n"
+            f"Commit: `{commit_hash[:8]}`\n"
+            f"Download: `uv run python -m src usecase=vertex_download job_id={job_id}`"
+        )
+        body = json.dumps({"text": text}).encode("utf-8")
+        request = Request(
+            slack_url,
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            urlopen(request)
+            logger.info("Slack notification sent")
+        except Exception:
+            logger.warning("Failed to send Slack notification", exc_info=True)
+
+    smtp_host = os.environ.get("SMTP_HOST", "")
+    smtp_recipient = os.environ.get("SMTP_RECIPIENT", "")
+    if smtp_host and smtp_recipient:
+        import smtplib
+        from email.mime.text import MIMEText
+
+        msg_body = (
+            f"Job: {job_id}\n"
+            f"Competition: {competition}\n"
+            f"Recipe: {recipe}\n"
+            f"Commit: {commit_hash[:8]}\n\n"
+            f"Download: uv run python -m src usecase=vertex_download job_id={job_id}"
+        )
+        msg = MIMEText(msg_body)
+        msg["Subject"] = f"[MLOps] Training completed: {job_id}"
+        msg["From"] = os.environ.get("SMTP_SENDER", "noreply@mlops.local")
+        msg["To"] = smtp_recipient
+
+        try:
+            with smtplib.SMTP(smtp_host, int(os.environ.get("SMTP_PORT", "587"))) as server:
+                server.starttls()
+                username = os.environ.get("SMTP_USERNAME", "")
+                password = os.environ.get("SMTP_PASSWORD", "")
+                if username and password:
+                    server.login(username, password)
+                server.sendmail(msg["From"], smtp_recipient, msg.as_string())
+            logger.info("Email notification sent")
+        except Exception:
+            logger.warning("Failed to send email notification", exc_info=True)
+
+
 def main() -> None:
     gcs_data_uri = os.environ["GCS_DATA_URI"]
     gcs_model_uri = os.environ["GCS_MODEL_URI"]
@@ -128,6 +194,14 @@ def main() -> None:
     else:
         logger.warning("fold_0/model.lgbm が見つかりません。model_dir 全体をアップロードします。")
         upload_to_gcs(model_dir, gcs_model_uri)
+    # 5. 通知送信（SLACK_WEBHOOK_URL が設定されている場合）
+    _send_notification(
+        job_id=job_id,
+        competition=competition,
+        recipe=recipe,
+        commit_hash=os.environ.get("MLOPS_COMMIT_HASH", "unknown"),
+    )
+
     logger.info("=== Training pipeline complete ===")
 
 

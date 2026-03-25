@@ -8,7 +8,7 @@ Notifier Protocol と NotificationPayload の単体テスト。
 
 from __future__ import annotations
 
-from src.domain.repository.notifier import Notifier, NotificationPayload
+from src.domain.repository.notifier import NotificationPayload, Notifier
 
 
 class _FakeNotifier:
@@ -45,7 +45,10 @@ class TestNotificationPayload:
             message="Training completed",
             job_id="titanic_lgbm",
             status="SUCCEEDED",
-            extra={"cv_score": "0.832", "download_command": "uv run python -m src usecase=vertex_download"},
+            extra={
+                "cv_score": "0.832",
+                "download_command": "uv run python -m src usecase=vertex_download",
+            },
         )
         assert payload.extra is not None
         assert payload.extra["cv_score"] == "0.832"

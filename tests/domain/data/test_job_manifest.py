@@ -23,7 +23,7 @@ def _make_manifest() -> JobManifest:
         timestamp="20260325T143000",
         commit_hash="a" * 40,
         status="SUBMITTED",
-        vertex_job_name="projects/123/locations/asia-northeast1/customJobs/789",
+        remote_job_name="projects/123/locations/asia-northeast1/customJobs/789",
         gcs_code_uri="gs://bucket/jobs/titanic_lgbm/20260325T143000/code",
         gcs_data_uri="gs://bucket/jobs/titanic_lgbm/20260325T143000/data",
         gcs_model_uri="gs://bucket/jobs/titanic_lgbm/20260325T143000/models",
@@ -54,7 +54,7 @@ class TestJobManifestSaveLoad:
         assert loaded.timestamp == manifest.timestamp
         assert loaded.commit_hash == manifest.commit_hash
         assert loaded.status == manifest.status
-        assert loaded.vertex_job_name == manifest.vertex_job_name
+        assert loaded.remote_job_name == manifest.remote_job_name
         assert loaded.gcs_code_uri == manifest.gcs_code_uri
         assert loaded.gcs_data_uri == manifest.gcs_data_uri
         assert loaded.gcs_model_uri == manifest.gcs_model_uri

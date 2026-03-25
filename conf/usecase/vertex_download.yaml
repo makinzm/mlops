@@ -1,0 +1,5 @@
+# @package _global_
+usecase: vertex_download
+
+defaults:
+  - /cloud: vertex

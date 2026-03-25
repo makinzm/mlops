@@ -1,0 +1,10 @@
+# Email (SMTP) 通知設定
+# 各値は .env から読み込む
+notification:
+  email:
+    smtp_host: ${oc.env:SMTP_HOST,smtp.gmail.com}
+    smtp_port: ${oc.env:SMTP_PORT,587}
+    sender: ${oc.env:SMTP_SENDER,}
+    recipient: ${oc.env:SMTP_RECIPIENT,}
+    username: ${oc.env:SMTP_USERNAME,}
+    password: ${oc.env:SMTP_PASSWORD,}

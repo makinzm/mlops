@@ -1,0 +1,35 @@
+# @package _global_
+# Titanic Vertex AI ダウンロード → Kaggle 提出パイプライン設定
+# Slack/Email 通知を受けた後に実行する
+#
+# 実行例:
+#   uv run python -m src usecase=pipeline recipe=vertex_download_and_push \
+#     manifest_path=models/titanic/titanic_lgbm/job_manifest.yaml
+usecase: pipeline
+job_id: titanic_vertex_download_and_push
+
+steps:
+  # (1) Vertex AI からモデルダウンロード
+  - usecase: vertex_download
+
+  # (2) 推論（submission.csv 生成）
+  - usecase: inference
+    recipe: titanic_ensemble
+
+  # (3) コードを既存 Dataset に push
+  - usecase: update_source_dataset
+    source_dataset:
+      version_message: "auto update: vertex download and push"
+
+  # (4) 推論専用 Notebook を push
+  - usecase: push_notebook
+    notebook:
+      kernel_slug: titanic-vertex-inference
+      recipe: inference_only
+      src_dataset: mlops-pipeline-src
+      extra_datasets:
+        - slug: titanic-vertex-models
+          mount_path: /kaggle/working/models/titanic
+      competition: titanic
+      enable_gpu: false
+      enable_internet: false

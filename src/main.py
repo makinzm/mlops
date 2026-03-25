@@ -206,6 +206,62 @@ def _run_remote_train(cfg: DictConfig) -> None:
     )
 
 
+def _run_vertex_submit(cfg: DictConfig) -> None:
+    """Vertex AI ジョブ非同期送信 UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.infrastructure.gcp.storage import GCSRepositoryImpl
+    from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
+    from src.infrastructure.repository.git import GitRepositoryImpl
+    from src.usecase.training.remote_submit import RemoteSubmitUseCase
+    from src.usecase.training.trainer_loader import load_trainer_cfgs
+
+    logger = logging.getLogger(__name__)
+    git_repo = GitRepositoryImpl()
+    trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+    trainer_cfg = trainer_cfgs[0]
+    gcs = GCSRepositoryImpl(project=str(trainer_cfg.cloud.project))
+    vertex = VertexAIRepositoryImpl(
+        project=str(trainer_cfg.cloud.project),
+        region=str(trainer_cfg.cloud.region),
+        staging_bucket=str(trainer_cfg.cloud.staging_bucket),
+    )
+    result = RemoteSubmitUseCase(
+        cfg=trainer_cfg,
+        object_storage=gcs,
+        training_job=vertex,
+        git_repo=git_repo,
+    ).execute()
+    logger.info(
+        f"Vertex AI ジョブ送信完了[{result.job_id}]: "
+        f"job={result.remote_job_name}, manifest={result.manifest_path}"
+    )
+
+
+def _run_vertex_download(cfg: DictConfig) -> None:
+    """Vertex AI モデルダウンロード UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.infrastructure.gcp.storage import GCSRepositoryImpl
+    from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
+    from src.usecase.training.remote_download import RemoteDownloadUseCase
+
+    logger = logging.getLogger(__name__)
+    gcs = GCSRepositoryImpl(project=str(cfg.cloud.project))
+    vertex = VertexAIRepositoryImpl(
+        project=str(cfg.cloud.project),
+        region=str(cfg.cloud.region),
+        staging_bucket=str(cfg.cloud.staging_bucket),
+    )
+    manifest_path = Path(str(cfg.manifest_path))
+    output_dir = Path(str(cfg.output_dir))
+    result = RemoteDownloadUseCase(
+        manifest_path=manifest_path,
+        object_storage=gcs,
+        training_job=vertex,
+        output_dir=output_dir,
+    ).execute()
+    logger.info(
+        f"モデルダウンロード完了[{result.job_id}]: local_model_dir={result.local_model_dir}"
+    )
+
+
 def _run_update_source_dataset_pipeline(cfg: DictConfig) -> None:
     """update_source_dataset UseCase を Pipeline から実行する。"""
     from src.infrastructure.kaggle.source_dataset import KaggleSourceDatasetRepository
@@ -323,6 +379,12 @@ def main(cfg: DictConfig) -> None:
     elif usecase_name == "remote_train":
         _run_remote_train(cfg)
 
+    elif usecase_name == "vertex_submit":
+        _run_vertex_submit(cfg)
+
+    elif usecase_name == "vertex_download":
+        _run_vertex_download(cfg)
+
     elif usecase_name == "pipeline":
         from src.usecase.pipeline.pipeline import PipelineUseCase
         from src.usecase.pipeline.pipeline_loader import load_pipeline_recipe_cfg
@@ -334,6 +396,8 @@ def main(cfg: DictConfig) -> None:
             run_inference=_run_inference,
             conf_dir=Path(_CONF_DIR),
             run_remote_train=_run_remote_train,
+            run_vertex_submit=_run_vertex_submit,
+            run_vertex_download=_run_vertex_download,
             run_update_source_dataset=_run_update_source_dataset_pipeline,
             run_push_notebook=_run_push_notebook_pipeline,
             run_download_dataset=_run_download,
@@ -422,6 +486,8 @@ def main(cfg: DictConfig) -> None:
             "train",
             "inference",
             "remote_train",
+            "vertex_submit",
+            "vertex_download",
             "pipeline",
             "push_notebook",
             "create_source_dataset",

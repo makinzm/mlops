@@ -9,8 +9,6 @@ CompositeNotifier の単体テスト。
 
 from __future__ import annotations
 
-import logging
-
 from src.domain.repository.notifier import NotificationPayload
 from src.infrastructure.notifier.composite_notifier import CompositeNotifier
 
@@ -44,8 +42,7 @@ class TestCompositeNotifierSend:
         """全 notifier が呼び出されること。"""
         notifier_a = _FakeNotifier()
         notifier_b = _FakeNotifier()
-        composite = CompositeNotifier(notifiers=[notifier_a, notifier_b])  # ty:ignore[invalid-argument-type]
-
+        composite = CompositeNotifier(notifiers=[notifier_a, notifier_b])
         composite.send(_make_payload())
 
         assert len(notifier_a.sent) == 1
@@ -55,21 +52,17 @@ class TestCompositeNotifierSend:
         """1つの notifier が失敗しても残りが実行されること。"""
         failing = _FakeNotifier(should_fail=True)
         succeeding = _FakeNotifier()
-        composite = CompositeNotifier(notifiers=[failing, succeeding])  # ty:ignore[invalid-argument-type]
-
+        composite = CompositeNotifier(notifiers=[failing, succeeding])
         composite.send(_make_payload())
 
         assert len(succeeding.sent) == 1
 
-    def test_logs_warning_on_failure(self, caplog: object) -> None:
-        """notifier 失敗時に warning ログが出力されること。"""
+    def test_does_not_raise_on_failure(self) -> None:
+        """notifier 失敗時でも例外が伝播しないこと。"""
         failing = _FakeNotifier(should_fail=True)
-        composite = CompositeNotifier(notifiers=[failing])  # ty:ignore[invalid-argument-type]
-
-        with logging.captureWarnings(True):
-            composite.send(_make_payload())
-
+        composite = CompositeNotifier(notifiers=[failing])
         # CompositeNotifier は失敗しても例外を投げない
+        composite.send(_make_payload())
 
     def test_empty_notifiers_does_nothing(self) -> None:
         """空の notifier リストで send() がエラーなく実行されること。"""

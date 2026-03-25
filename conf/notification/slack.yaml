@@ -1,0 +1,5 @@
+# Slack Incoming Webhook 通知設定
+# webhook_url は .env の SLACK_WEBHOOK_URL から読み込む
+notification:
+  slack:
+    webhook_url: ${oc.env:SLACK_WEBHOOK_URL,}

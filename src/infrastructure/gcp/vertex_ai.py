@@ -97,6 +97,77 @@ class VertexAIRepositoryImpl:
             error_message=error_msg,
         )
 
+    def submit_custom_job(
+        self,
+        display_name: str,
+        container_uri: str,
+        command: list[str],
+        args: list[str],
+        machine_type: str,
+        env_vars: dict[str, str],
+        service_account: str,
+    ) -> TrainingJobResult:
+        """カスタムトレーニングジョブを送信し、即座に返す（完了を待たない）。
+
+        run(sync=False) を使用し、ジョブ送信後に即座に戻る。
+        state='SUBMITTED' の TrainingJobResult を返す。
+        ref: https://cloud.google.com/python/docs/reference/aiplatform/latest/google.cloud.aiplatform.CustomJob
+        """
+        container_spec: dict[str, object] = {
+            "image_uri": container_uri,
+            "env": [{"name": k, "value": v} for k, v in env_vars.items()],
+        }
+        if command:
+            container_spec["command"] = command
+        if args:
+            container_spec["args"] = args
+        worker_pool_specs = [
+            {
+                "machine_spec": {"machine_type": machine_type},
+                "replica_count": 1,
+                "container_spec": container_spec,
+            }
+        ]
+        job = aiplatform.CustomJob(
+            display_name=display_name,
+            worker_pool_specs=worker_pool_specs,
+        )
+        logger.info(f"Submitting Vertex AI job (async): {display_name}")
+
+        # sync=False: ジョブ送信後に即座に返る（完了を待たない）
+        job.run(service_account=service_account, sync=False)
+
+        resource_name: str = job.resource_name
+        logger.info(f"Job submitted: {resource_name}")
+        return TrainingJobResult(
+            resource_name=resource_name,
+            state="SUBMITTED",
+        )
+
+    def get_job_status(self, job_name: str) -> TrainingJobResult:
+        """ジョブの現在のステータスを取得する。
+
+        ref: https://cloud.google.com/python/docs/reference/aiplatform/latest/google.cloud.aiplatform.CustomJob
+        """
+        job = aiplatform.CustomJob.get(job_name)
+        raw_state: str = job.state.name
+        state = _STATE_MAP.get(raw_state, raw_state)
+
+        error_msg: str | None = None
+        if state == "FAILED":
+            try:
+                error = getattr(job, "error", None)
+                error_msg = str(error.message) if error is not None else raw_state
+            except AttributeError:
+                error_msg = raw_state
+
+        logger.info(f"Job {job_name} status: {state}")
+        return TrainingJobResult(
+            resource_name=job_name,
+            state=state,
+            error_message=error_msg,
+        )
+
     def cancel_job(self, job_name: str) -> None:
         """実行中のジョブをキャンセルする。"""
         job = aiplatform.CustomJob.get(job_name)
