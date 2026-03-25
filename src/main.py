@@ -276,6 +276,20 @@ def _run_vertex_submit(cfg: DictConfig) -> None:
     )
 
 
+def _load_trainer_cfgs_safe(cfg: DictConfig) -> list[DictConfig]:
+    """recipe が pipeline recipe の場合でも安全に trainer config をロードする。
+
+    pipeline 経由だと cfg.recipe が pipeline recipe（例: vertex_download_and_push）に
+    なっており、trainer yaml として解決できない。recipe を一時的に null にして
+    全 trainer をロードする。
+    """
+    from src.usecase.training.trainer_loader import load_trainer_cfgs
+
+    cfg_copy = DictConfig(OmegaConf.to_container(cfg, resolve=True))
+    cfg_copy.recipe = None
+    return load_trainer_cfgs(cfg_copy, Path(_CONF_DIR))
+
+
 def _resolve_manifest_path(cfg: DictConfig) -> Path:
     """manifest_path を解決する。
 
@@ -284,7 +298,6 @@ def _resolve_manifest_path(cfg: DictConfig) -> Path:
     job_id が未設定なら recipe から trainer config をロードして取得する。
     """
     from src.usecase._utils import resolve_latest_dir
-    from src.usecase.training.trainer_loader import load_trainer_cfgs
 
     explicit = cfg.get("manifest_path")
     if explicit is not None and str(explicit) != "None":
@@ -304,10 +317,7 @@ def _resolve_manifest_path(cfg: DictConfig) -> Path:
             return Path(latest_dir) / "job_manifest.yaml"
 
     # cfg.job_id が無い or 対応 dir が無い → trainer config から取得
-    # recipe が pipeline recipe の場合があるため、一時的に除外して全 trainer をロードする
-    cfg_for_trainer = DictConfig(OmegaConf.to_container(cfg, resolve=True))
-    cfg_for_trainer.recipe = None
-    trainer_cfgs = load_trainer_cfgs(cfg_for_trainer, Path(_CONF_DIR))
+    trainer_cfgs = _load_trainer_cfgs_safe(cfg)
     job_id = str(trainer_cfgs[0].job_id)
     latest_dir = resolve_latest_dir(f"{history_base}/{competition}/{job_id}/latest")
     return Path(latest_dir) / "job_manifest.yaml"
@@ -332,9 +342,7 @@ def _run_vertex_download(cfg: DictConfig) -> None:
     # output_dir は trainer config に定義されている。cfg に無ければ trainer config から取得。
     output_dir_raw = cfg.get("output_dir")
     if output_dir_raw is None or str(output_dir_raw) == "None":
-        from src.usecase.training.trainer_loader import load_trainer_cfgs
-
-        trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+        trainer_cfgs = _load_trainer_cfgs_safe(cfg)
         output_dir = Path(str(trainer_cfgs[0].output_dir))
     else:
         output_dir = Path(str(output_dir_raw))
