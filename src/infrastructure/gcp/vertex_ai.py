@@ -134,8 +134,14 @@ class VertexAIRepositoryImpl:
         )
         logger.info(f"Submitting Vertex AI job (async): {display_name}")
 
-        # sync=False: ジョブ送信後に即座に返る（完了を待たない）
+        # sync=False: ジョブ送信をバックグラウンドスレッドで開始する（完了は待たない）
         job.run(service_account=service_account, sync=False)
+
+        # wait_for_resource_creation(): API がリソースを作成するまで待機する。
+        # sync=False ではバックグラウンドスレッドが API を呼ぶため、
+        # resource_name にアクセスする前にリソース作成完了を待つ必要がある。
+        # ジョブの完了は待たない。
+        job.wait_for_resource_creation()
 
         resource_name: str = job.resource_name
         logger.info(f"Job submitted: {resource_name}")
