@@ -281,16 +281,24 @@ def _resolve_manifest_path(cfg: DictConfig) -> Path:
 
     manifest_path が指定されていればそのまま返す。
     未指定の場合は competition + job_id + latest から自動解決する。
+    job_id が未設定なら recipe から trainer config をロードして取得する。
     """
     from src.usecase._utils import resolve_latest_dir
+    from src.usecase.training.trainer_loader import load_trainer_cfgs
 
     explicit = cfg.get("manifest_path")
     if explicit is not None and str(explicit) != "None":
         return Path(str(explicit))
 
-    # config から自動解決
+    # job_id を解決: cfg に無ければ trainer config から取得
+    job_id = cfg.get("job_id")
+    if job_id is None or str(job_id) == "None":
+        trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+        job_id = str(trainer_cfgs[0].job_id)
+    else:
+        job_id = str(job_id)
+
     competition = str(cfg.competition.name)
-    job_id = str(cfg.job_id)
     history_base = str(cfg.get("remote_jobs_history_dir", "remote_jobs_history"))
     latest_dir = resolve_latest_dir(f"{history_base}/{competition}/{job_id}/latest")
     return Path(latest_dir) / "job_manifest.yaml"
