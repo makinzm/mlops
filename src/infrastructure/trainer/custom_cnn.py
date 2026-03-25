@@ -135,7 +135,7 @@ def _build_conv_block(in_channels: int, config: ConvBlockConfig) -> nn.Sequentia
 
     activation_cls = _ACTIVATION_MAP.get(config.activation, nn.ReLU)
     if hasattr(activation_cls, "inplace"):
-        layers.append(activation_cls(inplace=True))  # ty:ignore[invalid-argument-type]
+        layers.append(activation_cls(inplace=True))
     else:
         layers.append(activation_cls())
 

@@ -39,8 +39,8 @@ class TrainingMetrics:
 
 def run_training_loop(
     model: nn.Module,
-    train_loader: DataLoader,  # ty:ignore[invalid-argument-type]
-    valid_loader: DataLoader,  # ty:ignore[invalid-argument-type]
+    train_loader: DataLoader,
+    valid_loader: DataLoader,
     criterion: nn.Module,
     optimizer: torch.optim.Optimizer,
     num_epochs: int,

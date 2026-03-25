@@ -24,6 +24,7 @@ class Executor(Protocol):
         targets: list[str],
         output_dir: str,
         cv_splits: list[tuple[list[int], list[int]]] | None,
+        cv_cfg: dict[str, object] | None = None,
     ) -> tuple[dict[str, DataFrame], list[StepResult]]:
         """パイプラインを実行して (結果DataFrame map, StepResult list) を返す。"""
         ...

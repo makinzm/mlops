@@ -19,7 +19,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 
-class ImageClassificationDataset(Dataset):  # type: ignore[type-arg]
+class ImageClassificationDataset(Dataset):
     """画像分類用 PyTorch Dataset。
 
     torchvision_transform か albumentations_transform のどちらかを指定する。
