@@ -332,6 +332,7 @@ def main(cfg: DictConfig) -> None:
             run_preprocess=_run_preprocess,
             run_train=_run_train,
             run_inference=_run_inference,
+            conf_dir=Path(_CONF_DIR),
             run_remote_train=_run_remote_train,
             run_update_source_dataset=_run_update_source_dataset_pipeline,
             run_push_notebook=_run_push_notebook_pipeline,
