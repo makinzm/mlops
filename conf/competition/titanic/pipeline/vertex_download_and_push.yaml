@@ -3,8 +3,7 @@
 # Slack/Email 通知を受けた後に実行する
 #
 # 実行例:
-#   uv run python -m src usecase=pipeline recipe=vertex_download_and_push \
-#     manifest_path=models/titanic/titanic_lgbm/job_manifest.yaml
+#   uv run python -m src usecase=pipeline recipe=vertex_download_and_push
 usecase: pipeline
 job_id: titanic_vertex_download_and_push
 
@@ -21,14 +20,24 @@ steps:
     source_dataset:
       version_message: "auto update: vertex download and push"
 
-  # (4) 推論専用 Notebook を push
+  # (4) モデル重みを別の Dataset に push（latest → 最新タイムスタンプを自動解決）
+  - usecase: update_source_dataset
+    source_dataset:
+      dataset_slug: titanic-vertex-models-2
+      title: titanic-vertex-models-2
+      src_dir: models/titanic/titanic_lgbm/latest
+      conf_dir: models/titanic/titanic_lgbm/latest
+      extra_dirs: []
+      version_message: "auto update: vertex trained model"
+
+  # (5) 推論専用 Notebook を push
   - usecase: push_notebook
     notebook:
       kernel_slug: titanic-vertex-inference
       recipe: inference_only
-      src_dataset: mlops-pipeline-src
+      src_dataset: mlops-pipeline-src-2
       extra_datasets:
-        - slug: titanic-vertex-models
+        - slug: titanic-vertex-models-2
           mount_path: /kaggle/working/models/titanic
       competition: titanic
       enable_gpu: false
