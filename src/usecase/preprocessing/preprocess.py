@@ -95,6 +95,7 @@ class PreprocessUseCase:
             targets=targets,
             output_dir=str(output_dir),
             cv_splits=cv_splits,
+            cv_cfg=cv_cfg_dict,
         )
 
         # DAG 可視化（output_dir に保存）

@@ -1,0 +1,27 @@
+commit_hash: 4cc38dd35cf2d1c77617164dc850cbad6236e056
+dag_path: pipeline_dag.html
+executor_used: local
+job_id: histopathologic_preprocess
+output_dir: data/2026/Q1/processed/histopathologic_preprocess/20260325T093048
+step_results:
+- method: format_column
+  reason: null
+  resolver: polars
+  status: ok
+- method: format_column
+  reason: null
+  resolver: polars
+  status: ok
+- method: stratified_subsample
+  reason: null
+  resolver: polars
+  status: ok
+- method: output
+  reason: gather indices are out of bounds
+  resolver: output
+  status: failed
+- method: output
+  reason: null
+  resolver: output
+  status: ok
+timestamp: '2026-03-25T09:30:49.190337'

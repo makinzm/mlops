@@ -1,0 +1,21 @@
+# @package _global_
+# Histopathologic 推論専用パイプライン（Kaggle Notebook 用）
+#
+# 学習済みモデルの重みを使って推論のみ実行する。
+# Kaggle Notebook からはこのレシピを使う（インターネット不要）。
+#
+# 前提:
+#   - 学習済み model.pt が Kaggle Dataset としてアップロード済み
+#   - テストデータが /kaggle/input/histopathologic-cancer-detection/ にマウント済み
+
+usecase: pipeline
+job_id: histopathologic_inference_only
+
+steps:
+  # ① テストデータの前処理（image_path 構築のみ、サブサンプリングなし）
+  - usecase: preprocess
+    recipe: base
+
+  # ② アンサンブル推論（CNN + ViT → submission.csv）
+  - usecase: inference
+    recipe: vision_ensemble

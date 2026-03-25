@@ -1,0 +1,57 @@
+# @package _global_
+# Histopathologic Cancer Detection — Custom CNN 学習設定
+#
+# ResNet ライクな skip connection 付き Custom CNN で二値分類する。
+# 画像サイズ 96x96（元データそのまま）。
+#
+# 実行例:
+#   uv run python -m src usecase=train competition=histopathologic recipe=vision_custom_cnn
+
+usecase: train
+job_id: histopathologic_custom_cnn
+trainer:
+  type: vision
+
+# ── 入力 ──────────────────────────────────────────
+preprocess_output_dir: data/2026/Q1/processed/histopathologic_preprocess/latest/train_out
+target_col: label
+image_path_col: image_path
+
+# ── backbone ──────────────────────────────────────
+backbone:
+  name: custom_cnn
+  pretrained: false
+  image_size: 96
+  custom_cnn:
+    layers:
+      - {out_channels: 32, kernel_size: 3, padding: 1, batch_norm: true, pool: max}
+      - {out_channels: 64, kernel_size: 3, padding: 1, batch_norm: true, pool: null}
+      - {out_channels: 64, kernel_size: 3, padding: 1, batch_norm: true, pool: max}
+      - {out_channels: 128, kernel_size: 3, padding: 1, batch_norm: true, pool: max}
+    skip_connections:
+      - {type: residual, from_layer: 1, to_layer: 2}
+    adaptive_pool_size: 1
+
+# ── 学習パラメータ ────────────────────────────────
+training:
+  num_epochs: 5
+  batch_size: 64
+  learning_rate: 0.001
+  num_workers: 2
+
+num_classes: 2
+
+# ── Data Augmentation ─────────────────────────────
+augmentation:
+  train:
+    - {name: HorizontalFlip, probability: 0.5}
+    - {name: VerticalFlip, probability: 0.5}
+    - {name: RandomBrightnessContrast, probability: 0.3}
+  valid: []
+
+# ── レポート ──────────────────────────────────────
+report:
+  n_error_samples: 20
+
+output_dir: ${oc.env:MLOPS_MODEL_DIR,models/${competition.name}}
+seed: 42

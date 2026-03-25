@@ -1,0 +1,25 @@
+# @package _global_
+# Histopathologic パイプライン — 前処理から推論まで（ダウンロード済み前提）
+#
+# 実行例:
+#   uv run python -m src usecase=pipeline competition=histopathologic recipe=all_after_download
+
+usecase: pipeline
+job_id: histopathologic_all_after_download
+
+steps:
+  # ① 前処理（image_path 構築 + サブサンプリング + CV split）
+  - usecase: preprocess
+    recipe: base
+
+  # ② Custom CNN 学習
+  - usecase: train
+    recipe: vision_custom_cnn
+
+  # ③ ViT 学習
+  - usecase: train
+    recipe: vision_vit
+
+  # ④ アンサンブル推論（2 モデルの重みを使用 → submission.csv）
+  - usecase: inference
+    recipe: vision_ensemble

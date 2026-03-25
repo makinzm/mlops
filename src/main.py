@@ -98,6 +98,19 @@ def _resolve_analyzers(cfg: DictConfig) -> list[object]:
     return analyzers
 
 
+def _run_download(cfg: DictConfig) -> None:
+    """ダウンロード UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.usecase.data_acquisition.download_dataset import DownloadDatasetUseCase
+
+    logger = logging.getLogger(__name__)
+    try:
+        downloader = _resolve_downloader(cfg)
+    except Exception:
+        logger.error("ダウンローダーの初期化に失敗しました", exc_info=True)
+        raise
+    DownloadDatasetUseCase(downloader, logger).execute()  # ty:ignore[invalid-argument-type]
+
+
 def _run_preprocess(cfg: DictConfig) -> None:
     """前処理 UseCase を実行する（Pipeline から呼ばれる）。"""
     from src.infrastructure.executor.factory import ExecutorFactory
@@ -144,8 +157,15 @@ def _run_train(cfg: DictConfig) -> None:
         trainer_type: str = trainer_cfg.trainer.type
         if trainer_type == "lgbm":
             trainer = LightGBMTrainer(trainer_cfg)
+        elif trainer_type == "vision":
+            from src.infrastructure.trainer.vision_trainer import VisionTrainer
+
+            raw_cfg: dict[str, Any] = OmegaConf.to_container(trainer_cfg, resolve=True)  # ty:ignore[invalid-assignment]
+            trainer = VisionTrainer(raw_cfg)
         else:
-            raise ValueError(f"trainer.type='{trainer_type}' は未登録です。 登録済み: ['lgbm']")
+            raise ValueError(
+                f"trainer.type='{trainer_type}' は未登録です。 登録済み: ['lgbm', 'vision']"
+            )
         train_result = TrainUseCase(trainer_cfg, trainer=trainer, git_repo=git_repo).execute()
         logger.info(
             f"学習完了[{train_result.job_id}]: "
@@ -247,9 +267,15 @@ def _run_inference(cfg: DictConfig) -> None:
 
     logger = logging.getLogger(__name__)
     git_repo = GitRepositoryImpl()
-    inferencer = LightGBMInferencer()
     inference_cfgs = load_inference_cfgs(cfg, Path(_CONF_DIR))
     for inference_cfg in inference_cfgs:
+        inferencer_type: str = str(inference_cfg.get("inferencer_type", "lgbm"))
+        if inferencer_type == "vision":
+            from src.infrastructure.inference.vision_inferencer import VisionInferencer
+
+            inferencer = VisionInferencer()
+        else:
+            inferencer = LightGBMInferencer()
         submission_path = InferenceUseCase(inferencer=inferencer, git_repo=git_repo).run(
             inference_cfg
         )
@@ -306,9 +332,11 @@ def main(cfg: DictConfig) -> None:
             run_preprocess=_run_preprocess,
             run_train=_run_train,
             run_inference=_run_inference,
+            conf_dir=Path(_CONF_DIR),
             run_remote_train=_run_remote_train,
             run_update_source_dataset=_run_update_source_dataset_pipeline,
             run_push_notebook=_run_push_notebook_pipeline,
+            run_download_dataset=_run_download,
         ).run(pipeline_cfg)
         logger.info(f"パイプライン完了[{pipeline_cfg.get('job_id', '?')}]")
 
@@ -334,6 +362,20 @@ def main(cfg: DictConfig) -> None:
 
         result = PushNotebookUseCase(cfg=cfg, platform_api=kaggle_api).execute()
         logger.info(f"Notebook push 完了: notebook={result.notebook_path}")
+
+    elif usecase_name == "gradcam":
+        from src.infrastructure.analyzer.gradcam_analyzer import GradCAMAnalyzerImpl
+        from src.infrastructure.repository.git import GitRepositoryImpl
+        from src.usecase.analysis.gradcam import GradCAMUseCase
+
+        git_repo = GitRepositoryImpl()
+        raw_cfg: dict[str, Any] = OmegaConf.to_container(cfg, resolve=True)  # ty:ignore[invalid-assignment]
+        results = GradCAMUseCase(
+            cfg=raw_cfg,
+            analyzer=GradCAMAnalyzerImpl(),
+            git_repo=git_repo,
+        ).execute()
+        logger.info(f"GradCAM 完了: {len(results)} 画像分析")
 
     elif usecase_name in ("create_source_dataset", "update_source_dataset"):
         from src.infrastructure.kaggle.source_dataset import KaggleSourceDatasetRepository
@@ -384,6 +426,7 @@ def main(cfg: DictConfig) -> None:
             "push_notebook",
             "create_source_dataset",
             "update_source_dataset",
+            "gradcam",
         ]
         raise ValueError(f"Unknown usecase: {usecase_name!r}. Supported: {supported}")
 

@@ -21,6 +21,7 @@ class LocalExecutor:
         targets: list[str],
         output_dir: str,
         cv_splits: list[tuple[list[int], list[int]]] | None,
+        cv_cfg: dict[str, object] | None = None,
     ) -> tuple[dict[str, DataFrame], list[StepResult]]:
         """DAGRunner を使ってパイプラインをローカル実行する。"""
         runner = DAGRunner(
@@ -28,6 +29,7 @@ class LocalExecutor:
             input_dfs=input_dfs,
             output_dir=Path(output_dir),
             cv_splits=cv_splits,
+            cv_cfg=cv_cfg,
         )
         results = runner.run(targets=targets)
         return results, runner.get_step_results()

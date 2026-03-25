@@ -1,0 +1,48 @@
+# @package _global_
+# Histopathologic Cancer Detection — ViT 学習設定
+#
+# vit_b_32 で二値分類する。画像サイズ 224x224（torchvision ViT のデフォルト）。
+# pretrained=false（ローカル学習で ImageNet 重みは不要）。
+#
+# 実行例:
+#   uv run python -m src usecase=train competition=histopathologic recipe=vision_vit
+
+usecase: train
+job_id: histopathologic_vit
+trainer:
+  type: vision
+
+# ── 入力 ──────────────────────────────────────────
+preprocess_output_dir: data/2026/Q1/processed/histopathologic_preprocess/latest/train_out
+target_col: label
+image_path_col: image_path
+
+# ── backbone ──────────────────────────────────────
+backbone:
+  name: vit_b_32
+  pretrained: false
+  image_size: 224
+
+# ── 学習パラメータ ────────────────────────────────
+training:
+  num_epochs: 5
+  batch_size: 32
+  learning_rate: 0.0001
+  num_workers: 2
+
+num_classes: 2
+
+# ── Data Augmentation ─────────────────────────────
+augmentation:
+  train:
+    - {name: HorizontalFlip, probability: 0.5}
+    - {name: VerticalFlip, probability: 0.5}
+    - {name: RandomBrightnessContrast, probability: 0.3}
+  valid: []
+
+# ── レポート ──────────────────────────────────────
+report:
+  n_error_samples: 20
+
+output_dir: ${oc.env:MLOPS_MODEL_DIR,models/${competition.name}}
+seed: 42

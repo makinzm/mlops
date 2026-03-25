@@ -1,0 +1,18 @@
+# @package _global_
+# GradCAM 分析ユースケース
+#
+# 実行例:
+#   uv run python -m src usecase=gradcam model_path=models/titanic/titanic_vision/latest/fold_0/model.pt image_dir=data/2026/Q1/raw/titanic/images output_dir=data/2026/Q1/gradcam/titanic
+
+usecase: gradcam
+job_id: gradcam_analysis
+
+# ── 入力 ──────────────────────────────────────────
+model_path: null
+image_dir: null
+target_layer: null
+
+# ── 出力 ──────────────────────────────────────────
+output_dir: data/2026/Q1/gradcam/${competition.name}/${job_id}
+
+seed: 42

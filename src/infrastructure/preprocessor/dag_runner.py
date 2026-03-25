@@ -28,11 +28,13 @@ class DAGRunner:
         input_dfs: dict[str, DataFrame],
         output_dir: Path,
         cv_splits: list[tuple[list[int], list[int]]] | None,
+        cv_cfg: dict[str, object] | None = None,
     ) -> None:
         self._nodes = nodes
         self._input_dfs = input_dfs
         self._output_dir = output_dir
         self._cv_splits = cv_splits
+        self._cv_cfg = cv_cfg or {}
         self._step_results: list[StepResult] = []
         # id → Node のインデックス
         self._node_map: dict[str, Node] = {n.id: n for n in nodes}
@@ -206,6 +208,15 @@ class DAGRunner:
             if "cv" not in method_cfg:
                 method_cfg["cv"] = self._cv_splits is not None
             if method_cfg.get("cv"):
-                method_cfg["splits"] = self._cv_splits
+                # 対象 DataFrame のサイズで splits を再生成する。
+                # 事前生成の splits は入力データ基準のため、
+                # subsample 等でデータ数が変わると indices が範囲外になる。
+                from src.infrastructure.preprocessor.cv_splitter import CVSplitter
+
+                input_df = cache[node.from_nodes[0]] if node.from_nodes else None
+                if input_df is not None and self._cv_cfg:
+                    method_cfg["splits"] = CVSplitter().build(self._cv_cfg, {"target": input_df})
+                else:
+                    method_cfg["splits"] = self._cv_splits
 
         return resolver_name, str(method), method_cfg

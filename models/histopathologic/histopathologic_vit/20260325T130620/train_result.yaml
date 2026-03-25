@@ -1,0 +1,27 @@
+job_id: histopathologic_vit
+timestamp: 20260325T130620
+commit_hash: 8c8da25fc49fa75b4128f0edeca148ed6085fe34
+trainer_type: vision
+metric: accuracy
+cv_mean_score: 0.8326895030915517
+cv_std_score: 0.0013854115742451415
+seed: 42
+folds:
+- fold_idx: 0
+  train_score: 0.8221858594122861
+  valid_score: 0.8310608126533952
+  best_iteration: null
+  n_train: 14667
+  n_valid: 7334
+- fold_idx: 1
+  train_score: 0.8247085293516057
+  valid_score: 0.8325606763021544
+  best_iteration: null
+  n_train: 14667
+  n_valid: 7334
+- fold_idx: 2
+  train_score: 0.8284701390782656
+  valid_score: 0.8344470203191054
+  best_iteration: null
+  n_train: 14668
+  n_valid: 7333

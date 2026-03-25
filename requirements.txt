@@ -6,6 +6,10 @@ aiohttp==3.13.3
     # via fsspec
 aiosignal==1.4.0
     # via aiohttp
+albucore==0.0.24
+    # via albumentations
+albumentations==2.0.8
+    # via mlops
 alembic==1.18.0
     # via mlflow
 annotated-doc==0.0.4
@@ -140,6 +144,8 @@ googleapis-common-protos==1.72.0
     #   google-api-core
     #   grpc-google-iam-v1
     #   grpcio-status
+grad-cam==1.5.5
+    # via mlops
 graphene==3.4.3
     # via mlflow
 graphql-core==3.2.7
@@ -218,6 +224,7 @@ markupsafe==3.0.3
     #   werkzeug
 matplotlib==3.10.8
     # via
+    #   grad-cam
     #   mlflow
     #   mlops
     #   seaborn
@@ -243,16 +250,22 @@ networkx==3.6.1
     # via torch
 numpy==2.4.1
     # via
+    #   albucore
+    #   albumentations
     #   contourpy
+    #   grad-cam
     #   lightgbm
     #   matplotlib
     #   mlflow
     #   mlops
+    #   opencv-python
+    #   opencv-python-headless
     #   pandas
     #   scikit-learn
     #   scipy
     #   seaborn
     #   torchmetrics
+    #   torchvision
 nvidia-cublas-cu12==12.8.4.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cudnn-cu12
@@ -296,6 +309,12 @@ omegaconf==2.3.0
     # via
     #   hydra-core
     #   mlops
+opencv-python==4.13.0.92
+    # via grad-cam
+opencv-python-headless==4.13.0.92
+    # via
+    #   albucore
+    #   albumentations
 opentelemetry-api==1.39.1
     # via
     #   mlflow-skinny
@@ -336,7 +355,11 @@ pathspec==1.0.3
     #   black
     #   mypy
 pillow==12.1.0
-    # via matplotlib
+    # via
+    #   grad-cam
+    #   matplotlib
+    #   mlops
+    #   torchvision
 platformdirs==4.5.1
     # via black
 polars==1.38.1
@@ -379,6 +402,7 @@ pycparser==2.23 ; implementation_name != 'PyPy' and platform_python_implementati
     # via cffi
 pydantic==2.12.5
     # via
+    #   albumentations
     #   fastapi
     #   google-cloud-aiplatform
     #   google-genai
@@ -412,6 +436,7 @@ pywin32==311 ; sys_platform == 'win32'
     # via docker
 pyyaml==6.0.3
     # via
+    #   albumentations
     #   mlflow-skinny
     #   mlops
     #   omegaconf
@@ -432,10 +457,12 @@ rsa==4.9.1
     # via google-auth
 scikit-learn==1.8.0
     # via
+    #   grad-cam
     #   mlflow
     #   mlops
 scipy==1.16.3
     # via
+    #   albumentations
     #   lightgbm
     #   mlflow
     #   scikit-learn
@@ -445,6 +472,8 @@ setuptools==80.9.0
     # via
     #   lightning-utilities
     #   torch
+simsimd==6.5.16
+    # via albucore
 six==1.17.0
     # via
     #   kaggle
@@ -461,6 +490,8 @@ sqlparse==0.5.5
     # via mlflow-skinny
 starlette==0.50.0
     # via fastapi
+stringzilla==4.6.0
+    # via albucore
 sympy==1.14.0
     # via torch
 tenacity==9.1.2
@@ -471,17 +502,26 @@ threadpoolctl==3.6.0
     # via scikit-learn
 torch==2.9.1
     # via
+    #   grad-cam
     #   mlops
     #   pytorch-lightning
     #   torchmetrics
+    #   torchvision
 torchmetrics==1.8.2
     # via pytorch-lightning
+torchvision==0.24.1
+    # via
+    #   grad-cam
+    #   mlops
 tqdm==4.67.1
     # via
+    #   grad-cam
     #   kaggle
     #   pytorch-lightning
 triton==3.5.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
+ttach==0.0.3
+    # via grad-cam
 types-requests==2.32.4.20260107
     # via
     #   kaggle

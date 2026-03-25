@@ -1,0 +1,7 @@
+*
+!.gitignore
+!.gitkeep
+!*.yaml
+!*.html
+!*.md
+!*/

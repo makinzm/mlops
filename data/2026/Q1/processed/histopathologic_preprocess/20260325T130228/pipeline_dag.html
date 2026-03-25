@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pipeline DAG</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad: true});</script>
+</head>
+<body>
+<h1>Pipeline DAG</h1>
+<div class="mermaid">
+graph LR
+  raw_labelsraw_labels([raw_labels<br/>input])
+  raw_testraw_test([raw_test<br/>input])
+  train_with_pathtrain_with_path[train_with_path<br/>polars:format_column]
+  train_subsampledtrain_subsampled[train_subsampled<br/>polars:stratified_subsample]
+  test_with_pathtest_with_path[test_with_path<br/>polars:format_column]
+  train_outtrain_out[[train_out<br/>OUTPUT]]
+  test_outtest_out[[test_out<br/>OUTPUT]]
+  raw_labels --> train_with_path
+  train_with_path --> train_subsampled
+  raw_test --> test_with_path
+  train_subsampled --> train_out
+  test_with_path --> test_out
+</div>
+</body>
+</html>
