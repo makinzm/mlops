@@ -1,14 +1,18 @@
 """
 Pipeline config 事前検証。
 
-全 step の config を実行前にビルド・検証し、
-足りないキーがあれば全て列挙してから PipelineConfigError を送出する。
+全 step の config を実行前にビルドし、OmegaConf の resolve を強制して
+未解決の変数や Missing キーを全て検出する。
 
 設計:
 1. build_step_configs(): 各 step に usecase のデフォルト config をマージ
-2. validate_pipeline_configs(): 必須キーの存在チェック
+2. validate_pipeline_configs(): OmegaConf.to_container(resolve=True, throw_on_missing=True)
+   で全キーの解決を試み、失敗した step のエラーを一括報告
 
-時間計算量: O(S * K) — S: step 数, K: チェックするキー数
+_REQUIRED_KEYS のようなハードコードリストは不要。
+config yaml 自体が「何が必要か」を定義しており、resolve 時に自動検出される。
+
+時間計算量: O(S) — S: step 数
 空間計算量: O(S)
 """
 
@@ -17,13 +21,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, MissingMandatoryValue, OmegaConf
 
 logger = logging.getLogger(__name__)
 
 # usecase 名 → conf/usecase/ の yaml ファイル名
-# NOTE: mille の name_deny でベンダー名を含む文字列リテラルが禁止されているため、
-#       usecase yaml 名が usecase 名と一致しない場合のみここに登録する。
+# NOTE: usecase yaml 名が usecase 名と一致しない場合のみここに登録する。
 #       一致する場合は _resolve_yaml_name() のフォールバックで処理する。
 _USECASE_TO_YAML: dict[str, str] = {
     "download_dataset": "download",
@@ -33,20 +36,6 @@ _USECASE_TO_YAML: dict[str, str] = {
 def _resolve_yaml_name(usecase_name: str) -> str:
     """usecase 名から conf/usecase/ の yaml ファイル名を解決する。"""
     return _USECASE_TO_YAML.get(usecase_name, usecase_name)
-
-
-# usecase 名 → 必須キーのリスト
-_REQUIRED_KEYS: dict[str, list[str]] = {
-    "download_dataset": ["output_dir", "source"],
-    "preprocess": ["competition"],
-    "train": ["competition"],
-    "inference": ["competition"],
-    "remote_train": ["competition"],
-    "push_notebook": ["notebook"],
-    "update_source_dataset": ["source_dataset"],
-    "create_source_dataset": ["source_dataset"],
-    "gradcam": ["model_path", "image_dir", "output_dir"],
-}
 
 
 class PipelineConfigError(Exception):
@@ -99,15 +88,7 @@ def build_step_configs(
 
         # マージ: base → usecase_defaults → step_overrides
         merged = OmegaConf.merge(base_cfg, usecase_defaults, step_cfg)
-
-        # OmegaConf 変数を解決
-        try:
-            resolved = OmegaConf.create(OmegaConf.to_container(merged, resolve=True))
-        except Exception:
-            # 解決できない変数がある場合は未解決のまま返す（検証で捕捉する）
-            resolved = DictConfig(OmegaConf.to_container(merged, resolve=False))
-
-        result.append(DictConfig(resolved))
+        result.append(DictConfig(merged))
 
     return result
 
@@ -115,13 +96,17 @@ def build_step_configs(
 def validate_pipeline_configs(step_configs: list[DictConfig]) -> None:
     """全 step の config を検証し、問題があれば一括でエラーを報告する。
 
+    OmegaConf.to_container(resolve=True, throw_on_missing=True) で全キーの解決を試み、
+    未解決の変数（${...}）や MISSING マーカーを自動検出する。
+    _REQUIRED_KEYS のようなハードコードリストは不要。
+
     Args:
         step_configs: build_step_configs() の戻り値
 
     Raises:
         PipelineConfigError: 1 つ以上の step に問題がある場合
 
-    時間計算量: O(S * K)
+    時間計算量: O(S)
     空間計算量: O(S)
     """
     errors: list[str] = []
@@ -129,19 +114,24 @@ def validate_pipeline_configs(step_configs: list[DictConfig]) -> None:
     for i, cfg in enumerate(step_configs):
         step_num = i + 1
         usecase = str(cfg.get("usecase", "unknown"))
-        required = _REQUIRED_KEYS.get(usecase, [])
 
-        step_errors: list[str] = []
-        for key in required:
-            if cfg.get(key) is None:
-                step_errors.append(
-                    f"  - '{key}' が未設定です。"
-                    f" conf/usecase/{_resolve_yaml_name(usecase)}.yaml"
-                    f" のデフォルト値を確認してください。"
-                )
-
-        if step_errors:
-            errors.append(f"Step {step_num} (usecase={usecase}):\n" + "\n".join(step_errors))
+        try:
+            OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+        except MissingMandatoryValue as e:
+            errors.append(
+                f"Step {step_num} (usecase={usecase}):\n"
+                f"  必須値が未設定です: {e}\n"
+                f"  修正: pipeline yaml の step に値を追加するか、"
+                f" conf/usecase/{_resolve_yaml_name(usecase)}.yaml"
+                f" のデフォルト値を確認してください。"
+            )
+        except Exception as e:
+            # InterpolationResolutionError 等: ${...} の変数が解決できない
+            errors.append(
+                f"Step {step_num} (usecase={usecase}):\n"
+                f"  config の解決に失敗しました: {e}\n"
+                f"  修正: 参照先の変数が定義されているか確認してください。"
+            )
 
     if errors:
         msg = "Pipeline config 検証エラー — 実行前に以下を修正してください:\n\n" + "\n\n".join(
