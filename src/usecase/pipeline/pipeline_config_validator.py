@@ -9,7 +9,6 @@ Pipeline config 事前検証。
 2. validate_pipeline_configs(): OmegaConf.to_container(resolve=True, throw_on_missing=True)
    で全キーの解決を試み、失敗した step のエラーを一括報告
 
-_REQUIRED_KEYS のようなハードコードリストは不要。
 config yaml 自体が「何が必要か」を定義しており、resolve 時に自動検出される。
 
 時間計算量: O(S) — S: step 数
@@ -98,8 +97,6 @@ def validate_pipeline_configs(step_configs: list[DictConfig]) -> None:
 
     OmegaConf.to_container(resolve=True, throw_on_missing=True) で全キーの解決を試み、
     未解決の変数（${...}）や MISSING マーカーを自動検出する。
-    _REQUIRED_KEYS のようなハードコードリストは不要。
-
     Args:
         step_configs: build_step_configs() の戻り値
 

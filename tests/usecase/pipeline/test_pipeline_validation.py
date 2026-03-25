@@ -4,7 +4,7 @@ Pipeline config 事前検証のテスト。
 なぜこのテストが必要か:
   - Pipeline 実行前に全 step の config を検証し、足りないキーを一括でエラー表示する。
   - OmegaConf の resolve を強制して Missing や未解決変数を自動検出する。
-  - _REQUIRED_KEYS のようなハードコードリストなしで動くことを確認する。
+  - ハードコードリストなしで OmegaConf resolve により自動検出されることを確認する。
 
 時間計算量: O(S) — S: step 数
 空間計算量: O(S)

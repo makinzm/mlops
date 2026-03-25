@@ -20,7 +20,7 @@ cfg.steps を順番にループし、step.usecase に応じて
 新しい usecase を追加する場合:
 1. main.py に _run_xxx() 関数を追加
 2. PipelineUseCase の初期化時に run_xxx=_run_xxx を渡す
-3. pipeline_config_validator.py の _USECASE_TO_YAML と _REQUIRED_KEYS に追加
+3. conf/usecase/{name}.yaml を作成する（OmegaConf resolve で自動検証される）
 """
 
 from __future__ import annotations
