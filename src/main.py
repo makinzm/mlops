@@ -183,10 +183,13 @@ def _run_remote_train(cfg: DictConfig) -> None:
     from src.usecase.training.trainer_loader import load_trainer_cfgs
 
     logger = logging.getLogger(__name__)
+    cfg = _ensure_cloud_config(cfg)
     git_repo = GitRepositoryImpl()
     trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
     # remote_train は一度に 1 レシピを実行する（最初の設定を使用）
     trainer_cfg = trainer_cfgs[0]
+    if trainer_cfg.get("cloud") is None:
+        trainer_cfg = DictConfig(OmegaConf.merge(trainer_cfg, {"cloud": cfg.cloud}))
     gcs = GCSRepositoryImpl(project=str(trainer_cfg.cloud.project))
     vertex = VertexAIRepositoryImpl(
         project=str(trainer_cfg.cloud.project),
@@ -206,6 +209,39 @@ def _run_remote_train(cfg: DictConfig) -> None:
     )
 
 
+def _ensure_cloud_config(cfg: DictConfig) -> DictConfig:
+    """cloud 設定が未解決の場合、conf/cloud/vertex.yaml を手動マージする。
+
+    Pipeline 経由の場合、Hydra の defaults 処理が走らないため
+    cloud: null のままになることがある。その場合は明示的にロードしてマージする。
+
+    同様に notification 設定も未解決なら conf/notification/slack.yaml をマージする。
+    """
+    needs_merge = False
+    extras: list[object] = []
+
+    if cfg.get("cloud") is None:
+        cloud_yaml = Path(_CONF_DIR) / "cloud" / "vertex.yaml"
+        if not cloud_yaml.exists():
+            raise FileNotFoundError(f"Cloud config not found: {cloud_yaml}")
+        extras.append(OmegaConf.load(cloud_yaml))
+        needs_merge = True
+
+    if cfg.get("notification") is None:
+        slack_yaml = Path(_CONF_DIR) / "notification" / "slack.yaml"
+        if slack_yaml.exists():
+            extras.append(OmegaConf.load(slack_yaml))
+            needs_merge = True
+
+    if not needs_merge:
+        return cfg
+
+    base = OmegaConf.create(OmegaConf.to_container(cfg, resolve=True))
+    for extra in extras:
+        base = OmegaConf.merge(base, extra)
+    return DictConfig(base)
+
+
 def _run_vertex_submit(cfg: DictConfig) -> None:
     """Vertex AI ジョブ非同期送信 UseCase を実行する（Pipeline から呼ばれる）。"""
     from src.infrastructure.gcp.storage import GCSRepositoryImpl
@@ -215,9 +251,13 @@ def _run_vertex_submit(cfg: DictConfig) -> None:
     from src.usecase.training.trainer_loader import load_trainer_cfgs
 
     logger = logging.getLogger(__name__)
+    cfg = _ensure_cloud_config(cfg)
     git_repo = GitRepositoryImpl()
     trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
     trainer_cfg = trainer_cfgs[0]
+    # trainer yaml に cloud が含まれない場合、元の cfg から補完する
+    if trainer_cfg.get("cloud") is None:
+        trainer_cfg = DictConfig(OmegaConf.merge(trainer_cfg, {"cloud": cfg.cloud}))
     gcs = GCSRepositoryImpl(project=str(trainer_cfg.cloud.project))
     vertex = VertexAIRepositoryImpl(
         project=str(trainer_cfg.cloud.project),
@@ -243,6 +283,7 @@ def _run_vertex_download(cfg: DictConfig) -> None:
     from src.usecase.training.remote_download import RemoteDownloadUseCase
 
     logger = logging.getLogger(__name__)
+    cfg = _ensure_cloud_config(cfg)
     gcs = GCSRepositoryImpl(project=str(cfg.cloud.project))
     vertex = VertexAIRepositoryImpl(
         project=str(cfg.cloud.project),
