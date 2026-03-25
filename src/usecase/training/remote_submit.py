@@ -37,11 +37,12 @@ from src.usecase._utils import resolve_latest_dir
 
 logger = logging.getLogger(__name__)
 
-_MODELS_DIR_GITIGNORE = """\
+_HISTORY_DIR_GITIGNORE = """\
+# manifest にはクラウドプロジェクト ID 等が含まれるため git 追跡しない。
+# ディレクトリ構造（.gitkeep）のみ残し、試行回数を確認できるようにする。
 *
 !.gitignore
-!*.yaml
-!*.md
+!.gitkeep
 !*/
 """
 
@@ -218,10 +219,15 @@ class RemoteSubmitUseCase:
         manifest.save(manifest_path)
         logger.info(f"Job manifest saved: {manifest_path}")
 
-        # 8. per-directory .gitignore を配置
+        # 8. per-directory .gitignore + .gitkeep を配置
+        #    .gitignore: manifest（機密情報含む）を除外
+        #    .gitkeep: ディレクトリ構造を git に残し試行回数を確認可能にする
         gitignore_path = history_dir / ".gitignore"
         if not gitignore_path.exists():
-            gitignore_path.write_text(_MODELS_DIR_GITIGNORE)
+            gitignore_path.write_text(_HISTORY_DIR_GITIGNORE)
+        gitkeep_path = history_dir / ".gitkeep"
+        if not gitkeep_path.exists():
+            gitkeep_path.touch()
 
         logger.info(
             f"Remote job submitted: {remote_job_name}\n"

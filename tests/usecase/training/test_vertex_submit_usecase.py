@@ -165,8 +165,8 @@ class TestRemoteSubmitUseCaseExecute:
         assert result.manifest_path.endswith("job_manifest.yaml")
         assert "remote_jobs_history" in result.manifest_path
 
-    def test_creates_gitignore_in_history_dir(self, tmp_path: Path) -> None:
-        """remote_jobs_history ディレクトリに .gitignore が作成されること。"""
+    def test_creates_gitignore_and_gitkeep_in_history_dir(self, tmp_path: Path) -> None:
+        """remote_jobs_history ディレクトリに .gitignore と .gitkeep が作成されること。"""
         cfg = _make_cfg(tmp_path)
         usecase = RemoteSubmitUseCase(
             cfg=cfg,
@@ -178,3 +178,6 @@ class TestRemoteSubmitUseCaseExecute:
 
         history_dir = Path(result.manifest_path).parent
         assert (history_dir / ".gitignore").exists()
+        assert (history_dir / ".gitkeep").exists()
+        gitignore_content = (history_dir / ".gitignore").read_text()
+        assert "!.gitkeep" in gitignore_content
