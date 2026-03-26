@@ -41,7 +41,7 @@ steps:
       src_dataset: ${_datasets.src}
       extra_datasets:
         - slug: ${_datasets.models}
-          mount_path: /kaggle/working/models/titanic
+          mount_path: /kaggle/working/models/titanic/titanic_lgbm/latest
       competition: titanic
       enable_gpu: false
       enable_internet: false
