@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 from omegaconf import DictConfig, OmegaConf
 
-from src.main import _resolve_manifest_path
+from src.presentation.cloud_config import resolve_manifest_path as _resolve_manifest_path
 
 
 @pytest.fixture()
@@ -41,7 +41,7 @@ def _base_cfg(tmp_path: Path, **overrides: object) -> DictConfig:
     }
     for key, value in overrides.items():
         base[key] = value
-    return OmegaConf.create(base)  # ty:ignore[invalid-argument-type]
+    return OmegaConf.create(base)
 
 
 class TestResolveManifestPathExplicit:
