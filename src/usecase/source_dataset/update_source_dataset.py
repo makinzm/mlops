@@ -92,12 +92,18 @@ class UpdateSourceDatasetUseCase:
                 metadata=metadata,
                 version_message=version_message,
             )
-        except Exception:
-            logger.error(
-                "Dataset バージョン更新に失敗しました。staging dir は残しています: %s",
-                staging_dir,
-            )
-            raise
+        except Exception as update_error:
+            # Dataset が存在しない場合（403 等）は自動で create にフォールバック
+            logger.warning("Dataset バージョン更新に失敗。新規作成を試みます: %s", metadata.full_id)
+            try:
+                self._repository.create(staging_dir=staging_dir, metadata=metadata)
+                logger.info("Dataset を新規作成しました: %s", metadata.full_id)
+            except Exception:
+                logger.error(
+                    "Dataset 新規作成にも失敗しました。staging dir は残しています: %s",
+                    staging_dir,
+                )
+                raise update_error
 
         cleanup_staging_dir(staging_dir)
         logger.info("Done. Dataset: %s", metadata.full_id)

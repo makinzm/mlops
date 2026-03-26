@@ -107,11 +107,12 @@ class TestUpdateSourceDatasetUseCaseExecute:
             assert len(remaining) == 0, f"成功後に staging に残骸がある: {remaining}"
 
     def test_execute_keeps_staging_dir_on_failure(self, tmp_path: Path) -> None:
-        """失敗時に staging subdir が残ること（デバッグ用）。"""
+        """update も create も失敗した場合に staging subdir が残ること（デバッグ用）。"""
         _setup_src(tmp_path)
         cfg = _make_cfg(tmp_path)
         mock_repo = MagicMock()
         mock_repo.update_version.side_effect = RuntimeError("upload failed")
+        mock_repo.create.side_effect = RuntimeError("create also failed")
         usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
 
         with pytest.raises(RuntimeError, match="upload failed"):
@@ -121,3 +122,16 @@ class TestUpdateSourceDatasetUseCaseExecute:
         assert staging_root.exists(), "失敗時は staging が残るべき"
         subdirs = [d for d in staging_root.iterdir() if d.is_dir()]
         assert len(subdirs) >= 1, "失敗時は staging subdir が残るべき"
+
+    def test_execute_creates_dataset_on_update_failure(self, tmp_path: Path) -> None:
+        """update 失敗時に create にフォールバックすること（upsert 動作）。"""
+        _setup_src(tmp_path)
+        cfg = _make_cfg(tmp_path)
+        mock_repo = MagicMock()
+        mock_repo.update_version.side_effect = RuntimeError("403 Forbidden")
+        usecase = UpdateSourceDatasetUseCase(cfg=cfg, repository=mock_repo)  # ty:ignore[invalid-argument-type]
+
+        usecase.execute()
+
+        mock_repo.update_version.assert_called_once()
+        mock_repo.create.assert_called_once()
