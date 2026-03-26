@@ -183,10 +183,13 @@ def _run_remote_train(cfg: DictConfig) -> None:
     from src.usecase.training.trainer_loader import load_trainer_cfgs
 
     logger = logging.getLogger(__name__)
+    cfg = _ensure_cloud_config(cfg)
     git_repo = GitRepositoryImpl()
     trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
     # remote_train は一度に 1 レシピを実行する（最初の設定を使用）
     trainer_cfg = trainer_cfgs[0]
+    if trainer_cfg.get("cloud") is None:
+        trainer_cfg = DictConfig(OmegaConf.merge(trainer_cfg, {"cloud": cfg.cloud}))
     gcs = GCSRepositoryImpl(project=str(trainer_cfg.cloud.project))
     vertex = VertexAIRepositoryImpl(
         project=str(trainer_cfg.cloud.project),
@@ -203,6 +206,154 @@ def _run_remote_train(cfg: DictConfig) -> None:
         f"リモート学習完了[{result.job_id}]: "
         f"job={result.remote_job_name}, "
         f"local_model_dir={result.local_model_dir}"
+    )
+
+
+def _ensure_cloud_config(cfg: DictConfig) -> DictConfig:
+    """cloud 設定が未解決の場合、conf/cloud/vertex.yaml を手動マージする。
+
+    Pipeline 経由の場合、Hydra の defaults 処理が走らないため
+    cloud: null のままになることがある。その場合は明示的にロードしてマージする。
+
+    同様に notification 設定も未解決なら conf/notification/slack.yaml をマージする。
+    """
+    needs_merge = False
+    extras: list[object] = []
+
+    if cfg.get("cloud") is None:
+        cloud_yaml = Path(_CONF_DIR) / "cloud" / "vertex.yaml"
+        if not cloud_yaml.exists():
+            raise FileNotFoundError(f"Cloud config not found: {cloud_yaml}")
+        extras.append(OmegaConf.load(cloud_yaml))
+        needs_merge = True
+
+    if cfg.get("notification") is None:
+        slack_yaml = Path(_CONF_DIR) / "notification" / "slack.yaml"
+        if slack_yaml.exists():
+            extras.append(OmegaConf.load(slack_yaml))
+            needs_merge = True
+
+    if not needs_merge:
+        return cfg
+
+    base = OmegaConf.create(OmegaConf.to_container(cfg, resolve=True))
+    for extra in extras:
+        base = OmegaConf.merge(base, extra)
+    return DictConfig(base)
+
+
+def _run_vertex_submit(cfg: DictConfig) -> None:
+    """Vertex AI ジョブ非同期送信 UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.infrastructure.gcp.storage import GCSRepositoryImpl
+    from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
+    from src.infrastructure.repository.git import GitRepositoryImpl
+    from src.usecase.training.remote_submit import RemoteSubmitUseCase
+    from src.usecase.training.trainer_loader import load_trainer_cfgs
+
+    logger = logging.getLogger(__name__)
+    cfg = _ensure_cloud_config(cfg)
+    git_repo = GitRepositoryImpl()
+    trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
+    trainer_cfg = trainer_cfgs[0]
+    # trainer yaml に cloud が含まれない場合、元の cfg から補完する
+    if trainer_cfg.get("cloud") is None:
+        trainer_cfg = DictConfig(OmegaConf.merge(trainer_cfg, {"cloud": cfg.cloud}))
+    gcs = GCSRepositoryImpl(project=str(trainer_cfg.cloud.project))
+    vertex = VertexAIRepositoryImpl(
+        project=str(trainer_cfg.cloud.project),
+        region=str(trainer_cfg.cloud.region),
+        staging_bucket=str(trainer_cfg.cloud.staging_bucket),
+    )
+    result = RemoteSubmitUseCase(
+        cfg=trainer_cfg,
+        object_storage=gcs,
+        training_job=vertex,
+        git_repo=git_repo,
+    ).execute()
+    logger.info(
+        f"Vertex AI ジョブ送信完了[{result.job_id}]: "
+        f"job={result.remote_job_name}, manifest={result.manifest_path}"
+    )
+
+
+def _load_trainer_cfgs_safe(cfg: DictConfig) -> list[DictConfig]:
+    """recipe が pipeline recipe の場合でも安全に trainer config をロードする。
+
+    pipeline 経由だと cfg.recipe が pipeline recipe（例: vertex_download_and_push）に
+    なっており、trainer yaml として解決できない。recipe を一時的に null にして
+    全 trainer をロードする。
+    """
+    from src.usecase.training.trainer_loader import load_trainer_cfgs
+
+    cfg_copy = DictConfig(OmegaConf.to_container(cfg, resolve=True))
+    cfg_copy.recipe = None
+    return load_trainer_cfgs(cfg_copy, Path(_CONF_DIR))
+
+
+def _resolve_manifest_path(cfg: DictConfig) -> Path:
+    """manifest_path を解決する。
+
+    manifest_path が指定されていればそのまま返す。
+    未指定の場合は competition + job_id + latest から自動解決する。
+    job_id が未設定なら recipe から trainer config をロードして取得する。
+    """
+    from src.usecase._utils import resolve_latest_dir
+
+    explicit = cfg.get("manifest_path")
+    if explicit is not None and str(explicit) != "None":
+        return Path(str(explicit))
+
+    competition = str(cfg.competition.name)
+    history_base = str(cfg.get("remote_jobs_history_dir", "remote_jobs_history"))
+
+    # job_id を解決: cfg の job_id が使えなければ trainer config から取得
+    # pipeline 経由だと cfg.job_id が pipeline 自体の ID になるため、
+    # 実際の history ディレクトリが存在するかで判定する
+    job_id = cfg.get("job_id")
+    if job_id is not None and str(job_id) != "None":
+        candidate = Path(history_base) / competition / str(job_id)
+        if candidate.is_dir():
+            latest_dir = resolve_latest_dir(f"{candidate}/latest")
+            return Path(latest_dir) / "job_manifest.yaml"
+
+    # cfg.job_id が無い or 対応 dir が無い → trainer config から取得
+    trainer_cfgs = _load_trainer_cfgs_safe(cfg)
+    job_id = str(trainer_cfgs[0].job_id)
+    latest_dir = resolve_latest_dir(f"{history_base}/{competition}/{job_id}/latest")
+    return Path(latest_dir) / "job_manifest.yaml"
+
+
+def _run_vertex_download(cfg: DictConfig) -> None:
+    """Vertex AI モデルダウンロード UseCase を実行する（Pipeline から呼ばれる）。"""
+    from src.infrastructure.gcp.storage import GCSRepositoryImpl
+    from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
+    from src.usecase.training.remote_download import RemoteDownloadUseCase
+
+    logger = logging.getLogger(__name__)
+    cfg = _ensure_cloud_config(cfg)
+    gcs = GCSRepositoryImpl(project=str(cfg.cloud.project))
+    vertex = VertexAIRepositoryImpl(
+        project=str(cfg.cloud.project),
+        region=str(cfg.cloud.region),
+        staging_bucket=str(cfg.cloud.staging_bucket),
+    )
+    manifest_path = _resolve_manifest_path(cfg)
+    logger.info(f"Using manifest: {manifest_path}")
+    # output_dir は trainer config に定義されている。cfg に無ければ trainer config から取得。
+    output_dir_raw = cfg.get("output_dir")
+    if output_dir_raw is None or str(output_dir_raw) == "None":
+        trainer_cfgs = _load_trainer_cfgs_safe(cfg)
+        output_dir = Path(str(trainer_cfgs[0].output_dir))
+    else:
+        output_dir = Path(str(output_dir_raw))
+    result = RemoteDownloadUseCase(
+        manifest_path=manifest_path,
+        object_storage=gcs,
+        training_job=vertex,
+        output_dir=output_dir,
+    ).execute()
+    logger.info(
+        f"モデルダウンロード完了[{result.job_id}]: local_model_dir={result.local_model_dir}"
     )
 
 
@@ -323,6 +474,12 @@ def main(cfg: DictConfig) -> None:
     elif usecase_name == "remote_train":
         _run_remote_train(cfg)
 
+    elif usecase_name == "vertex_submit":
+        _run_vertex_submit(cfg)
+
+    elif usecase_name == "vertex_download":
+        _run_vertex_download(cfg)
+
     elif usecase_name == "pipeline":
         from src.usecase.pipeline.pipeline import PipelineUseCase
         from src.usecase.pipeline.pipeline_loader import load_pipeline_recipe_cfg
@@ -334,6 +491,8 @@ def main(cfg: DictConfig) -> None:
             run_inference=_run_inference,
             conf_dir=Path(_CONF_DIR),
             run_remote_train=_run_remote_train,
+            run_vertex_submit=_run_vertex_submit,
+            run_vertex_download=_run_vertex_download,
             run_update_source_dataset=_run_update_source_dataset_pipeline,
             run_push_notebook=_run_push_notebook_pipeline,
             run_download_dataset=_run_download,
@@ -422,6 +581,8 @@ def main(cfg: DictConfig) -> None:
             "train",
             "inference",
             "remote_train",
+            "vertex_submit",
+            "vertex_download",
             "pipeline",
             "push_notebook",
             "create_source_dataset",

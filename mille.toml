@@ -11,7 +11,7 @@ name = "src_domain"
 paths = ["src/domain/**"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["dataclasses", "pathlib", "typing"]
+external_allow = ["dataclasses", "pathlib", "typing", "yaml"]
 name_deny = ["gcp", "vertex", "lgbm", "titanic", "kaggle"]
 
 [[layers]]
@@ -20,7 +20,7 @@ paths = ["src/infrastructure/**"]
 allow = ["src_domain", "src_usecase"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["albumentations", "collections", "dataclasses", "datetime", "google", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "PIL", "polars", "pytorch_grad_cam", "seaborn", "sklearn", "subprocess", "torch", "torchvision", "typing", "yaml", "zipfile"]
+external_allow = ["albumentations", "collections", "dataclasses", "datetime", "email", "google", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "PIL", "polars", "pytorch_grad_cam", "seaborn", "sklearn", "smtplib", "subprocess", "torch", "torchvision", "typing", "urllib", "yaml", "zipfile"]
 name_deny = ["titanic"]
 
 [[layers]]
@@ -30,7 +30,7 @@ allow = ["src_domain"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["collections", "dataclasses", "datetime", "fnmatch", "jinja2", "json", "logging", "numpy", "omegaconf", "pathlib", "polars", "scipy", "shutil", "typing", "yaml"]
-name_deny = ["gcp", "vertex", "lgbm", "titanic", "kaggle"]
+name_deny = ["gcp", "vertex", "lgbm", "titanic", "kaggle", "google"]
 
 [[layers]]
 name = "tests_domain"
@@ -46,7 +46,7 @@ paths = ["tests/infrastructure/**"]
 allow = ["src_domain", "src_infrastructure"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["albumentations", "google", "json", "lightgbm", "math", "numpy", "omegaconf", "pandas", "pathlib", "PIL", "polars", "pytest", "src", "torch", "torchvision", "typing", "unittest", "yaml", "zipfile"]
+external_allow = ["albumentations", "google", "json", "lightgbm", "math", "numpy", "omegaconf", "pandas", "pathlib", "PIL", "polars", "pytest", "smtplib", "src", "torch", "torchvision", "typing", "unittest", "urllib", "yaml", "zipfile"]
 
 [[layers]]
 name = "tests_usecase"

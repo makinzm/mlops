@@ -40,6 +40,34 @@ class TrainingJobRepository(Protocol):
         """カスタムトレーニングジョブを送信し、完了まで待機して結果を返す。"""
         ...
 
+    def submit_custom_job(
+        self,
+        display_name: str,
+        container_uri: str,
+        command: list[str],
+        args: list[str],
+        machine_type: str,
+        env_vars: dict[str, str],
+        service_account: str,
+    ) -> TrainingJobResult:
+        """カスタムトレーニングジョブを送信し、即座に返す（完了を待たない）。"""
+        ...
+
+    def get_job_status(self, job_name: str) -> TrainingJobResult:
+        """ジョブの現在のステータスを取得する。"""
+        ...
+
+    def build_bootstrap_command(self, code_uri: str) -> list[str]:
+        """コンテナ起動時のブートストラップコマンドを生成する。
+
+        コードダウンロード・依存インストール・エントリーポイント実行を含む。
+        """
+        ...
+
+    def build_console_url(self, job_name: str) -> str:
+        """ジョブの管理コンソール URL を生成する。"""
+        ...
+
     def cancel_job(self, job_name: str) -> None:
         """実行中のジョブをキャンセルする。"""
         ...
