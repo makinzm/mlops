@@ -113,7 +113,7 @@ git merge upstream/main
 
 コンペで追加した汎用的な関数やユーティリティをテンプレートに戻す手順。
 
-### 3.1 方針: どのコミットを戻すか判断する
+### 3.1 方針: どのファイルを戻すか判断する
 
 バックポート対象の基準:
 
@@ -132,61 +132,72 @@ git merge upstream/main
 | コンペ固有のデータパス | 他のコンペでは使わない |
 | 実験ログ・モデルファイル | データは持ち込まない |
 
-### 3.2 コンペリポジトリでバックポート候補を特定
-
-```bash
-cd kaggle-{competition_name}
-
-# テンプレートとの差分をファイル単位で確認
-git diff upstream/main --stat
-
-# src/ 以下の変更のみ確認（conf/ やデータは除外）
-git diff upstream/main -- src/ tests/
-```
-
-### 3.3 テンプレートにコンペリポジトリを remote 追加
+### 3.2 テンプレートにコンペリポジトリを remote 追加
 
 ```bash
 cd /path/to/mlops  # テンプレートリポジトリ
-git fetch upstream  # 最新化
 
 # コンペリポジトリを一時的に remote 追加
 git remote add competition git@github.com:{your_username}/kaggle-{competition_name}.git
 git fetch competition
 ```
 
-### 3.4 cherry-pick で取り込む
+### 3.3 差分をファイル単位で確認
+
+```bash
+# コンペリポジトリで変更されたファイル一覧を確認
+git diff main...competition/main --stat
+
+# src/ と tests/ に絞って確認（conf/ やデータは除外）
+git diff main...competition/main --stat -- src/ tests/
+
+# 特定ディレクトリの中身を詳しく見たい場合
+git diff main...competition/main -- src/domain/preprocessing/
+```
+
+### 3.4 ファイルパス指定で一括取り込み
+
+`git checkout` でコンペリポジトリからファイル単位・ディレクトリ単位で取り込む。
+コミット履歴ではなくファイルの最終状態を持ってくるので、コミットの粒度を気にしなくてよい。
 
 ```bash
 # バックポート用ブランチを作成
 git checkout -b backport/{competition_name} origin/main
 
-# 対象コミットを cherry-pick（コミットハッシュはコンペリポジトリの git log で確認）
-git cherry-pick {commit_hash_1}
-git cherry-pick {commit_hash_2}
+# ファイル単位で取り込み
+git checkout competition/main -- src/domain/preprocessing/clip_outliers.py
+git checkout competition/main -- tests/domain/preprocessing/test_clip_outliers.py
+
+# ディレクトリ単位で一括取り込み
+git checkout competition/main -- src/domain/model/transformer/
+git checkout competition/main -- tests/domain/model/transformer/
 ```
 
-> **ヒント**: コンペ中に「これはテンプレートにも欲しい」と思った変更は、
-> 独立したコミットにしておくと cherry-pick しやすい。
-> コミットメッセージに `[backport]` タグをつけておくと後で探しやすい。
+この時点で取り込んだファイルはすべて staging 済みの状態になる。
+
+### 3.5 staging を解除して整理コミットを作成
+
+`git reset --soft` の考え方と同じく、一度 staging を解除してから
+関心事ごとにコミットを分ける。
 
 ```bash
-# コンペリポジトリ側で [backport] タグ付きコミットを探す
-git log --oneline competition/main | grep '\[backport\]'
-```
+# staging を解除（ファイルは working tree に残る）
+git restore --staged .
 
-### 3.5 コンフリクト解消
-
-cherry-pick でコンフリクトが発生した場合:
-
-```bash
-# コンフリクトファイルを確認
+# 変更内容を確認
 git status
+git diff
 
-# 手動で解消後
-git add {resolved_files}
-git cherry-pick --continue
+# 関心事ごとに add & commit
+git add src/domain/preprocessing/clip_outliers.py tests/domain/preprocessing/test_clip_outliers.py
+git commit -m "feat: clip_outliers 前処理関数を追加"
+
+git add src/domain/model/transformer/ tests/domain/model/transformer/
+git commit -m "feat: Transformer モデルラッパーを追加"
 ```
+
+> **ヒント**: 取り込んだファイルにコンペ固有のハードコードがないか `git diff` で確認し、
+> 汎用的な形に修正してからコミットする。
 
 ### 3.6 テスト実行 & PR 作成
 
@@ -201,9 +212,10 @@ gh pr create \
   --body "## Summary
 - {competition_name} コンペで追加した汎用関数をテンプレートに反映
 
-## cherry-pick 元コミット
-- {commit_hash_1}: {description}
-- {commit_hash_2}: {description}
+## 取り込んだファイル
+- src/domain/preprocessing/clip_outliers.py
+- src/domain/model/transformer/
+- （対応するテストファイル）
 
 ## Test plan
 - [ ] \`uv run pytest tests/\` が通る
@@ -227,15 +239,15 @@ git remote remove competition
 │                  テンプレートリポジトリ                  │
 │                  (makinzm/mlops)                      │
 │                                                       │
-│  upstream ◄──────────────────────── cherry-pick PR    │
+│  upstream ◄─────────────────── backport PR             │
 └───────┬───────────────────────────────────▲───────────┘
         │ clone                             │
         ▼                                   │
 ┌─────────────────────────────────┐         │
 │    コンペ用リポジトリ (Private)    │         │
 │                                  │ ────────┘
-│  origin: kaggle-{competition}    │  バックポート
-│  upstream: makinzm/mlops         │  ([backport] コミット)
+│  origin: kaggle-{competition}    │  git checkout で
+│  upstream: makinzm/mlops         │  ファイル単位取り込み
 │  .env → ~/.config/mlops/.env     │
 └─────────────────────────────────┘
 ```
@@ -254,13 +266,13 @@ git remote remove competition
 
 ### コンペ期間中
 
-- [ ] テンプレートに戻したい変更は独立コミット + `[backport]` タグ
 - [ ] 必要に応じて `git fetch upstream && git merge upstream/main`
 
 ### コンペ終了後
 
-- [ ] `git diff upstream/main -- src/ tests/` でバックポート候補を特定
-- [ ] テンプレートで `backport/{competition_name}` ブランチを作成
-- [ ] `cherry-pick` で対象コミットを取り込み
+- [ ] テンプレートに competition remote を追加
+- [ ] `git diff main...competition/main --stat -- src/ tests/` でバックポート候補を特定
+- [ ] `git checkout competition/main -- {paths}` でファイル単位取り込み
+- [ ] `git restore --staged .` → 関心事ごとにコミット整理
 - [ ] テスト通過を確認して PR 作成
 - [ ] 一時 remote を削除
