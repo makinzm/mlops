@@ -20,9 +20,7 @@ class TestAuthenticateKaggleApi:
     def test_returns_authenticated_api(self) -> None:
         """正常系: 認証済み KaggleApi インスタンスを返すこと。"""
         mock_api = MagicMock()
-        with patch(
-            "src.presentation.kaggle_auth.KaggleApi", return_value=mock_api
-        ):
+        with patch("kaggle.api.kaggle_api_extended.KaggleApi", return_value=mock_api):
             from src.presentation.kaggle_auth import authenticate_kaggle_api
 
             result = authenticate_kaggle_api()
@@ -31,17 +29,37 @@ class TestAuthenticateKaggleApi:
         mock_api.authenticate.assert_called_once()
 
     def test_raises_runtime_error_on_import_system_exit(self) -> None:
-        """import 時の SystemExit が RuntimeError に変換されること。"""
+        """import 時の SystemExit が RuntimeError に変換されること。
+
+        kaggle パッケージは import 時に authenticate() を実行するため、
+        import 文自体で SystemExit が発生するケースをシミュレートする。
+        builtins.__import__ をパッチして kaggle モジュールの import で SystemExit を発生させる。
+        """
+        import builtins
+        import sys
+
         from src.presentation.kaggle_auth import authenticate_kaggle_api
 
-        with (
-            patch(
-                "src.presentation.kaggle_auth.KaggleApi",
-                side_effect=SystemExit(1),
-            ),
-            pytest.raises(RuntimeError, match="Kaggle 認証に失敗"),
-        ):
-            authenticate_kaggle_api()
+        # kaggle モジュールをキャッシュから除去して再 import を強制
+        modules_to_remove = [k for k in sys.modules if k.startswith("kaggle")]
+        saved = {k: sys.modules.pop(k) for k in modules_to_remove}
+
+        original_import = builtins.__import__
+
+        def _raise_on_kaggle(name: str, *args: object, **kwargs: object) -> object:
+            if name.startswith("kaggle"):
+                raise SystemExit(1)
+            return original_import(name, *args, **kwargs)  # ty:ignore[invalid-argument-type]
+
+        try:
+            with (
+                patch("builtins.__import__", side_effect=_raise_on_kaggle),
+                pytest.raises(RuntimeError, match="Kaggle 認証に失敗"),
+            ):
+                authenticate_kaggle_api()
+        finally:
+            # モジュールキャッシュを復元
+            sys.modules.update(saved)
 
     def test_raises_runtime_error_on_authenticate_system_exit(self) -> None:
         """authenticate() 時の SystemExit が RuntimeError に変換されること。"""
@@ -50,7 +68,7 @@ class TestAuthenticateKaggleApi:
 
         with (
             patch(
-                "src.presentation.kaggle_auth.KaggleApi",
+                "kaggle.api.kaggle_api_extended.KaggleApi",
                 return_value=mock_api,
             ),
             pytest.raises(RuntimeError, match="Kaggle 認証に失敗"),

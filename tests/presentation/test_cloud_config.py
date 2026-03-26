@@ -33,7 +33,9 @@ class TestEnsureCloudConfig:
         conf_dir = tmp_path / "conf"
         cloud_dir = conf_dir / "cloud"
         cloud_dir.mkdir(parents=True)
-        (cloud_dir / "vertex.yaml").write_text("cloud:\n  project: merged-project\n  region: us\n  staging_bucket: gs://b\n")
+        (cloud_dir / "vertex.yaml").write_text(
+            "cloud:\n  project: merged-project\n  region: us\n  staging_bucket: gs://b\n"
+        )
 
         cfg = OmegaConf.create({"cloud": None, "notification": {"type": "slack"}})
         result = ensure_cloud_config(cfg, str(conf_dir))
