@@ -7,6 +7,11 @@
 usecase: pipeline
 job_id: titanic_vertex_download_and_push
 
+# Dataset slug を一箇所で管理し、step 間の不整合を防ぐ
+_datasets:
+  src: mlops-pipeline-src-2
+  models: titanic-vertex-models-2
+
 steps:
   # (1) Vertex AI からモデルダウンロード
   - usecase: vertex_download
@@ -14,13 +19,14 @@ steps:
   # (2) コードを既存 Dataset に push
   - usecase: update_source_dataset
     source_dataset:
+      dataset_slug: ${_datasets.src}
       version_message: "auto update: vertex download and push"
 
-  # (3) モデル重みを別の Dataset に push（latest → 最新タイムスタンプを自動解決）
+  # (3) モデル重みを別の Dataset に push（upsert: 初回は自動作成）
   - usecase: update_source_dataset
     source_dataset:
-      dataset_slug: titanic-vertex-models-2
-      title: titanic-vertex-models-2
+      dataset_slug: ${_datasets.models}
+      title: ${_datasets.models}
       src_dir: models/titanic/titanic_lgbm/latest
       conf_dir: models/titanic/titanic_lgbm/latest
       extra_dirs: []
@@ -29,11 +35,11 @@ steps:
   # (4) 推論専用 Notebook を push
   - usecase: push_notebook
     notebook:
-      kernel_slug: titanic-vertex-inference
+      kernel_slug: titanic-vertex-inference-2
       recipe: inference_only
-      src_dataset: mlops-pipeline-src-2
+      src_dataset: ${_datasets.src}
       extra_datasets:
-        - slug: titanic-vertex-models-2
+        - slug: ${_datasets.models}
           mount_path: /kaggle/working/models/titanic
       competition: titanic
       enable_gpu: false
