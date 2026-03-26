@@ -11,16 +11,12 @@ steps:
   # (1) Vertex AI からモデルダウンロード
   - usecase: vertex_download
 
-  # (2) 推論（submission.csv 生成）
-  - usecase: inference
-    recipe: titanic_ensemble
-
-  # (3) コードを既存 Dataset に push
+  # (2) コードを既存 Dataset に push
   - usecase: update_source_dataset
     source_dataset:
       version_message: "auto update: vertex download and push"
 
-  # (4) モデル重みを別の Dataset に push（latest → 最新タイムスタンプを自動解決）
+  # (3) モデル重みを別の Dataset に push（latest → 最新タイムスタンプを自動解決）
   - usecase: update_source_dataset
     source_dataset:
       dataset_slug: titanic-vertex-models-2
@@ -30,7 +26,7 @@ steps:
       extra_dirs: []
       version_message: "auto update: vertex trained model"
 
-  # (5) 推論専用 Notebook を push
+  # (4) 推論専用 Notebook を push
   - usecase: push_notebook
     notebook:
       kernel_slug: titanic-vertex-inference
