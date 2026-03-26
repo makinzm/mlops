@@ -16,10 +16,11 @@ steps:
   # (1) Vertex AI からモデルダウンロード
   - usecase: vertex_download
 
-  # (2) コードを既存 Dataset に push
+  # (2) コードを既存 Dataset に push（upsert: 初回は自動作成）
   - usecase: update_source_dataset
     source_dataset:
       dataset_slug: ${_datasets.src}
+      title: ${_datasets.src}
       version_message: "auto update: vertex download and push"
 
   # (3) モデル重みを別の Dataset に push（upsert: 初回は自動作成）
