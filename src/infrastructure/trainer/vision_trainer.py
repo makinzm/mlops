@@ -31,6 +31,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from src.domain.model.backbone import BackboneConfig
+from src.domain.model.seed import SeedFixer
 from src.domain.model.trainer import FoldResult, TrainResult
 from src.infrastructure.trainer.error_analysis import write_error_analysis
 from src.infrastructure.trainer.torch_utils.augmentation import (
@@ -42,7 +43,7 @@ from src.infrastructure.trainer.torch_utils.model_builder import (
     build_vision_model,
     save_checkpoint,
 )
-from src.infrastructure.trainer.torch_utils.seed import fix_seed
+from src.infrastructure.trainer.torch_utils.seed import TorchSeedFixer
 from src.infrastructure.trainer.torch_utils.training_loop import run_training_loop
 from src.infrastructure.trainer.torch_utils.validation import validate_training_inputs
 
@@ -55,8 +56,9 @@ class VisionTrainer:
     Trainer Protocol を満たす。
     """
 
-    def __init__(self, cfg: dict[str, Any]) -> None:
+    def __init__(self, cfg: dict[str, Any], seed_fixer: SeedFixer | None = None) -> None:
         self._cfg = cfg
+        self._seed_fixer: SeedFixer = seed_fixer if seed_fixer is not None else TorchSeedFixer()
 
     def fit_folds(
         self,
@@ -163,7 +165,7 @@ class VisionTrainer:
             fold_out = output_dir / f"fold_{fold_idx}"
             fold_out.mkdir(parents=True, exist_ok=True)
 
-            fix_seed(seed)
+            self._seed_fixer.fix(seed)
 
             train_df = pl.read_parquet(fold_dir / "train.parquet")
             valid_df = pl.read_parquet(fold_dir / "test.parquet")
