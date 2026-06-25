@@ -43,8 +43,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv tool install mille
-      - run: mille check
+      - run: uv sync
+      - run: uv run mille check
 
   actionlint:
     runs-on: ubuntu-latest
