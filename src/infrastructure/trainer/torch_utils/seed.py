@@ -27,3 +27,14 @@ def fix_seed(seed: int) -> None:
     np.random.seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+
+class TorchSeedFixer:
+    """domain.model.seed.SeedFixer Protocol の PyTorch 実装。
+
+    fix_seed() をそのまま呼ぶ薄いラッパー。usecase/trainer 層が
+    PyTorch 固有の実装に直接依存しないよう Protocol 越しに使う。
+    """
+
+    def fix(self, seed: int) -> None:
+        fix_seed(seed)

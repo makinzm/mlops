@@ -2,10 +2,10 @@
 SeedFixer Protocol のテスト。
 
 なぜこのテストが必要か:
-  - fix_seed() は src/infrastructure/trainer/torch_utils/seed.py に直接実装されており、
-    usecase/trainer 層が PyTorch 固有の実装に直接依存していた。
-  - SeedFixer Protocol を domain 層に定義し、TorchSeedFixer がそれを満たすことを保証することで、
-    将来 TensorFlow/JAX 等の別フレームワーク実装に差し替え可能にする。
+  - SeedFixer Protocol を domain 層に定義し、fix(seed: int) -> None を満たす
+    任意のオブジェクトが Protocol を満たすことを保証する。
+  - 具体実装（TorchSeedFixer 等）への依存は infrastructure 層のテストで検証する
+    （Clean Architecture: tests/domain は src/infrastructure に依存してはならない）。
 """
 
 from __future__ import annotations
@@ -13,10 +13,13 @@ from __future__ import annotations
 from src.domain.model.seed import SeedFixer
 
 
-class TestSeedFixerProtocol:
-    def test_torch_seed_fixer_satisfies_protocol(self) -> None:
-        """TorchSeedFixer が SeedFixer Protocol を満たすこと。"""
-        from src.infrastructure.trainer.torch_utils.seed import TorchSeedFixer
+class _FakeSeedFixer:
+    def fix(self, seed: int) -> None:
+        pass
 
-        fixer: SeedFixer = TorchSeedFixer()
+
+class TestSeedFixerProtocol:
+    def test_object_with_fix_method_satisfies_protocol(self) -> None:
+        """fix(seed: int) -> None を実装したオブジェクトが Protocol を満たすこと。"""
+        fixer: SeedFixer = _FakeSeedFixer()
         assert isinstance(fixer, SeedFixer)
