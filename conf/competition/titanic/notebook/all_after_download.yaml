@@ -1,0 +1,14 @@
+# @package _global_
+# Titanic パイプライン全体 Notebook の Kaggle push 設定
+#
+# 実行例:
+#   uv run python -m src usecase=push_notebook recipe=all_after_download
+
+notebook:
+  competition: titanic
+  kernel_slug: titanic-pipeline
+  src_dataset: mlops-pipeline-src
+  recipe: all_after_download
+  enable_gpu: false
+  enable_internet: false
+  extra_datasets: []

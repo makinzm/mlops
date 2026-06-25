@@ -125,3 +125,36 @@ class TestValidatePipelineConfigs:
             DictConfig({"usecase": "train", "recipe": None}),
         ]
         validate_pipeline_configs(step_configs)
+
+
+class TestHistopathologicFullPipelineNotebookStep:
+    """conf/competition/histopathologic/pipeline/full.yaml の push_notebook step の回帰テスト。
+
+    なぜこのテストが必要か:
+      - 過去、push_notebook step が `notebook: histopathologic_inference`
+        （文字列）として書かれており、PushNotebookUseCase が
+        `cfg.notebook.competition` にアクセスする箇所で AttributeError になる
+        既存バグがあった（テストが無く未実行のため検出されていなかった）。
+      - notebook が dict 形状であり、PushNotebookUseCase が要求するキーを
+        持つことを実 conf ディレクトリで検証し、再発を防ぐ。
+    """
+
+    _REAL_CONF_DIR = Path(__file__).parent.parent.parent.parent / "conf"
+
+    def test_push_notebook_step_resolves_to_dict_with_required_keys(self) -> None:
+        """push_notebook step の cfg.notebook が dict であり必須キーを持つこと。"""
+        pipeline_path = (
+            self._REAL_CONF_DIR / "competition" / "histopathologic" / "pipeline" / "full.yaml"
+        )
+        pipeline_cfg = OmegaConf.merge(
+            OmegaConf.create({"competition": {"name": "histopathologic"}}),
+            OmegaConf.load(pipeline_path),
+        )
+        step_configs = build_step_configs(DictConfig(pipeline_cfg), self._REAL_CONF_DIR)
+        notebook_step = next(c for c in step_configs if c.get("usecase") == "push_notebook")
+        notebook_cfg = notebook_step.notebook
+        assert isinstance(notebook_cfg, DictConfig), (
+            f"notebook が dict 形状でない（文字列のまま渡されている）: {notebook_cfg!r}"
+        )
+        for key in ("competition", "kernel_slug", "src_dataset", "enable_gpu", "enable_internet"):
+            assert key in notebook_cfg, f"notebook 設定に必須キー '{key}' が無い"
