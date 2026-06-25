@@ -151,6 +151,19 @@
 - **OK**: Hydra の config group（`usecase=download_dataset`）でユースケースを切り替え
 - 将来 `usecase=preprocess`, `usecase=train`, `usecase=analyze` を追加しやすい構造にする
 
+### モデルの入力次元はハードコードせず関連設定から自動計算する
+
+- **NG**: embedding 系モデルの `input_dim` を `1536` のように固定値で書く
+  → embedding の次元（`embedding.dim`）や追加特徴量の有無（`save_logits` 等）が変わると
+  学習時とは異なる次元で推論が実行され、Kaggle 提出が失敗する
+- **OK**: `input_dim` は `embedding.dim + (追加特徴量の次元 if 有効化フラグ else 0)` のように、
+  関連する設定値から学習・推論の両パスで動的に導出する
+- **Why**: 姉妹プロジェクト（BirdCLEF 2026）で `save_logits=True` 時に `input_dim` を
+  ハードコードしたまま放置し、次元不一致で提出が失敗した実績がある
+- **How to apply**: モデルの入力/出力次元を設定値から計算する箇所を追加・変更するときは、
+  学習側と推論側の両方で同じ計算式を使っているかをテストで確認する
+  （`checkpoint['input_dim'] == 期待値` のようなアサーションを学習・推論両方のテストに置く）
+
 ---
 
 ## 設定・環境変数
