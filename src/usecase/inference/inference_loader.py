@@ -7,7 +7,9 @@ Hydra cfg とマージした DictConfig リストを返す。
 
 from pathlib import Path
 
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
+
+from src.usecase._recipe import load_recipe_cfgs
 
 
 def load_inference_cfgs(cfg: DictConfig, conf_dir: Path) -> list[DictConfig]:
@@ -24,26 +26,12 @@ def load_inference_cfgs(cfg: DictConfig, conf_dir: Path) -> list[DictConfig]:
     Raises:
         ValueError: recipe が見つからない / inference ディレクトリが空の場合。
     """
-    competition_name: str = cfg.competition.name
-    recipe: str | None = cfg.get("recipe")
-
-    inference_dir = conf_dir / "competition" / competition_name / "inference"
-
-    if recipe is not None:
-        target = inference_dir / f"{recipe}.yaml"
-        if not target.exists():
-            available = [f.stem for f in sorted(inference_dir.glob("*.yaml"))]
-            raise ValueError(
-                f"recipe='{recipe}' が見つかりません"
-                f"（competition: {competition_name}）。"
-                f" 利用可能: {available}"
-            )
-        yaml_files = [target]
-    else:
-        yaml_files = sorted(inference_dir.glob("*.yaml"))
-        if not yaml_files:
-            raise ValueError(f"inference 設定が見つかりません: {inference_dir}")
-
-    # Hydra の struct モード制約を回避するため to_container で plain dict に変換してからマージ
-    base = OmegaConf.create(OmegaConf.to_container(cfg, resolve=True))
-    return [DictConfig(OmegaConf.merge(base, OmegaConf.load(f))) for f in yaml_files]
+    return load_recipe_cfgs(
+        cfg,
+        "inference",
+        conf_dir,
+        empty_dir_message=(
+            f"inference 設定が見つかりません: "
+            f"{conf_dir / 'competition' / cfg.competition.name / 'inference'}"
+        ),
+    )
