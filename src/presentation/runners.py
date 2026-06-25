@@ -328,13 +328,20 @@ def run_pipeline(cfg: DictConfig, logger: Any = None) -> None:
 
 
 def run_push_notebook(cfg: DictConfig, logger: Any = None) -> None:
-    """Notebook push UseCase を実行する。"""
+    """Notebook push UseCase を実行する。
+
+    conf/usecase/push_notebook.yaml は routing-only のため、
+    cfg.recipe が指定されていれば conf/competition/{name}/notebook/{recipe}.yaml を
+    マージしてから実行する（pipeline 経由で notebook が既に dict 指定済みの場合は素通し）。
+    """
+    from src.usecase.notebook.notebook_loader import load_notebook_recipe_cfg
     from src.usecase.notebook.push_notebook import PushNotebookUseCase
 
     if logger is None:
         logger = logging.getLogger(__name__)
+    merged = load_notebook_recipe_cfg(cfg, Path(_CONF_DIR))
     kaggle_api = authenticate_kaggle_api()
-    result = PushNotebookUseCase(cfg=cfg, platform_api=kaggle_api).execute()
+    result = PushNotebookUseCase(cfg=merged, platform_api=kaggle_api).execute()
     logger.info(f"Notebook push 完了: notebook={result.notebook_path}")
 
 

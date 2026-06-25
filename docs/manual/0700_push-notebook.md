@@ -50,8 +50,12 @@ uv run python -m src usecase=update_source_dataset source_dataset.version_messag
 
 ### ステップ 2: Notebook を生成して Kaggle にプッシュ
 
+`conf/usecase/push_notebook.yaml` は routing-only（`usecase`, `output_dir` のみ）。
+competition 固有パラメータ（`competition`, `kernel_slug`, `src_dataset` 等）は
+`conf/competition/{slug}/notebook/{recipe}.yaml` に記述し、`recipe=` で選択する。
+
 ```bash
-uv run python -m src usecase=push_notebook notebook.competition=titanic
+uv run python -m src usecase=push_notebook competition=titanic recipe=all_after_download
 ```
 
 ### ステップ 3: Kaggle Notebook で実行
@@ -134,7 +138,7 @@ steps:
 
 ```bash
 uv run python -m src usecase=update_source_dataset source_dataset.version_message="add inference_only recipe"
-uv run python -m src usecase=push_notebook notebook.competition=titanic
+uv run python -m src usecase=push_vertex_notebook competition=titanic recipe=inference_only
 ```
 
 ### 3. Notebook のセル 2 を変更
@@ -200,7 +204,7 @@ uv run kaggle datasets version -p .packages/ -m "update packages" -r zip
 
 ### 3. Notebook の dataset_sources に追加
 
-`conf/usecase/push_notebook.yaml` を編集して `packages_dataset` を追加:
+`conf/competition/titanic/notebook/all_after_download.yaml` を編集して `packages_dataset` を追加:
 
 ```yaml
 notebook:
@@ -213,7 +217,7 @@ notebook:
 ```
 
 > **現状の制限**: `packages_dataset` と `enable_internet: false` は
-> `conf/usecase/push_notebook.yaml` と `kernel-metadata.json` の手動編集が必要。
+> `conf/competition/{slug}/notebook/{recipe}.yaml` と `kernel-metadata.json` の手動編集が必要。
 > 将来的には `push_notebook` usecase が自動反映する予定。
 
 手動で `notebooks/titanic/kernel-metadata.json` を編集する場合:
@@ -276,28 +280,43 @@ subprocess.check_call([
 
 ## 設定変更リファレンス
 
-### コンペを変える
+competition 固有パラメータは `conf/competition/{slug}/notebook/{recipe}.yaml` に書く
+（`conf/usecase/push_notebook.yaml` は routing-only なので編集しない）。
+
+### 新しいコンペ用の notebook recipe を追加する
 
 ```bash
-uv run python -m src usecase=push_notebook notebook.competition=otto
+mkdir -p conf/competition/otto/notebook
 ```
 
-### kernel_slug（URL名）を変える
+```yaml
+# conf/competition/otto/notebook/all_after_download.yaml
+# @package _global_
+notebook:
+  competition: otto
+  kernel_slug: otto-pipeline
+  src_dataset: mlops-pipeline-src
+  recipe: all_after_download
+  enable_gpu: false
+  enable_internet: false
+  extra_datasets: []
+```
 
 ```bash
-uv run python -m src usecase=push_notebook notebook.competition=titanic notebook.kernel_slug=titanic-v2
+uv run python -m src usecase=push_notebook competition=otto recipe=all_after_download
 ```
 
-### GPU を有効にする
+### kernel_slug（URL名）や GPU 設定を変える
 
-```bash
-uv run python -m src usecase=push_notebook notebook.competition=titanic notebook.enable_gpu=true
-```
+recipe yaml のフィールドが常に優先される（CLI からの一時上書きは未対応）ため、
+`conf/competition/{slug}/notebook/{recipe}.yaml` を直接編集する。
+一時的に試したい場合は別の recipe ファイル（例: `all_after_download_v2.yaml`）を作成し
+`recipe=all_after_download_v2` で切り替える。
 
 ### src_dataset のスラッグを変える
 
 ```yaml
-# conf/usecase/push_notebook.yaml
+# conf/competition/titanic/notebook/all_after_download.yaml
 notebook:
   src_dataset: my-custom-src-dataset
 ```

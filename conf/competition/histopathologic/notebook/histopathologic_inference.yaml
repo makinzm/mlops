@@ -1,0 +1,14 @@
+# @package _global_
+# Histopathologic 推論用 Notebook の Kaggle push 設定
+#
+# 実行例:
+#   uv run python -m src usecase=push_notebook competition=histopathologic recipe=histopathologic_inference
+
+notebook:
+  competition: histopathologic-cancer-detection
+  kernel_slug: histopathologic-inference
+  src_dataset: mlops-pipeline-src
+  recipe: inference_only
+  enable_gpu: false
+  enable_internet: false
+  extra_datasets: []

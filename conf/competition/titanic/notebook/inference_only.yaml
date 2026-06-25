@@ -1,0 +1,16 @@
+# @package _global_
+# Titanic Vertex AI 推論専用 Notebook の Kaggle push 設定
+#
+# 実行例:
+#   uv run python -m src usecase=push_vertex_notebook recipe=inference_only
+
+notebook:
+  competition: titanic
+  kernel_slug: titanic-vertex-inference
+  recipe: inference_only
+  src_dataset: mlops-pipeline-src
+  extra_datasets:
+    - slug: titanic-vertex-models
+      mount_path: /kaggle/working/models/titanic
+  enable_gpu: false
+  enable_internet: false
