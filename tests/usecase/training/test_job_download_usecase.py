@@ -130,7 +130,7 @@ class TestJobDownloadUseCaseExecute:
             usecase.execute()
 
     def test_checks_job_status_via_training_job(self, tmp_path: Path) -> None:
-        """get_job_status が cloud_job_name で呼ばれること。"""
+        """get_job_status が job_name で呼ばれること。"""
         _, manifest_path = _make_manifest(tmp_path)
         mock_vertex = _make_mock_vertex("SUCCEEDED")
         usecase = JobDownloadUseCase(

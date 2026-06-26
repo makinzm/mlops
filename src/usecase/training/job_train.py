@@ -84,7 +84,7 @@ class JobTrainUseCase:
             - cfg.preprocess_output_dir: 前処理済みデータのパス
             - cfg.output_dir: モデル出力先のルートディレクトリ
             - cfg.recipe: 使用する学習レシピ名
-            - cfg.infra.project: クラウドプロジェクト ID
+            - cfg.infra.project: インフラのプロジェクト ID
             - cfg.infra.staging_bucket: オブジェクトストレージバケット URI
             - cfg.infra.container_uri: Docker イメージ URI
             - cfg.infra.machine_type: マシンタイプ

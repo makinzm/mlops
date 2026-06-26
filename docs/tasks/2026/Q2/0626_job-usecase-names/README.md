@@ -35,8 +35,13 @@ usecase 層には不適切という指摘を受けた。usecase 層の名前は�
 - `conf/config.yaml`: `cloud_jobs_history_dir` → `job_history_dir`, コメント更新
 
 ### domain
-- `src/domain/data/job_manifest.py`: `cloud_job_name` フィールドはすでにドメイン概念なので変更なし
+- `src/domain/data/job_manifest.py`: `cloud_job_name` → `job_name` にリネーム（cloud も除去対象）
 - `src/infrastructure/executor/factory.py`: エラーメッセージのコメント更新
+
+### conf/infra
+- `conf/cloud/vertex.yaml` → `conf/infra/vertex.yaml` に移動（旧ファイルは `git rm` で削除）
+- `conf/config.yaml`: `cloud: null` → `infra: null`
+- `conf/usecase/job_*.yaml`: `defaults: - /infra: vertex` に更新
 
 ### mille.toml
 - `src_usecase.name_deny` に `"cloud"` を追加

@@ -38,7 +38,7 @@ from src.usecase._utils import resolve_latest_dir
 logger = logging.getLogger(__name__)
 
 _HISTORY_DIR_GITIGNORE = """\
-# manifest にはクラウドプロジェクト ID 等が含まれるため git 追跡しない。
+# manifest にはインフラプロジェクト ID 等が含まれるため git 追跡しない。
 # ディレクトリ構造（.gitkeep）のみ残し、試行回数を確認できるようにする。
 *
 !.gitignore
@@ -85,7 +85,7 @@ class JobSubmitUseCase:
             - cfg.preprocess_output_dir: 前処理済みデータのパス
             - cfg.output_dir: モデル出力先のルートディレクトリ
             - cfg.recipe: 使用する学習レシピ名
-            - cfg.infra.*: クラウド設定
+            - cfg.infra.*: インフラ設定
             - cfg.notification: 通知設定（オプション）
         object_storage: ObjectStorageRepository の実装。
         training_job: TrainingJobRepository の実装。
