@@ -6,8 +6,10 @@
 #
 # 前提: preprocess_output_dir に manifest.json と cv_splits.json が存在すること。
 
+usecase: train
 job_id: audio_example_efficientnet_b0
-trainer_type: audio
+trainer:
+  type: audio
 
 spectrogram:
   sample_rate: 32000

@@ -155,9 +155,14 @@ def run_train(cfg: DictConfig, logger: Any = None) -> None:
 
             raw_cfg: dict[str, Any] = OmegaConf.to_container(trainer_cfg, resolve=True)  # ty:ignore[invalid-assignment]
             trainer = VisionTrainer(raw_cfg)
+        elif trainer_type == "audio":
+            from src.infrastructure.trainer.audio_trainer import AudioTrainer
+
+            trainer = AudioTrainer()
         else:
             raise ValueError(
-                f"trainer.type='{trainer_type}' は未登録です。 登録済み: ['lgbm', 'vision']"
+                f"trainer.type='{trainer_type}' は未登録です。"
+                " 登録済み: ['lgbm', 'vision', 'audio']"
             )
         train_result = TrainUseCase(trainer_cfg, trainer=trainer, git_repo=git_repo).execute()
         logger.info(
