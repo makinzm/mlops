@@ -36,6 +36,18 @@
       "Write(**/secrets/**)",
       "Bash(wget *)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/scripts/check-dir-structure.sh"
+          }
+        ]
+      }
+    ]
   }
 }
-
