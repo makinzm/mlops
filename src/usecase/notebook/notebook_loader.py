@@ -13,7 +13,9 @@ cfg をそのまま返す（既存の pipeline 実行を壊さない）。
 
 from pathlib import Path
 
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
+
+from src.usecase._recipe import load_single_recipe_cfg
 
 
 def load_notebook_recipe_cfg(cfg: DictConfig, conf_dir: Path) -> DictConfig:
@@ -30,21 +32,4 @@ def load_notebook_recipe_cfg(cfg: DictConfig, conf_dir: Path) -> DictConfig:
     Raises:
         ValueError: recipe を指定したが該当 yaml が見つからない場合。
     """
-    recipe: str | None = cfg.get("recipe")
-    if recipe is None:
-        return cfg
-
-    competition_name: str = cfg.competition.name
-    notebook_dir = conf_dir / "competition" / competition_name / "notebook"
-    target = notebook_dir / f"{recipe}.yaml"
-    if not target.exists():
-        available = [f.stem for f in sorted(notebook_dir.glob("*.yaml"))]
-        raise ValueError(
-            f"recipe='{recipe}' が見つかりません"
-            f"（competition: {competition_name}）。"
-            f" 利用可能: {available}"
-        )
-
-    # Hydra の struct モード制約を回避するため to_container で plain dict に変換してからマージ
-    base = OmegaConf.create(OmegaConf.to_container(cfg, resolve=True))
-    return DictConfig(OmegaConf.merge(base, OmegaConf.load(target)))
+    return load_single_recipe_cfg(cfg, "notebook", conf_dir, required=False)
