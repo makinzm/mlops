@@ -41,6 +41,22 @@ class TestSpecAugment:
         result = spec_augment(batch)
         assert result is batch
 
+    def test_per_sample_independent_masks(self) -> None:
+        """バッチ内の各サンプルに独立したマスクが適用されること。
+
+        バッチ全体で同一マスクの場合、全サンプルの (freq_zero_cols XOR time_zero_rows) が
+        完全一致する。per-sample ならばそれらが分岐するはずなので、
+        隣接サンプルのマスクを直接比較して少なくとも1組が異なることを確認する。
+        """
+        torch.manual_seed(42)
+        # 全サンプルを 1.0 で初期化
+        batch = torch.ones(8, 1, 64, 312)
+        result = spec_augment(batch.clone(), freq_mask_param=20, time_mask_param=60, n_masks=3)
+        # 各サンプルのゼロマスクをフラット化してタプルにする
+        masks = [tuple((result[i] == 0.0).flatten().tolist()) for i in range(8)]
+        # per-sample なら同一マスクが全部同じになることはほぼない（3マスク×8サンプルで多様性がある）
+        assert len(set(masks)) > 1
+
 
 class TestMixup:
     """mixup のテスト。"""

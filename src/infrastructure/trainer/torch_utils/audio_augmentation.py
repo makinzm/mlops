@@ -39,14 +39,15 @@ def spec_augment(
     時間計算量: O(B * n_masks) — B: バッチサイズ
     空間計算量: O(1)（in-place）
     """
-    _, _, n_mels, n_time = mel.shape
-    for _ in range(n_masks):
-        f = torch.randint(0, freq_mask_param + 1, (1,)).item()
-        f0 = torch.randint(0, int(max(n_mels - f, 1)), (1,)).item()
-        mel[:, :, f0 : f0 + f, :] = 0.0
-        t = torch.randint(0, time_mask_param + 1, (1,)).item()
-        t0 = torch.randint(0, int(max(n_time - t, 1)), (1,)).item()
-        mel[:, :, :, t0 : t0 + t] = 0.0
+    batch_size, _, n_mels, n_time = mel.shape
+    for b in range(batch_size):
+        for _ in range(n_masks):
+            f = torch.randint(0, freq_mask_param + 1, (1,)).item()
+            f0 = torch.randint(0, int(max(n_mels - f, 1)), (1,)).item()
+            mel[b, :, f0 : f0 + f, :] = 0.0
+            t = torch.randint(0, time_mask_param + 1, (1,)).item()
+            t0 = torch.randint(0, int(max(n_time - t, 1)), (1,)).item()
+            mel[b, :, :, t0 : t0 + t] = 0.0
     return mel
 
 

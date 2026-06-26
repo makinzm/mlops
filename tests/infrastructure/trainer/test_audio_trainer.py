@@ -195,6 +195,65 @@ class TestAudioTrainer:
         checkpoint = torch.load(result.fold_results[0].model_path, weights_only=True)
         assert checkpoint["num_classes"] == 3
 
+    def test_error_analysis_file_written(
+        self, audio_data_dir: Path, train_cfg: dict[str, Any], tmp_path: Path
+    ) -> None:
+        """error_analysis.npy が各 fold に書き出されること。"""
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        trainer = AudioTrainer()
+        result = trainer.fit_folds(
+            preprocess_output_dir=audio_data_dir,
+            output_dir=output_dir,
+            cfg=train_cfg,
+        )
+
+        for fold_result in result.fold_results:
+            assert fold_result.error_analysis_path.exists()
+
+    def test_roc_auc_does_not_crash_on_all_positive_class(
+        self, tmp_path: Path, train_cfg: dict[str, Any]
+    ) -> None:
+        """val fold の1クラスが全陽性のときも ROC-AUC がクラッシュしないこと。"""
+        import json
+
+        audio_dir = tmp_path / "audio"
+        audio_dir.mkdir()
+
+        num_classes = 3
+        manifest = []
+        for i in range(12):
+            label = [0.0] * num_classes
+            label[0] = 1.0  # クラス0は全サンプルが陽性（全陰性クラスはなし）
+            if i < 6:
+                label[1] = 1.0  # クラス1は train 側で陽性
+            audio_path = audio_dir / f"sample_{i}.pt"
+            torch.save(torch.randn(160000), audio_path)
+            manifest.append({"file_path": str(audio_path), "label": label})
+
+        manifest_path = tmp_path / "manifest.json"
+        with open(manifest_path, "w") as f:
+            json.dump(manifest, f)
+
+        # val が [6,12): クラス0が全陽性、クラス1が全陰性 → 両方スキップされるケース
+        splits = [{"train": list(range(6)), "val": list(range(6, 12))}]
+        splits_path = tmp_path / "cv_splits.json"
+        with open(splits_path, "w") as f:
+            json.dump(splits, f)
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        train_cfg["training"]["epochs"] = 1
+
+        trainer = AudioTrainer()
+        result = trainer.fit_folds(
+            preprocess_output_dir=tmp_path,
+            output_dir=output_dir,
+            cfg=train_cfg,
+        )
+        assert isinstance(result, TrainResult)
+
     def test_missing_num_classes_raises(
         self, audio_data_dir: Path, train_cfg: dict[str, Any], tmp_path: Path
     ) -> None:

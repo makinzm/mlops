@@ -13,7 +13,7 @@ domain 層では numpy/torch 等の外部ライブラリに依存せず、
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @dataclass
@@ -91,13 +91,13 @@ class SpectrogramTransformer(Protocol):
     空間計算量: O(n_mels * n_frames)
     """
 
-    def transform_file(self, file_path: str) -> list[list[float]]:
+    def transform_file(self, file_path: str) -> Any:
         """音声ファイルをスペクトログラムに変換する。
 
         Args:
             file_path: 音声ファイルのパス。
 
         Returns:
-            2D リスト (n_mels x time_frames)。
+            スペクトログラム表現。型は実装依存（torch.Tensor 等）。
         """
         ...

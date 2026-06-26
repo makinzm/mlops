@@ -137,13 +137,15 @@ def _build_audio_model(
 def _compute_macro_roc_auc(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """macro-averaged ROC-AUC を計算する。
 
-    true positive がないクラスはスキップする。
+    全陰性（col_sum == 0）および全陽性（col_sum == n_samples）のクラスは
+    sklearn が ValueError を送出するためスキップする。
 
     時間計算量: O(C * N) — C: スコア対象クラス数, N: サンプル数
     空間計算量: O(C * N)
     """
+    n_samples = y_true.shape[0]
     col_sums = y_true.sum(axis=0)
-    scored_cols = np.where(col_sums > 0)[0]
+    scored_cols = np.where((col_sums > 0) & (col_sums < n_samples))[0]
     if len(scored_cols) == 0:
         return 0.0
     return float(
@@ -318,6 +320,9 @@ class AudioTrainer:
             oof_path = fold_out / "oof_predictions.npy"
             np.save(oof_path, y_pred)
 
+            ea_path = fold_out / "error_analysis.npy"
+            np.save(ea_path, np.stack([y_true, y_pred], axis=0))
+
             fold_results.append(
                 FoldResult(
                     fold_idx=fold_idx,
@@ -326,7 +331,7 @@ class AudioTrainer:
                     metric="roc_auc",
                     model_path=model_path,
                     oof_path=oof_path,
-                    error_analysis_path=fold_out / "error_analysis.npy",
+                    error_analysis_path=ea_path,
                     feature_importance_path=None,
                     n_train=len(split["train"]),
                     n_valid=len(split["val"]),
