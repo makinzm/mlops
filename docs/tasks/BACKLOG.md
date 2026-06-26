@@ -22,14 +22,10 @@
   - 拒否時の代替: 現状通り都度承認
   - 変更先: `~/.local/share/chezmoi/dot_claude/settings.json` → `chezmoi apply`
 
-- [ ] **TASK-003** 実行環境の切り替え設計を整理・ドキュメント化する
-  - local / GCP Vertex（CPU・GPU） / AWS（未実装）の切り替え方を `docs/manual/execution-env.md` にまとめる
-  - `conf/executor/gcp_vertex.yaml` と `conf/cloud/vertex.yaml` の役割の違いを明記
-  - AWS 対応の設計判断（やる/やらない）を ADR に残す
-
-- [ ] **TASK-004** `conf/executor/gcp_vertex.yaml` と `conf/executor/ray_local.yaml` の「フォールバックのみ」状態を解消する
-  - 現状: `ExecutorFactory` がこれらを受け取っても `LocalExecutor` に落ちる
-  - GCP Vertex executor を本実装するか、明示的に「未実装」エラーにするか判断する
+- [x] **TASK-003** 実行環境の切り替え設計を整理・ドキュメント化する
+  - `docs/manual/execution-env.md` 作成。commit `7d25f9d`
+- [x] **TASK-004** `conf/executor/gcp_vertex.yaml` / `ray_local.yaml` の「フォールバックのみ」状態を解消する
+  - `ExecutorFactory` を変更: NotImplementedError / ValueError を明示的に上げる。commit `7d25f9d`
 
 ---
 
