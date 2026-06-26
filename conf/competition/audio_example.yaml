@@ -1,0 +1,5 @@
+# @package _global_
+# 音声コンペ用サンプル設定。
+# 実際のコンペ名に置き換えて使う（例: birdclef-2027）。
+competition:
+  name: audio_example

@@ -1,0 +1,35 @@
+# @package _global_
+# AudioTrainer 用サンプル設定（EfficientNet-B0 + SpecAugment + Mixup）。
+#
+# 使い方:
+#   uv run python -m src usecase=train competition=audio_example recipe=efficientnet_b0
+#
+# 前提: preprocess_output_dir に manifest.json と cv_splits.json が存在すること。
+
+job_id: audio_example_efficientnet_b0
+trainer_type: audio
+
+spectrogram:
+  sample_rate: 32000
+  n_fft: 2048
+  hop_length: 512
+  n_mels: 128
+  segment_seconds: 5.0
+
+model:
+  backbone: efficientnet_b0
+  pretrained: true
+  num_classes: 10  # コンペのクラス数に合わせて変更する
+
+training:
+  epochs: 20
+  batch_size: 32
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+
+augmentation:
+  spec_augment: true
+  mixup: true
+  mixup_alpha: 0.4
+  freq_mask_param: 20
+  time_mask_param: 40
