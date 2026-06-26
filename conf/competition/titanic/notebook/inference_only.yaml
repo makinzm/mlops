@@ -2,7 +2,7 @@
 # Titanic クラウド推論専用 Notebook の Kaggle push 設定
 #
 # 実行例:
-#   uv run python -m src usecase=push_cloud_notebook recipe=inference_only
+#   uv run python -m src usecase=push_job_notebook recipe=inference_only
 
 notebook:
   competition: titanic

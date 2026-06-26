@@ -39,7 +39,7 @@ def _make_cfg(tmp_path: Path) -> DictConfig:
             "recipe": "lgbm",
             "output_dir": str(tmp_path / "models" / "titanic"),
             "seed": 42,
-            "cloud": {
+            "infra": {
                 "project": "test-project",
                 "region": "asia-northeast1",
                 "staging_bucket": "gs://test-bucket",

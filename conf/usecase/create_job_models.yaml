@@ -1,8 +1,8 @@
 # @package _global_
-# クラウド学習済みモデルを Kaggle Dataset にアップロードする設定
+# 学習済みモデルの Kaggle Dataset を初回作成する設定
 #
-# 実行: uv run python -m src usecase=upload_cloud_models
-usecase: update_source_dataset
+# 実行: uv run python -m src usecase=create_job_models
+usecase: create_source_dataset
 
 source_dataset:
   src_dir: models/titanic/titanic_lgbm/latest
@@ -12,6 +12,6 @@ source_dataset:
   license_name: CC0-1.0
   ignorefile: .kaggleignore
   extra_dirs: []
-  version_message: "cloud trained model"
+  version_message: "initial: job trained model"
 
 staging_dir: .staging

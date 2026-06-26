@@ -1,5 +1,5 @@
 """
-CloudSubmitUseCase — クラウド環境にジョブを非同期送信し、即座に終了する。
+JobSubmitUseCase — ジョブを非同期送信し、即座に終了するユースケース。
 
 処理フロー:
 1. preprocess_output_dir を解決（"latest" -> 最新タイムスタンプ）
@@ -7,16 +7,16 @@ CloudSubmitUseCase — クラウド環境にジョブを非同期送信し、即
 3. preprocessed data をオブジェクトストレージにアップロード
 4. submit_custom_job (sync=False) でジョブ送信
 5. job_manifest.yaml を保存
-6. CloudSubmitResult を返す（ローカルプロセスは即終了可能）
+6. JobSubmitResult を返す（ローカルプロセスは即終了可能）
 
 出力:
   models/{competition}/{job_id}/
     ├── .gitignore
     └── job_manifest.yaml
 
-CloudTrainUseCase（同期版）との違い:
+JobTrainUseCase（同期版）との違い:
 - submit_custom_job を使い、ジョブ完了を待たない
-- モデルのダウンロードは行わない（CloudDownloadUseCase が担う）
+- モデルのダウンロードは行わない（JobDownloadUseCase が担う）
 - 通知用環境変数をコンテナに渡す
 """
 
@@ -65,19 +65,19 @@ _PROJECT_ROOT = _find_project_root()
 
 
 @dataclass
-class CloudSubmitResult:
-    """クラウドジョブ送信の結果。"""
+class JobSubmitResult:
+    """ジョブ非同期送信の結果。"""
 
     job_id: str
     timestamp: str
     commit_hash: str
-    cloud_job_name: str
+    job_name: str
     manifest_path: str
     console_url: str
 
 
-class CloudSubmitUseCase:
-    """クラウド環境にジョブを非同期送信し、manifest を保存して即座に終了する。
+class JobSubmitUseCase:
+    """ジョブを非同期送信し、manifest を保存して即座に終了する。
 
     Args:
         cfg: Hydra DictConfig。以下のキーを使用する:
@@ -85,7 +85,7 @@ class CloudSubmitUseCase:
             - cfg.preprocess_output_dir: 前処理済みデータのパス
             - cfg.output_dir: モデル出力先のルートディレクトリ
             - cfg.recipe: 使用する学習レシピ名
-            - cfg.cloud.*: クラウド設定
+            - cfg.infra.*: クラウド設定
             - cfg.notification: 通知設定（オプション）
         object_storage: ObjectStorageRepository の実装。
         training_job: TrainingJobRepository の実装。
@@ -104,7 +104,7 @@ class CloudSubmitUseCase:
         self._training_job = training_job
         self._git_repo = git_repo
 
-    def execute(self) -> CloudSubmitResult:
+    def execute(self) -> JobSubmitResult:
         """ジョブを非同期送信し、manifest を保存して結果を返す。
 
         時間計算量: O(U) — U: アップロードファイル数
@@ -121,8 +121,8 @@ class CloudSubmitUseCase:
         preprocess_dir = resolve_latest_dir(str(cfg.preprocess_output_dir))
 
         # 2. オブジェクトストレージ URI を確定
-        cloud_cfg = cfg.cloud
-        bucket_base = str(cloud_cfg.staging_bucket).rstrip("/")
+        infra_cfg = cfg.infra
+        bucket_base = str(infra_cfg.staging_bucket).rstrip("/")
         gcs_code_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/code"
         gcs_data_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/data"
         gcs_model_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/models"
@@ -173,18 +173,18 @@ class CloudSubmitUseCase:
         command = self._training_job.build_bootstrap_command(gcs_code_uri)
         result = self._training_job.submit_custom_job(
             display_name=f"{job_id}-{timestamp}",
-            container_uri=str(cloud_cfg.container_uri),
+            container_uri=str(infra_cfg.container_uri),
             command=command,
             args=[],
-            machine_type=str(cloud_cfg.machine_type),
+            machine_type=str(infra_cfg.machine_type),
             env_vars=env_vars,
-            service_account=str(cloud_cfg.service_account),
+            service_account=str(infra_cfg.service_account),
         )
-        cloud_job_name = result.resource_name
+        job_name = result.resource_name
 
-        # 7. job_manifest.yaml を cloud_jobs_history/ に保存
+        # 7. job_manifest.yaml を job_history/ に保存
         #    models/ はモデル成果物専用。ジョブ管理情報は分離する。
-        history_base = str(cfg.get("cloud_jobs_history_dir", "cloud_jobs_history"))
+        history_base = str(cfg.get("job_history_dir", "job_history"))
         if not Path(history_base).is_absolute():
             history_base = str(_PROJECT_ROOT / history_base)
         history_dir = Path(history_base) / competition / job_id / timestamp
@@ -195,7 +195,7 @@ class CloudSubmitUseCase:
             timestamp=timestamp,
             commit_hash=commit_hash,
             status="SUBMITTED",
-            cloud_job_name=cloud_job_name,
+            job_name=job_name,
             gcs_code_uri=gcs_code_uri,
             gcs_data_uri=gcs_data_uri,
             gcs_model_uri=gcs_model_uri,
@@ -214,20 +214,20 @@ class CloudSubmitUseCase:
             gitkeep_path.touch()
 
         # Console URL を TrainingJobRepository 経由で生成
-        console_url = self._training_job.build_console_url(cloud_job_name)
+        console_url = self._training_job.build_console_url(job_name)
 
         logger.info(
-            f"Cloud job submitted: {cloud_job_name}\n"
+            f"Job submitted: {job_name}\n"
             f"  Console: {console_url}\n"
             f"  manifest: {manifest_path}\n"
-            f"  Download: uv run python -m src usecase=cloud_download"
+            f"  Download: uv run python -m src usecase=job_download"
         )
 
-        return CloudSubmitResult(
+        return JobSubmitResult(
             job_id=job_id,
             timestamp=timestamp,
             commit_hash=commit_hash,
-            cloud_job_name=cloud_job_name,
+            job_name=job_name,
             manifest_path=str(manifest_path),
             console_url=console_url,
         )

@@ -26,11 +26,11 @@ def ensure_cloud_config(cfg: DictConfig, conf_dir: str | None = None) -> DictCon
     needs_merge = False
     extras: list[object] = []
 
-    if cfg.get("cloud") is None:
-        cloud_yaml = Path(conf_dir) / "cloud" / "vertex.yaml"
-        if not cloud_yaml.exists():
-            raise FileNotFoundError(f"Cloud config not found: {cloud_yaml}")
-        extras.append(OmegaConf.load(cloud_yaml))
+    if cfg.get("infra") is None:
+        infra_yaml = Path(conf_dir) / "infra" / "vertex.yaml"
+        if not infra_yaml.exists():
+            raise FileNotFoundError(f"Infra config not found: {infra_yaml}")
+        extras.append(OmegaConf.load(infra_yaml))
         needs_merge = True
 
     if cfg.get("notification") is None:
@@ -51,7 +51,7 @@ def ensure_cloud_config(cfg: DictConfig, conf_dir: str | None = None) -> DictCon
 def load_trainer_cfgs_safe(cfg: DictConfig, conf_dir: str | None = None) -> list[DictConfig]:
     """recipe が pipeline recipe の場合でも安全に trainer config をロードする。
 
-    pipeline 経由だと cfg.recipe が pipeline recipe（例: cloud_download_and_push）に
+    pipeline 経由だと cfg.recipe が pipeline recipe（例: job_download_and_push）に
     なっており、trainer yaml として解決できない。recipe を一時的に null にして
     全 trainer をロードする。
     """
@@ -81,7 +81,7 @@ def resolve_manifest_path(cfg: DictConfig, conf_dir: str | None = None) -> Path:
         return Path(str(explicit))
 
     competition = str(cfg.competition.name)
-    history_base = str(cfg.get("cloud_jobs_history_dir", "cloud_jobs_history"))
+    history_base = str(cfg.get("job_history_dir", "job_history"))
 
     # job_id を解決: cfg の job_id が使えなければ trainer config から取得
     # pipeline 経由だと cfg.job_id が pipeline 自体の ID になるため、

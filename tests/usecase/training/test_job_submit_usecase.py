@@ -39,7 +39,7 @@ def _make_cfg(tmp_path: Path) -> DictConfig:
             "output_dir": str(tmp_path / "models" / "titanic"),
             "job_history_dir": str(tmp_path / "job_history"),
             "seed": 42,
-            "cloud": {
+            "infra": {
                 "project": "test-project",
                 "region": "asia-northeast1",
                 "staging_bucket": "gs://test-bucket",
@@ -121,7 +121,7 @@ class TestJobSubmitUseCaseExecute:
         manifest = JobManifest.load(manifest_path)
         assert manifest.status == "SUBMITTED"
         assert manifest.job_id == "titanic_lgbm"
-        assert manifest.cloud_job_name == _FAKE_JOB_NAME
+        assert manifest.job_name == _FAKE_JOB_NAME
 
     def test_uploads_code_and_data(self, tmp_path: Path) -> None:
         """コードとデータが GCS にアップロードされること。"""

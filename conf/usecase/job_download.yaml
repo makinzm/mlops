@@ -1,0 +1,5 @@
+# @package _global_
+usecase: job_download
+
+defaults:
+  - /infra: vertex

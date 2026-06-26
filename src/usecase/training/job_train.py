@@ -1,15 +1,15 @@
 """
-CloudTrainUseCase — クラウド環境でモデル学習を実行するユースケース。
+JobTrainUseCase — 学習ジョブを送信し完了まで待機してモデルを取得するユースケース。
 
 処理フロー:
 1. preprocess_output_dir を解決（"latest" → 最新タイムスタンプ）
 2. src/ + conf/ をオブジェクトストレージにアップロード（コードはイメージに含めず経由で渡す）
 3. preprocessed data をオブジェクトストレージにアップロード
-4. クラウド学習ジョブを送信（コンテナに GCS_CODE_URI / GCS_DATA_URI / GCS_MODEL_URI を渡す）
+4. 学習ジョブを送信（コンテナに GCS_CODE_URI / GCS_DATA_URI / GCS_MODEL_URI を渡す）
 5. ジョブ完了をポーリング（失敗時は RuntimeError を送出）
 6. オブジェクトストレージからモデル成果物をローカルにダウンロード
 7. per-job .gitignore を配置
-8. CloudTrainResult を返す
+8. JobTrainResult を返す
 
 出力ディレクトリ構造:
   models/{competition}/{job_id}/
@@ -63,20 +63,20 @@ _PROJECT_ROOT = _find_project_root()
 
 
 @dataclass
-class CloudTrainResult:
-    """クラウド学習ジョブの実行結果。"""
+class JobTrainResult:
+    """学習ジョブの同期実行結果。"""
 
     job_id: str
     timestamp: str
     commit_hash: str
-    cloud_job_name: str
+    job_name: str
     gcs_data_uri: str
     gcs_model_uri: str
     local_model_dir: Path
 
 
-class CloudTrainUseCase:
-    """オブジェクトストレージ + クラウド学習基盤を使いリモートでモデル学習を実行する。
+class JobTrainUseCase:
+    """オブジェクトストレージ + 学習基盤を使いジョブを同期実行してモデルを取得する。
 
     Args:
         cfg: Hydra DictConfig。以下のキーを使用する:
@@ -84,11 +84,11 @@ class CloudTrainUseCase:
             - cfg.preprocess_output_dir: 前処理済みデータのパス
             - cfg.output_dir: モデル出力先のルートディレクトリ
             - cfg.recipe: 使用する学習レシピ名
-            - cfg.cloud.project: クラウドプロジェクト ID
-            - cfg.cloud.staging_bucket: オブジェクトストレージバケット URI
-            - cfg.cloud.container_uri: Docker イメージ URI
-            - cfg.cloud.machine_type: マシンタイプ
-            - cfg.cloud.service_account: 学習 SA のメールアドレス
+            - cfg.infra.project: クラウドプロジェクト ID
+            - cfg.infra.staging_bucket: オブジェクトストレージバケット URI
+            - cfg.infra.container_uri: Docker イメージ URI
+            - cfg.infra.machine_type: マシンタイプ
+            - cfg.infra.service_account: 学習 SA のメールアドレス
         object_storage: ObjectStorageRepository の実装。
         training_job: TrainingJobRepository の実装。
         git_repo: GitRepository の実装。
@@ -106,7 +106,7 @@ class CloudTrainUseCase:
         self._training_job = training_job
         self._git_repo = git_repo
 
-    def execute(self) -> CloudTrainResult:
+    def execute(self) -> JobTrainResult:
         cfg = self._cfg
         job_id = str(cfg.job_id)
         recipe = str(cfg.get("recipe", "base"))
@@ -118,8 +118,8 @@ class CloudTrainUseCase:
         preprocess_dir = resolve_latest_dir(str(cfg.preprocess_output_dir))
 
         # 2. オブジェクトストレージ URI を確定
-        cloud_cfg = cfg.cloud
-        bucket_base = str(cloud_cfg.staging_bucket).rstrip("/")
+        infra_cfg = cfg.infra
+        bucket_base = str(infra_cfg.staging_bucket).rstrip("/")
         gcs_code_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/code"
         gcs_data_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/data"
         gcs_model_uri = f"{bucket_base}/jobs/{job_id}/{timestamp}/models"
@@ -135,7 +135,7 @@ class CloudTrainUseCase:
         logger.info(f"Uploading preprocessed data to {gcs_data_uri}")
         self._object_storage.upload_dir(preprocess_dir, gcs_data_uri)
 
-        # 5. クラウド学習ジョブを送信
+        # 5. 学習ジョブを送信
         env_vars: dict[str, str] = {
             "GCS_CODE_URI": gcs_code_uri,
             "GCS_DATA_URI": gcs_data_uri,
@@ -151,19 +151,19 @@ class CloudTrainUseCase:
         # run_custom_job は送信 + 完了待機を1メソッドで行う
         result = self._training_job.run_custom_job(
             display_name=f"{job_id}-{timestamp}",
-            container_uri=str(cloud_cfg.container_uri),
+            container_uri=str(infra_cfg.container_uri),
             command=command,
             args=[],
-            machine_type=str(cloud_cfg.machine_type),
+            machine_type=str(infra_cfg.machine_type),
             env_vars=env_vars,
-            service_account=str(cloud_cfg.service_account),
+            service_account=str(infra_cfg.service_account),
         )
-        cloud_job_name = result.resource_name
-        logger.info(f"Cloud training job completed: {cloud_job_name} ({result.state})")
+        job_name = result.resource_name
+        logger.info(f"Training job completed: {job_name} ({result.state})")
 
         if not result.is_succeeded:
             raise RuntimeError(
-                f"Cloud training job failed [{cloud_job_name}]: "
+                f"Training job failed [{job_name}]: "
                 f"state={result.state}, error={result.error_message}"
             )
 
@@ -179,11 +179,11 @@ class CloudTrainUseCase:
         if not gitignore_path.exists():
             gitignore_path.write_text(_MODELS_DIR_GITIGNORE)
 
-        return CloudTrainResult(
+        return JobTrainResult(
             job_id=job_id,
             timestamp=timestamp,
             commit_hash=commit_hash,
-            cloud_job_name=cloud_job_name,
+            job_name=job_name,
             gcs_data_uri=gcs_data_uri,
             gcs_model_uri=gcs_model_uri,
             local_model_dir=local_model_dir,
