@@ -31,6 +31,8 @@ certifi==2026.1.4
     #   httpcore
     #   httpx
     #   requests
+cffi==2.0.0
+    # via soundfile
 charset-normalizer==3.4.4
     # via requests
 click==8.3.1
@@ -187,6 +189,7 @@ numpy==2.4.1
     #   scikit-learn
     #   scipy
     #   seaborn
+    #   soundfile
     #   torchmetrics
     #   torchvision
 nvidia-cublas-cu12==12.8.4.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
@@ -297,6 +300,8 @@ pyasn1==0.6.1
     #   rsa
 pyasn1-modules==0.4.2
     # via google-auth
+pycparser==3.0 ; implementation_name != 'PyPy'
+    # via cffi
 pydantic==2.12.5
     # via
     #   albumentations
@@ -362,6 +367,8 @@ six==1.17.0
     #   python-dateutil
 sniffio==1.3.1
     # via google-genai
+soundfile==0.14.0
+    # via mlops
 stringzilla==4.6.0
     # via albucore
 sympy==1.14.0
@@ -412,6 +419,7 @@ typing-extensions==4.15.0
     #   pydantic
     #   pydantic-core
     #   pytorch-lightning
+    #   soundfile
     #   torch
     #   typing-inspection
 typing-inspection==0.4.2

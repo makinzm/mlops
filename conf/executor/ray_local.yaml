@@ -1,5 +1,7 @@
-# RayExecutor（ローカル）設定 — 将来実装予定
-# 未実装のため LocalExecutor にフォールバックする
+# RayExecutor（ローカル）設定 — 未実装
+#
+# ⚠ この executor_type を設定すると NotImplementedError が発生する。
+# ローカル並列実行には executor: local を使用すること。
 type: ray_local
 num_cpus: 4
 num_gpus: 0
