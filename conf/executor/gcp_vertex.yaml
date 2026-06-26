@@ -1,5 +1,8 @@
-# GCP Vertex AI Executor 設定 — 将来実装予定
-# 未実装のため LocalExecutor にフォールバックする
+# GCP Vertex AI Executor 設定 — preprocess ステップでの Vertex 実行は未実装
+#
+# ⚠ この executor_type を preprocess pipeline に設定すると NotImplementedError が発生する。
+# GCP Vertex AI での学習には usecase=remote_train または usecase=vertex_submit を使うこと。
+# 詳細: docs/manual/execution-env.md
 type: gcp_vertex
 project: my-gcp-project
 region: asia-northeast1
