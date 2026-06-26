@@ -1,11 +1,11 @@
 # @package _global_
-# Vertex AI 推論専用 Notebook を Kaggle に push する設定のルーティング。
+# クラウド推論専用 Notebook を Kaggle に push する設定のルーティング。
 #
 # competition 固有パラメータ（competition, kernel_slug, src_dataset 等）は
 # conf/competition/{slug}/notebook/{recipe}.yaml に記述する。
 #
 # 実行例:
-#   uv run python -m src usecase=push_vertex_notebook recipe=inference_only
+#   uv run python -m src usecase=push_cloud_notebook recipe=inference_only
 usecase: push_notebook
 
 output_dir: notebooks

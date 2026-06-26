@@ -1,15 +1,15 @@
 """
-RemoteTrainUseCase — リモート環境でモデル学習を実行するユースケース。
+CloudTrainUseCase — クラウド環境でモデル学習を実行するユースケース。
 
 処理フロー:
 1. preprocess_output_dir を解決（"latest" → 最新タイムスタンプ）
 2. src/ + conf/ をオブジェクトストレージにアップロード（コードはイメージに含めず経由で渡す）
 3. preprocessed data をオブジェクトストレージにアップロード
-4. リモート学習ジョブを送信（コンテナに GCS_CODE_URI / GCS_DATA_URI / GCS_MODEL_URI を渡す）
+4. クラウド学習ジョブを送信（コンテナに GCS_CODE_URI / GCS_DATA_URI / GCS_MODEL_URI を渡す）
 5. ジョブ完了をポーリング（失敗時は RuntimeError を送出）
 6. オブジェクトストレージからモデル成果物をローカルにダウンロード
 7. per-job .gitignore を配置
-8. RemoteTrainResult を返す
+8. CloudTrainResult を返す
 
 出力ディレクトリ構造:
   models/{competition}/{job_id}/
@@ -63,20 +63,20 @@ _PROJECT_ROOT = _find_project_root()
 
 
 @dataclass
-class RemoteTrainResult:
-    """リモート学習ジョブの実行結果。"""
+class CloudTrainResult:
+    """クラウド学習ジョブの実行結果。"""
 
     job_id: str
     timestamp: str
     commit_hash: str
-    remote_job_name: str
+    cloud_job_name: str
     gcs_data_uri: str
     gcs_model_uri: str
     local_model_dir: Path
 
 
-class RemoteTrainUseCase:
-    """オブジェクトストレージ + リモート学習基盤を使いリモートでモデル学習を実行する。
+class CloudTrainUseCase:
+    """オブジェクトストレージ + クラウド学習基盤を使いリモートでモデル学習を実行する。
 
     Args:
         cfg: Hydra DictConfig。以下のキーを使用する:
@@ -106,7 +106,7 @@ class RemoteTrainUseCase:
         self._training_job = training_job
         self._git_repo = git_repo
 
-    def execute(self) -> RemoteTrainResult:
+    def execute(self) -> CloudTrainResult:
         cfg = self._cfg
         job_id = str(cfg.job_id)
         recipe = str(cfg.get("recipe", "base"))
@@ -135,11 +135,7 @@ class RemoteTrainUseCase:
         logger.info(f"Uploading preprocessed data to {gcs_data_uri}")
         self._object_storage.upload_dir(preprocess_dir, gcs_data_uri)
 
-        # 5. リモート学習ジョブを送信
-        #    コンテナイメージを使う場合、command で:
-        #    - Python SDK でコードをオブジェクトストレージから /app にダウンロード
-        #    - 不足 deps を pip install
-        #    - entrypoint を実行
+        # 5. クラウド学習ジョブを送信
         env_vars: dict[str, str] = {
             "GCS_CODE_URI": gcs_code_uri,
             "GCS_DATA_URI": gcs_data_uri,
@@ -162,32 +158,32 @@ class RemoteTrainUseCase:
             env_vars=env_vars,
             service_account=str(cloud_cfg.service_account),
         )
-        remote_job_name = result.resource_name
-        logger.info(f"Remote training job completed: {remote_job_name} ({result.state})")
+        cloud_job_name = result.resource_name
+        logger.info(f"Cloud training job completed: {cloud_job_name} ({result.state})")
 
         if not result.is_succeeded:
             raise RuntimeError(
-                f"Remote training job failed [{remote_job_name}]: "
+                f"Cloud training job failed [{cloud_job_name}]: "
                 f"state={result.state}, error={result.error_message}"
             )
 
-        # 7. ローカルにモデル成果物をダウンロード
+        # 6. ローカルにモデル成果物をダウンロード
         job_dir = Path(str(cfg.output_dir)) / job_id
         local_model_dir = job_dir / timestamp
         local_model_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Downloading model artifacts from {gcs_model_uri} to {local_model_dir}")
         self._object_storage.download_dir(gcs_model_uri, local_model_dir)
 
-        # 8. per-job .gitignore を配置
+        # 7. per-job .gitignore を配置
         gitignore_path = job_dir / ".gitignore"
         if not gitignore_path.exists():
             gitignore_path.write_text(_MODELS_DIR_GITIGNORE)
 
-        return RemoteTrainResult(
+        return CloudTrainResult(
             job_id=job_id,
             timestamp=timestamp,
             commit_hash=commit_hash,
-            remote_job_name=remote_job_name,
+            cloud_job_name=cloud_job_name,
             gcs_data_uri=gcs_data_uri,
             gcs_model_uri=gcs_model_uri,
             local_model_dir=local_model_dir,

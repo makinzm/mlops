@@ -31,7 +31,7 @@ def _make_manifest(tmp_path: Path, status: str = "SUBMITTED") -> tuple[JobManife
         timestamp="20260325T143000",
         commit_hash="d" * 40,
         status=status,
-        remote_job_name=_FAKE_JOB_NAME,
+        cloud_job_name=_FAKE_JOB_NAME,
         gcs_code_uri="gs://test-bucket/jobs/titanic_lgbm/20260325T143000/code",
         gcs_data_uri="gs://test-bucket/jobs/titanic_lgbm/20260325T143000/data",
         gcs_model_uri="gs://test-bucket/jobs/titanic_lgbm/20260325T143000/models",
@@ -130,7 +130,7 @@ class TestCloudDownloadUseCaseExecute:
             usecase.execute()
 
     def test_checks_job_status_via_training_job(self, tmp_path: Path) -> None:
-        """get_job_status が remote_job_name で呼ばれること。"""
+        """get_job_status が cloud_job_name で呼ばれること。"""
         _, manifest_path = _make_manifest(tmp_path)
         mock_vertex = _make_mock_vertex("SUCCEEDED")
         usecase = CloudDownloadUseCase(

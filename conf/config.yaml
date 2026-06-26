@@ -16,16 +16,16 @@ platform_username: null
 source_dataset: null
 staging_dir: null
 
-# vertex_train usecase 用パラメータ
+# cloud_train usecase 用パラメータ
 # caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
 cloud: null
 job_id: null
 
-# vertex_submit / vertex_download usecase 用パラメータ
+# cloud_submit / cloud_download usecase 用パラメータ
 # caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
 notification: null
 manifest_path: null
-remote_jobs_history_dir: remote_jobs_history
+cloud_jobs_history_dir: cloud_jobs_history
 
 # pipeline yaml 内でのローカル変数（Dataset slug 等の共有用）
 _datasets: null

@@ -37,7 +37,7 @@ def _make_cfg(tmp_path: Path) -> DictConfig:
             "preprocess_output_dir": str(processed_dir),
             "recipe": "lgbm",
             "output_dir": str(tmp_path / "models" / "titanic"),
-            "remote_jobs_history_dir": str(tmp_path / "remote_jobs_history"),
+            "cloud_jobs_history_dir": str(tmp_path / "cloud_jobs_history"),
             "seed": 42,
             "cloud": {
                 "project": "test-project",
@@ -121,7 +121,7 @@ class TestCloudSubmitUseCaseExecute:
         manifest = JobManifest.load(manifest_path)
         assert manifest.status == "SUBMITTED"
         assert manifest.job_id == "titanic_lgbm"
-        assert manifest.remote_job_name == _FAKE_JOB_NAME
+        assert manifest.cloud_job_name == _FAKE_JOB_NAME
 
     def test_uploads_code_and_data(self, tmp_path: Path) -> None:
         """コードとデータが GCS にアップロードされること。"""
@@ -165,12 +165,12 @@ class TestCloudSubmitUseCaseExecute:
         )
         result = usecase.execute()
         assert result.manifest_path.endswith("job_manifest.yaml")
-        assert "remote_jobs_history" in result.manifest_path
+        assert "cloud_jobs_history" in result.manifest_path
         # {job_id}/{timestamp}/ 形式であること（resolve_latest_dir 互換）
         assert "/titanic_lgbm/" in result.manifest_path
 
     def test_creates_gitignore_and_gitkeep_in_history_dir(self, tmp_path: Path) -> None:
-        """remote_jobs_history ディレクトリに .gitignore と .gitkeep が作成されること。"""
+        """cloud_jobs_history ディレクトリに .gitignore と .gitkeep が作成されること。"""
         cfg = _make_cfg(tmp_path)
         usecase = CloudSubmitUseCase(
             cfg=cfg,

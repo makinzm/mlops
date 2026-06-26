@@ -1,0 +1,17 @@
+# @package _global_
+# Titanic クラウド Fire-and-Forget パイプライン設定
+# 前処理 -> クラウドジョブ非同期送信 -> 即終了
+#
+# 実行例:
+#   uv run python -m src usecase=pipeline recipe=cloud_fire_and_forget
+usecase: pipeline
+job_id: titanic_cloud_fire_and_forget
+
+steps:
+  # (1) 前処理
+  - usecase: preprocess
+    recipe: base
+
+  # (2) クラウドジョブ非同期送信（即座に終了）
+  - usecase: cloud_submit
+    recipe: lgbm

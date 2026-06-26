@@ -13,6 +13,9 @@ from omegaconf import DictConfig
 
 from src.presentation.runners import (
     run_automatically_eda,
+    run_cloud_download,
+    run_cloud_submit,
+    run_cloud_train,
     run_create_source_dataset,
     run_download,
     run_gradcam,
@@ -20,11 +23,8 @@ from src.presentation.runners import (
     run_pipeline,
     run_preprocess,
     run_push_notebook,
-    run_remote_train,
     run_train,
     run_update_source_dataset,
-    run_vertex_download,
-    run_vertex_submit,
 )
 
 Runner = Callable[[DictConfig, Any], None]
@@ -35,9 +35,9 @@ RUNNERS: dict[str, Runner] = {
     "preprocess": run_preprocess,
     "train": run_train,
     "inference": run_inference,
-    "remote_train": run_remote_train,
-    "vertex_submit": run_vertex_submit,
-    "vertex_download": run_vertex_download,
+    "cloud_train": run_cloud_train,
+    "cloud_submit": run_cloud_submit,
+    "cloud_download": run_cloud_download,
     "pipeline": run_pipeline,
     "push_notebook": run_push_notebook,
     "create_source_dataset": run_create_source_dataset,

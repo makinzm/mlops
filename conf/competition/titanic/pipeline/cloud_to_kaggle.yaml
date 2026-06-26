@@ -1,18 +1,18 @@
 # @package _global_
-# Titanic Vertex AI パイプライン設定 — Vertex AI 学習から Kaggle 提出まで
+# Titanic クラウドパイプライン設定 — クラウド学習から Kaggle 提出まで
 #
 # 実行例:
-#   uv run python -m src usecase=pipeline recipe=vertex_to_kaggle
+#   uv run python -m src usecase=pipeline recipe=cloud_to_kaggle
 usecase: pipeline
-job_id: titanic_vertex_to_kaggle
+job_id: titanic_cloud_to_kaggle
 
 steps:
   # ① 前処理
   - usecase: preprocess
     recipe: base
 
-  # ② Vertex AI で学習
-  - usecase: remote_train
+  # ② クラウドで学習
+  - usecase: cloud_train
     recipe: lgbm
 
   # ③ 推論（submission.csv 生成）
@@ -22,7 +22,7 @@ steps:
   # ④ コード（src + conf）を既存 Dataset に push
   - usecase: update_source_dataset
     source_dataset:
-      version_message: "auto update: vertex training"
+      version_message: "auto update: cloud training"
 
   # ⑤ 最新モデル重みを別の Dataset に push（latest → 最新タイムスタンプを自動解決）
   - usecase: update_source_dataset
@@ -32,7 +32,7 @@ steps:
       src_dir: models/titanic/titanic_lgbm/latest
       conf_dir: models/titanic/titanic_lgbm/latest
       extra_dirs: []
-      version_message: "auto update: vertex trained model"
+      version_message: "auto update: cloud trained model"
 
   # ⑥ 推論専用 Notebook を push（学習しない）
   - usecase: push_notebook
