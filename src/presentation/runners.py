@@ -172,12 +172,12 @@ def run_train(cfg: DictConfig, logger: Any = None) -> None:
         )
 
 
-def run_cloud_train(cfg: DictConfig, logger: Any = None) -> None:
-    """クラウド学習 UseCase を実行する。"""
+def run_job_train(cfg: DictConfig, logger: Any = None) -> None:
+    """学習ジョブ同期実行 UseCase を実行する。"""
     from src.infrastructure.gcp.storage import GCSRepositoryImpl
     from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
     from src.infrastructure.repository.git import GitRepositoryImpl
-    from src.usecase.training.cloud_train import CloudTrainUseCase
+    from src.usecase.training.job_train import JobTrainUseCase
     from src.usecase.training.trainer_loader import load_trainer_cfgs
 
     if logger is None:
@@ -186,33 +186,33 @@ def run_cloud_train(cfg: DictConfig, logger: Any = None) -> None:
     git_repo = GitRepositoryImpl()
     trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
     trainer_cfg = trainer_cfgs[0]
-    if trainer_cfg.get("cloud") is None:
-        trainer_cfg = DictConfig(OmegaConf.merge(trainer_cfg, {"cloud": cfg.cloud}))
-    gcs = GCSRepositoryImpl(project=str(trainer_cfg.cloud.project))
+    if trainer_cfg.get("infra") is None:
+        trainer_cfg = DictConfig(OmegaConf.merge(trainer_cfg, {"infra": cfg.infra}))
+    gcs = GCSRepositoryImpl(project=str(trainer_cfg.infra.project))
     vertex = VertexAIRepositoryImpl(
-        project=str(trainer_cfg.cloud.project),
-        region=str(trainer_cfg.cloud.region),
-        staging_bucket=str(trainer_cfg.cloud.staging_bucket),
+        project=str(trainer_cfg.infra.project),
+        region=str(trainer_cfg.infra.region),
+        staging_bucket=str(trainer_cfg.infra.staging_bucket),
     )
-    result = CloudTrainUseCase(
+    result = JobTrainUseCase(
         cfg=trainer_cfg,
         object_storage=gcs,
         training_job=vertex,
         git_repo=git_repo,
     ).execute()
     logger.info(
-        f"クラウド学習完了[{result.job_id}]: "
-        f"job={result.cloud_job_name}, "
+        f"学習ジョブ完了[{result.job_id}]: "
+        f"job={result.job_name}, "
         f"local_model_dir={result.local_model_dir}"
     )
 
 
-def run_cloud_submit(cfg: DictConfig, logger: Any = None) -> None:
-    """クラウドジョブ非同期送信 UseCase を実行する。"""
+def run_job_submit(cfg: DictConfig, logger: Any = None) -> None:
+    """学習ジョブ非同期送信 UseCase を実行する。"""
     from src.infrastructure.gcp.storage import GCSRepositoryImpl
     from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
     from src.infrastructure.repository.git import GitRepositoryImpl
-    from src.usecase.training.cloud_submit import CloudSubmitUseCase
+    from src.usecase.training.job_submit import JobSubmitUseCase
     from src.usecase.training.trainer_loader import load_trainer_cfgs
 
     if logger is None:
@@ -221,40 +221,40 @@ def run_cloud_submit(cfg: DictConfig, logger: Any = None) -> None:
     git_repo = GitRepositoryImpl()
     trainer_cfgs = load_trainer_cfgs(cfg, Path(_CONF_DIR))
     trainer_cfg = trainer_cfgs[0]
-    if trainer_cfg.get("cloud") is None:
-        trainer_cfg = DictConfig(OmegaConf.merge(trainer_cfg, {"cloud": cfg.cloud}))
-    gcs = GCSRepositoryImpl(project=str(trainer_cfg.cloud.project))
+    if trainer_cfg.get("infra") is None:
+        trainer_cfg = DictConfig(OmegaConf.merge(trainer_cfg, {"infra": cfg.infra}))
+    gcs = GCSRepositoryImpl(project=str(trainer_cfg.infra.project))
     vertex = VertexAIRepositoryImpl(
-        project=str(trainer_cfg.cloud.project),
-        region=str(trainer_cfg.cloud.region),
-        staging_bucket=str(trainer_cfg.cloud.staging_bucket),
+        project=str(trainer_cfg.infra.project),
+        region=str(trainer_cfg.infra.region),
+        staging_bucket=str(trainer_cfg.infra.staging_bucket),
     )
-    result = CloudSubmitUseCase(
+    result = JobSubmitUseCase(
         cfg=trainer_cfg,
         object_storage=gcs,
         training_job=vertex,
         git_repo=git_repo,
     ).execute()
     logger.info(
-        f"クラウドジョブ送信完了[{result.job_id}]: "
-        f"job={result.cloud_job_name}, manifest={result.manifest_path}"
+        f"学習ジョブ送信完了[{result.job_id}]: "
+        f"job={result.job_name}, manifest={result.manifest_path}"
     )
 
 
-def run_cloud_download(cfg: DictConfig, logger: Any = None) -> None:
-    """クラウドモデルダウンロード UseCase を実行する。"""
+def run_job_download(cfg: DictConfig, logger: Any = None) -> None:
+    """学習ジョブ結果ダウンロード UseCase を実行する。"""
     from src.infrastructure.gcp.storage import GCSRepositoryImpl
     from src.infrastructure.gcp.vertex_ai import VertexAIRepositoryImpl
-    from src.usecase.training.cloud_download import CloudDownloadUseCase
+    from src.usecase.training.job_download import JobDownloadUseCase
 
     if logger is None:
         logger = logging.getLogger(__name__)
     cfg = ensure_cloud_config(cfg, _CONF_DIR)
-    gcs = GCSRepositoryImpl(project=str(cfg.cloud.project))
+    gcs = GCSRepositoryImpl(project=str(cfg.infra.project))
     vertex = VertexAIRepositoryImpl(
-        project=str(cfg.cloud.project),
-        region=str(cfg.cloud.region),
-        staging_bucket=str(cfg.cloud.staging_bucket),
+        project=str(cfg.infra.project),
+        region=str(cfg.infra.region),
+        staging_bucket=str(cfg.infra.staging_bucket),
     )
     manifest_path = resolve_manifest_path(cfg, _CONF_DIR)
     logger.info(f"Using manifest: {manifest_path}")
@@ -264,7 +264,7 @@ def run_cloud_download(cfg: DictConfig, logger: Any = None) -> None:
         output_dir = Path(str(trainer_cfgs[0].output_dir))
     else:
         output_dir = Path(str(output_dir_raw))
-    result = CloudDownloadUseCase(
+    result = JobDownloadUseCase(
         manifest_path=manifest_path,
         object_storage=gcs,
         training_job=vertex,
@@ -322,9 +322,9 @@ def run_pipeline(cfg: DictConfig, logger: Any = None) -> None:
         run_train=_pipeline_runner(run_train),
         run_inference=_pipeline_runner(run_inference),
         conf_dir=Path(_CONF_DIR),
-        run_cloud_train=_pipeline_runner(run_cloud_train),
-        run_cloud_submit=_pipeline_runner(run_cloud_submit),
-        run_cloud_download=_pipeline_runner(run_cloud_download),
+        run_job_train=_pipeline_runner(run_job_train),
+        run_job_submit=_pipeline_runner(run_job_submit),
+        run_job_download=_pipeline_runner(run_job_download),
         run_update_source_dataset=_pipeline_runner(run_update_source_dataset),
         run_push_notebook=_pipeline_runner(run_push_notebook),
         run_download_dataset=_pipeline_runner(run_download),

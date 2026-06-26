@@ -16,16 +16,16 @@ platform_username: null
 source_dataset: null
 staging_dir: null
 
-# cloud_train usecase 用パラメータ
+# job_train / job_submit / job_download usecase 用パラメータ
 # caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
-cloud: null
+infra: null
 job_id: null
 
-# cloud_submit / cloud_download usecase 用パラメータ
+# job_submit / job_download usecase 用パラメータ
 # caution.md: conf/config.yaml に宣言していないキーは CLI から渡せない
 notification: null
 manifest_path: null
-cloud_jobs_history_dir: cloud_jobs_history
+job_history_dir: job_history
 
 # pipeline yaml 内でのローカル変数（Dataset slug 等の共有用）
 _datasets: null

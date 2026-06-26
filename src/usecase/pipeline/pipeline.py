@@ -52,7 +52,7 @@ class PipelineUseCase:
     ) -> None:
         # extra_runners のキーは "run_<name>" 形式で渡されるため、
         # "run_" プレフィックスを除去して step.usecase の値に合わせる。
-        # 例: run_cloud_train → cloud_train
+        # 例: run_job_train → job_train
         normalized_extras = {
             (k[len("run_") :] if k.startswith("run_") else k): v for k, v in extra_runners.items()
         }

@@ -1,5 +1,0 @@
-# @package _global_
-usecase: cloud_train
-
-defaults:
-  - /cloud: vertex

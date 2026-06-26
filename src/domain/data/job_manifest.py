@@ -25,7 +25,7 @@ class JobManifest:
         timestamp: ジョブ投入時のタイムスタンプ（YYYYMMDDTHHMMSS）
         commit_hash: Git コミットハッシュ
         status: ジョブ状態 (SUBMITTED / SUCCEEDED / FAILED / DOWNLOADED)
-        cloud_job_name: Cloud training ジョブのリソース名
+        job_name: ジョブスケジューラが割り当てたジョブのリソース名
         gcs_code_uri: コードの GCS URI
         gcs_data_uri: データの GCS URI
         gcs_model_uri: モデルの GCS URI
@@ -41,7 +41,7 @@ class JobManifest:
     timestamp: str
     commit_hash: str
     status: str = "SUBMITTED"
-    cloud_job_name: str = ""
+    job_name: str = ""
     gcs_code_uri: str = ""
     gcs_data_uri: str = ""
     gcs_model_uri: str = ""
@@ -71,7 +71,7 @@ class JobManifest:
             "timestamp": self.timestamp,
             "commit_hash": self.commit_hash,
             "status": self.status,
-            "cloud_job_name": self.cloud_job_name,
+            "job_name": self.job_name,
             "gcs_code_uri": self.gcs_code_uri,
             "gcs_data_uri": self.gcs_data_uri,
             "gcs_model_uri": self.gcs_model_uri,
@@ -100,7 +100,7 @@ class JobManifest:
             timestamp=data["timestamp"],
             commit_hash=data["commit_hash"],
             status=data.get("status", "SUBMITTED"),
-            cloud_job_name=data.get("cloud_job_name", ""),
+            job_name=data.get("job_name", ""),
             gcs_code_uri=data.get("gcs_code_uri", ""),
             gcs_data_uri=data.get("gcs_data_uri", ""),
             gcs_model_uri=data.get("gcs_model_uri", ""),

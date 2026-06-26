@@ -1,0 +1,5 @@
+# @package _global_
+usecase: job_submit
+
+defaults:
+  - /infra: vertex

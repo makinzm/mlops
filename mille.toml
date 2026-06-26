@@ -30,7 +30,7 @@ allow = ["src_domain"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
 external_allow = ["collections", "dataclasses", "datetime", "fnmatch", "jinja2", "json", "logging", "numpy", "omegaconf", "pathlib", "polars", "scipy", "shutil", "typing", "yaml"]
-name_deny = ["gcp", "vertex", "remote", "lgbm", "titanic", "kaggle", "google"]
+name_deny = ["gcp", "vertex", "remote", "cloud", "lgbm", "titanic", "kaggle", "google"]
 
 [[layers]]
 name = "tests_domain"

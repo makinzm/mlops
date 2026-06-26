@@ -1,6 +1,6 @@
 # @package _global_
 # GCP 設定 — 値は .env から読み込む（プレースホルダーを直接書き換えないこと）
-cloud:
+infra:
   project: ${oc.env:GCP_PROJECT}
   region: ${oc.env:GCP_REGION,asia-northeast1}
   staging_bucket: gs://${oc.env:GCP_BUCKET_NAME,${oc.env:GCP_PROJECT}-mlops-staging}

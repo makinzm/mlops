@@ -1,11 +1,11 @@
 # @package _global_
-# Titanic クラウドダウンロード → Kaggle 提出パイプライン設定
+# Titanic ジョブダウンロード → Kaggle 提出パイプライン設定
 # Slack/Email 通知を受けた後に実行する
 #
 # 実行例:
-#   uv run python -m src usecase=pipeline recipe=cloud_download_and_push
+#   uv run python -m src usecase=pipeline recipe=job_download_and_push
 usecase: pipeline
-job_id: titanic_cloud_download_and_push
+job_id: titanic_job_download_and_push
 
 # Dataset slug を一箇所で管理し、step 間の不整合を防ぐ
 _datasets:
@@ -13,15 +13,15 @@ _datasets:
   models: titanic-vertex-models-2
 
 steps:
-  # (1) クラウドからモデルダウンロード
-  - usecase: cloud_download
+  # (1) ジョブからモデルダウンロード
+  - usecase: job_download
 
   # (2) コードを既存 Dataset に push（upsert: 初回は自動作成）
   - usecase: update_source_dataset
     source_dataset:
       dataset_slug: ${_datasets.src}
       title: ${_datasets.src}
-      version_message: "auto update: cloud download and push"
+      version_message: "auto update: job download and push"
 
   # (3) モデル重みを別の Dataset に push（upsert: 初回は自動作成）
   - usecase: update_source_dataset
@@ -31,7 +31,7 @@ steps:
       src_dir: models/titanic/titanic_lgbm/latest
       conf_dir: models/titanic/titanic_lgbm/latest
       extra_dirs: []
-      version_message: "auto update: cloud trained model"
+      version_message: "auto update: job trained model"
 
   # (4) 推論専用 Notebook を push
   - usecase: push_notebook

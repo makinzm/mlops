@@ -1,15 +1,15 @@
 """
-CloudDownloadUseCase — クラウド学習ジョブの結果をダウンロードする。
+JobDownloadUseCase — 学習ジョブの結果をダウンロードするユースケース。
 
 処理フロー:
 1. job_manifest.yaml を読み込む
-2. クラウド学習ジョブのステータスを確認
+2. 学習ジョブのステータスを確認
 3. SUCCEEDED ならばオブジェクトストレージからモデルをダウンロード
 4. manifest を DOWNLOADED に更新
-5. CloudDownloadResult を返す
+5. JobDownloadResult を返す
 
 前提:
-  CloudSubmitUseCase が job_manifest.yaml を生成済みであること。
+  JobSubmitUseCase が job_manifest.yaml を生成済みであること。
 """
 
 from __future__ import annotations
@@ -27,16 +27,16 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class CloudDownloadResult:
-    """クラウドモデルダウンロードの結果。"""
+class JobDownloadResult:
+    """学習ジョブ結果ダウンロードの結果。"""
 
     job_id: str
     local_model_dir: str
     manifest_path: str
 
 
-class CloudDownloadUseCase:
-    """クラウド学習ジョブの結果をオブジェクトストレージからダウンロードする。
+class JobDownloadUseCase:
+    """学習ジョブの結果をオブジェクトストレージからダウンロードする。
 
     Args:
         manifest_path: job_manifest.yaml のパス。
@@ -57,7 +57,7 @@ class CloudDownloadUseCase:
         self._training_job = training_job
         self._output_dir = output_dir
 
-    def execute(self) -> CloudDownloadResult:
+    def execute(self) -> JobDownloadResult:
         """ジョブステータスを確認し、成功ならモデルをダウンロードする。
 
         時間計算量: O(D) — D: ダウンロードファイル数
@@ -71,14 +71,14 @@ class CloudDownloadUseCase:
         # 既にダウンロード済みならスキップ
         if manifest.status == "DOWNLOADED":
             logger.info(f"Job {manifest.job_id} is already downloaded: {manifest.local_model_dir}")
-            return CloudDownloadResult(
+            return JobDownloadResult(
                 job_id=manifest.job_id,
                 local_model_dir=manifest.local_model_dir or "",
                 manifest_path=str(self._manifest_path),
             )
 
         # ジョブステータスを確認
-        status_result = self._training_job.get_job_status(manifest.cloud_job_name)
+        status_result = self._training_job.get_job_status(manifest.job_name)
 
         if status_result.state == "FAILED":
             # manifest も FAILED に更新
@@ -86,14 +86,13 @@ class CloudDownloadUseCase:
             manifest.completed_at = datetime.now().isoformat()
             manifest.save(self._manifest_path)
             raise RuntimeError(
-                f"Cloud training job FAILED [{manifest.cloud_job_name}]: "
-                f"{status_result.error_message}"
+                f"Training job FAILED [{manifest.job_name}]: {status_result.error_message}"
             )
 
         if status_result.state not in ("SUCCEEDED",):
             raise RuntimeError(
-                f"Cloud training job is still {status_result.state} "
-                f"[{manifest.cloud_job_name}]. "
+                f"Training job is still {status_result.state} "
+                f"[{manifest.job_name}]. "
                 f"Please wait for completion."
             )
 
@@ -110,7 +109,7 @@ class CloudDownloadUseCase:
         manifest.save(self._manifest_path)
         logger.info(f"Model downloaded to {local_model_dir}")
 
-        return CloudDownloadResult(
+        return JobDownloadResult(
             job_id=manifest.job_id,
             local_model_dir=str(local_model_dir),
             manifest_path=str(self._manifest_path),

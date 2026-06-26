@@ -11,7 +11,7 @@ from src.infrastructure.executor.local import LocalExecutor
 _UNIMPLEMENTED_EXECUTORS: dict[str, str] = {
     "gcp_vertex": (
         "gcp_vertex executor は preprocess ステップでは未実装です。"
-        " GCP Vertex AI 学習は usecase=cloud_train / cloud_submit を使ってください。"
+        " GCP Vertex AI 学習は usecase=job_train / job_submit を使ってください。"
     ),
     "ray_local": (
         "ray_local executor は未実装です。 ローカル実行には executor: local を使用してください。"

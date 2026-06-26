@@ -18,28 +18,28 @@ from omegaconf import OmegaConf
 class TestEnsureCloudConfig:
     """_ensure_cloud_config() のテスト。"""
 
-    def test_returns_cfg_when_cloud_present(self) -> None:
-        """cloud が既に設定済みなら cfg をそのまま返すこと。"""
+    def test_returns_cfg_when_infra_present(self) -> None:
+        """infra が既に設定済みなら cfg をそのまま返すこと。"""
         from src.presentation.cloud_config import ensure_cloud_config
 
-        cfg = OmegaConf.create({"cloud": {"project": "test"}, "notification": {"type": "slack"}})
+        cfg = OmegaConf.create({"infra": {"project": "test"}, "notification": {"type": "slack"}})
         result = ensure_cloud_config(cfg, "/dummy/conf")
-        assert result.cloud.project == "test"
+        assert result.infra.project == "test"
 
-    def test_merges_cloud_yaml_when_missing(self, tmp_path: Path) -> None:
-        """cloud が None の場合、vertex.yaml をマージすること。"""
+    def test_merges_infra_yaml_when_missing(self, tmp_path: Path) -> None:
+        """infra が None の場合、vertex.yaml をマージすること。"""
         from src.presentation.cloud_config import ensure_cloud_config
 
         conf_dir = tmp_path / "conf"
-        cloud_dir = conf_dir / "cloud"
-        cloud_dir.mkdir(parents=True)
-        (cloud_dir / "vertex.yaml").write_text(
-            "cloud:\n  project: merged-project\n  region: us\n  staging_bucket: gs://b\n"
+        infra_dir = conf_dir / "infra"
+        infra_dir.mkdir(parents=True)
+        (infra_dir / "vertex.yaml").write_text(
+            "infra:\n  project: merged-project\n  region: us\n  staging_bucket: gs://b\n"
         )
 
-        cfg = OmegaConf.create({"cloud": None, "notification": {"type": "slack"}})
+        cfg = OmegaConf.create({"infra": None, "notification": {"type": "slack"}})
         result = ensure_cloud_config(cfg, str(conf_dir))
-        assert result.cloud.project == "merged-project"
+        assert result.infra.project == "merged-project"
 
 
 class TestModuleImportPath:
