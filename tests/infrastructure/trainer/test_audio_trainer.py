@@ -7,7 +7,7 @@ AudioTrainer のテスト。
 - BCEWithLogitsLoss + ROC-AUC による multi-label 学習が正しく動くことを保証する。
 - fit_folds が TrainResult を返すことを確認する。
 - cfg 経由で num_classes / backbone を指定できること（BirdCLEF 固有のハードコード除去）を保証する。
-- SeedFixer Protocol 経由で seed 固定されること（caution.md: seed 固定関数の直接呼び出し禁止）を保証する。
+- SeedFixer Protocol 経由で seed 固定されること（seed 固定関数の直接呼び出し禁止）を保証する。
 """
 
 import json
@@ -17,7 +17,6 @@ from typing import Any
 import pytest
 import torch
 
-from src.domain.model.seed import SeedFixer
 from src.domain.model.trainer import Trainer, TrainResult
 from src.infrastructure.trainer.audio_trainer import AudioTrainer
 

@@ -74,9 +74,7 @@ class TestMelSpectrogramTransformer:
         result = transformer.transform_file(path)
         assert result.shape[0] == default_cfg.n_mels
 
-    def test_segment_and_transform_splits_audio(
-        self, default_cfg: SpectrogramConfig
-    ) -> None:
+    def test_segment_and_transform_splits_audio(self, default_cfg: SpectrogramConfig) -> None:
         """segment_and_transform が複数セグメントを返すこと。"""
         transformer = MelSpectrogramTransformer(default_cfg)
         # 3セグメント分の音声

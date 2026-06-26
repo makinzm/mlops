@@ -20,7 +20,7 @@ paths = ["src/infrastructure/**"]
 allow = ["src_domain", "src_usecase"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["albumentations", "collections", "dataclasses", "datetime", "email", "google", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "PIL", "polars", "pytorch_grad_cam", "seaborn", "sklearn", "smtplib", "subprocess", "torch", "torchvision", "typing", "urllib", "yaml", "zipfile"]
+external_allow = ["albumentations", "collections", "dataclasses", "datetime", "email", "google", "json", "kaggle", "lightgbm", "logging", "math", "matplotlib", "numpy", "omegaconf", "os", "pandas", "pathlib", "PIL", "polars", "pytorch_grad_cam", "seaborn", "sklearn", "smtplib", "soundfile", "subprocess", "torch", "torchvision", "typing", "urllib", "yaml", "zipfile"]
 name_deny = ["titanic"]
 
 [[layers]]
@@ -46,7 +46,7 @@ paths = ["tests/infrastructure/**"]
 allow = ["src_domain", "src_infrastructure"]
 dependency_mode = "opt-in"
 external_mode = "opt-in"
-external_allow = ["albumentations", "google", "json", "lightgbm", "math", "numpy", "omegaconf", "pandas", "pathlib", "PIL", "polars", "pytest", "smtplib", "src", "torch", "torchvision", "typing", "unittest", "urllib", "yaml", "zipfile"]
+external_allow = ["albumentations", "google", "json", "lightgbm", "math", "numpy", "omegaconf", "pandas", "pathlib", "PIL", "polars", "pytest", "smtplib", "soundfile", "src", "torch", "torchvision", "typing", "unittest", "urllib", "yaml", "zipfile"]
 
 [[layers]]
 name = "tests_usecase"
