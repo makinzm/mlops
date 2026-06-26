@@ -1,12 +1,12 @@
 """
-RemoteTrainUseCase の単体テスト。
+CloudTrainUseCase の単体テスト。
 
 なぜこのテストが必要か:
-  - RemoteTrainUseCase は ObjectStorageRepository と TrainingJobRepository を受け取り、
+  - CloudTrainUseCase は ObjectStorageRepository と TrainingJobRepository を受け取り、
     コード + データのオブジェクトストレージアップロード → リモート学習ジョブ送信 → 完了待機 →
     モデルのオブジェクトストレージダウンロード の一連の流れを担う。
   - 各リポジトリの Mock を使い、クラウド呼び出しなしで UseCase ロジックをテストする。
-  - .gitignore 配置、RemoteTrainResult の正しい構造を保証する。
+  - .gitignore 配置、CloudTrainResult の正しい構造を保証する。
 """
 
 from __future__ import annotations
@@ -18,14 +18,14 @@ import pytest
 from omegaconf import DictConfig, OmegaConf
 
 from src.domain.repository.training_job import TrainingJobResult
-from src.usecase.training.remote_train import RemoteTrainResult, RemoteTrainUseCase
+from src.usecase.training.cloud_train import CloudTrainResult, CloudTrainUseCase
 
 _FAKE_COMMIT = "b" * 40
 _FAKE_JOB_NAME = "projects/123/locations/asia-northeast1/customJobs/789"
 
 
 def _make_cfg(tmp_path: Path) -> DictConfig:
-    """RemoteTrainUseCase 用の DictConfig を生成する。"""
+    """CloudTrainUseCase 用の DictConfig を生成する。"""
     processed_dir = tmp_path / "processed" / "titanic_preprocess" / "20260315T120000" / "train_out"
     processed_dir.mkdir(parents=True)
     (processed_dir / "fold_0").mkdir()
@@ -77,26 +77,26 @@ def _make_mock_git_repo() -> MagicMock:
     return mock
 
 
-class TestRemoteTrainUseCaseExecute:
-    """RemoteTrainUseCase.execute() のテスト。"""
+class TestCloudTrainUseCaseExecute:
+    """CloudTrainUseCase.execute() のテスト。"""
 
-    def test_returns_remote_train_result(self, tmp_path: Path) -> None:
-        """execute() が RemoteTrainResult を返すこと。"""
+    def test_returns_cloud_train_result(self, tmp_path: Path) -> None:
+        """execute() が CloudTrainResult を返すこと。"""
         cfg = _make_cfg(tmp_path)
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=_make_mock_vertex(),
             git_repo=_make_mock_git_repo(),
         )
         result = usecase.execute()
-        assert isinstance(result, RemoteTrainResult)
+        assert isinstance(result, CloudTrainResult)
 
     def test_uploads_code_and_data_to_gcs(self, tmp_path: Path) -> None:
         """コードとデータがストレージにアップロードされること。"""
         cfg = _make_cfg(tmp_path)
         mock_gcs = _make_mock_gcs()
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=mock_gcs,
             training_job=_make_mock_vertex(),
@@ -116,7 +116,7 @@ class TestRemoteTrainUseCaseExecute:
         """リモート学習ジョブが正しいコンテナ URI とマシンタイプで送信されること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=mock_vertex,
@@ -133,7 +133,7 @@ class TestRemoteTrainUseCaseExecute:
         """run_custom_job が呼ばれること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=mock_vertex,
@@ -147,7 +147,7 @@ class TestRemoteTrainUseCaseExecute:
         """モデル成果物がオブジェクトストレージからローカルにダウンロードされること。"""
         cfg = _make_cfg(tmp_path)
         mock_gcs = _make_mock_gcs()
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=mock_gcs,
             training_job=_make_mock_vertex(),
@@ -165,7 +165,7 @@ class TestRemoteTrainUseCaseExecute:
     def test_creates_gitignore_in_job_dir(self, tmp_path: Path) -> None:
         """job_id ディレクトリに .gitignore が作成されること。"""
         cfg = _make_cfg(tmp_path)
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=_make_mock_vertex(),
@@ -183,7 +183,7 @@ class TestRemoteTrainUseCaseExecute:
         mock_vertex.run_custom_job.return_value = TrainingJobResult(
             resource_name=_FAKE_JOB_NAME, state="FAILED", error_message="OOM error"
         )
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=mock_vertex,
@@ -194,9 +194,9 @@ class TestRemoteTrainUseCaseExecute:
             usecase.execute()
 
     def test_result_contains_commit_hash(self, tmp_path: Path) -> None:
-        """RemoteTrainResult に commit_hash が記録されること。"""
+        """CloudTrainResult に commit_hash が記録されること。"""
         cfg = _make_cfg(tmp_path)
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=_make_mock_vertex(),
@@ -206,9 +206,9 @@ class TestRemoteTrainUseCaseExecute:
         assert result.commit_hash == _FAKE_COMMIT
 
     def test_result_contains_gcs_uris(self, tmp_path: Path) -> None:
-        """RemoteTrainResult にオブジェクトストレージ URI が記録されること。"""
+        """CloudTrainResult にオブジェクトストレージ URI が記録されること。"""
         cfg = _make_cfg(tmp_path)
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=_make_mock_vertex(),
@@ -222,7 +222,7 @@ class TestRemoteTrainUseCaseExecute:
         """build_bootstrap_command の戻り値が command に渡されること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=mock_vertex,
@@ -239,7 +239,7 @@ class TestRemoteTrainUseCaseExecute:
         """リモート学習ジョブの env_vars に GCS_DATA_URI と GCS_MODEL_URI が含まれること。"""
         cfg = _make_cfg(tmp_path)
         mock_vertex = _make_mock_vertex()
-        usecase = RemoteTrainUseCase(
+        usecase = CloudTrainUseCase(
             cfg=cfg,
             object_storage=_make_mock_gcs(),
             training_job=mock_vertex,
