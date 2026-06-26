@@ -9,23 +9,17 @@
 
 ## 未着手
 
-- [x] **TASK-001** `AudioTrainer` を `runners.py` に接続する
-  - `conf/competition/audio_example/training/efficientnet_b0.yaml` の `trainer_type: audio` を `trainer.type: audio` に修正
-  - `src/presentation/runners.py` の `run_train` に `elif trainer_type == "audio": trainer = AudioTrainer()` を追加
-  - 回帰テスト追加
-
-- [x] **TASK-002** chezmoi: BACKLOG.md をセッション開始時に自動注入する Hook を追加
-- [x] **TASK-005** chezmoi: ループ検出しきい値を 40→150 に引き上げ（Stop フック対応後も継続ルール追加）
-- [x] **TASK-006** chezmoi: dot_claude 変更は事前確認不要のルールを追加
-  - 副作用: リモートへの push が承認なしで実行される
-  - 追加理由: feature ブランチ push のたびに loop 検出が入る
-  - 拒否時の代替: 現状通り都度承認
-  - 変更先: `~/.local/share/chezmoi/dot_claude/settings.json` → `chezmoi apply`
-
-- [x] **TASK-003** 実行環境の切り替え設計を整理・ドキュメント化する
-  - `docs/manual/execution-env.md` 作成。commit `7d25f9d`
-- [x] **TASK-004** `conf/executor/gcp_vertex.yaml` / `ray_local.yaml` の「フォールバックのみ」状態を解消する
-  - `ExecutorFactory` を変更: NotImplementedError / ValueError を明示的に上げる。commit `7d25f9d`
+- [ ] **TASK-007** usecase 層からインフラ名（remote / vertex）を除去し mille ルールを追加
+  - **前提**: PR #53 マージ後に新ブランチで対応
+  - **mille**: `src_usecase.name_deny` に `"remote"` を追加（`"vertex"` はすでにある）
+  - **リネーム対象**:
+    - `src/usecase/training/remote_train.py` → `cloud_train.py`
+    - `src/usecase/training/remote_submit.py` → `cloud_submit.py`
+    - `src/usecase/training/remote_download.py` → `cloud_download.py`
+    - `src/presentation/runners.py`: `run_remote_train` → `run_cloud_train`、`run_vertex_submit` → `run_cloud_submit`、`run_vertex_download` → `run_cloud_download`
+    - `src/presentation/registry.py`: キー `"remote_train"` / `"vertex_submit"` / `"vertex_download"` → `"cloud_train"` / `"cloud_submit"` / `"cloud_download"`
+    - `conf/usecase/`: `vertex_submit.yaml`、`vertex_download.yaml`、`vertex_train.yaml`、`create_vertex_models.yaml`、`upload_vertex_models.yaml`、`push_vertex_notebook.yaml` → マージ後に実物確認してリネーム案確定
+  - **参照箇所も含めて全置換**: pipeline.py 内の文字列参照、コメント、テストも対象
 
 ---
 
@@ -33,5 +27,7 @@
 
 - [x] **TASK-001** `AudioTrainer` を `runners.py` に接続する。commit `cbb742a`
 - [x] **TASK-002** chezmoi: `pre-task-estimate.sh` にセッション初回 BACKLOG.md 自動注入を追加。グローバル CLAUDE.md にルール #7 追記。dot_claude commit `411a669` / chezmoi commit `7db8a3f`、両方 push 済。
+- [x] **TASK-003** 実行環境の切り替え設計を整理・ドキュメント化する。`docs/manual/execution-env.md` 作成。commit `7d25f9d`
+- [x] **TASK-004** `conf/executor/gcp_vertex.yaml` / `ray_local.yaml` の「フォールバックのみ」状態を解消する。`ExecutorFactory` を NotImplementedError / ValueError に変更。commit `7d25f9d`
 - [x] **TASK-005** chezmoi: ループ検出しきい値 40→150、Stop フック後継続ルール追加。dot_claude commit `5c16848` / `c2ab994`
 - [x] **TASK-006** chezmoi: dot_claude 変更は事前確認不要のルール追加。dot_claude commit `8f9d564`
