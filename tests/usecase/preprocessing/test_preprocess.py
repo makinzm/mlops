@@ -105,40 +105,6 @@ class TestPreprocessUseCase:
         result_yamls = list(job_dir.rglob("preprocess_result.yaml"))
         assert len(result_yamls) >= 1
 
-    def test_executor_fallback_recorded(self, train_csv: Path, tmp_path: Path) -> None:
-        """未実装 Executor 指定時に executor_fallback=True が結果に記録されること。"""
-        cfg = OmegaConf.create(
-            {
-                "usecase": "preprocess",
-                "job_id": "fallback_job",
-                "inputs": [{"id": "raw_train", "path": str(train_csv), "format": "csv"}],
-                "output_dir": str(tmp_path / "processed"),
-                "executor": {"type": "gcp_vertex"},  # 未実装
-                "cv": {"strategy": "none", "n_splits": 5, "time_col": None, "target_col": None},
-                "steps": [
-                    {
-                        "id": "selected",
-                        "polars": {"method": "select_columns", "columns": ["id", "col1", "label"]},
-                    },
-                    {
-                        "id": "tabular_out",
-                        "output": {
-                            "columns": ["id", "col1", "label"],
-                            "format": "parquet",
-                            "cv": False,
-                        },
-                    },
-                ],
-                "targets": ["tabular_out"],
-                "seed": 42,
-            }
-        )
-
-        result = _make_usecase(cfg).execute()
-        assert result.executor_fallback is True
-        assert result.executor_requested == "gcp_vertex"
-        assert result.executor_used == "local"
-
     def test_step_results_in_result(self, train_csv: Path, tmp_path: Path) -> None:
         """step_results に各ステップの実行状況が記録されること。"""
         cfg = OmegaConf.create(

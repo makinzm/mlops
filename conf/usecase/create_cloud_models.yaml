@@ -1,7 +1,7 @@
 # @package _global_
-# Vertex AI 学習済みモデルの Kaggle Dataset を初回作成する設定
+# クラウド学習済みモデルの Kaggle Dataset を初回作成する設定
 #
-# 実行: uv run python -m src usecase=create_vertex_models
+# 実行: uv run python -m src usecase=create_cloud_models
 usecase: create_source_dataset
 
 source_dataset:
@@ -12,6 +12,6 @@ source_dataset:
   license_name: CC0-1.0
   ignorefile: .kaggleignore
   extra_dirs: []
-  version_message: "initial: vertex AI trained model"
+  version_message: "initial: cloud trained model"
 
 staging_dir: .staging

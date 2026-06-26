@@ -1,5 +1,5 @@
 # @package _global_
-usecase: vertex_download
+usecase: cloud_submit
 
 defaults:
   - /cloud: vertex

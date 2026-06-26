@@ -1,5 +1,5 @@
 """
-RemoteSubmitUseCase — リモート環境にジョブを非同期送信し、即座に終了する。
+CloudSubmitUseCase — クラウド環境にジョブを非同期送信し、即座に終了する。
 
 処理フロー:
 1. preprocess_output_dir を解決（"latest" -> 最新タイムスタンプ）
@@ -7,16 +7,16 @@ RemoteSubmitUseCase — リモート環境にジョブを非同期送信し、�
 3. preprocessed data をオブジェクトストレージにアップロード
 4. submit_custom_job (sync=False) でジョブ送信
 5. job_manifest.yaml を保存
-6. RemoteSubmitResult を返す（ローカルプロセスは即終了可能）
+6. CloudSubmitResult を返す（ローカルプロセスは即終了可能）
 
 出力:
   models/{competition}/{job_id}/
     ├── .gitignore
     └── job_manifest.yaml
 
-RemoteTrainUseCase（同期版）との違い:
+CloudTrainUseCase（同期版）との違い:
 - submit_custom_job を使い、ジョブ完了を待たない
-- モデルのダウンロードは行わない（RemoteDownloadUseCase が担う）
+- モデルのダウンロードは行わない（CloudDownloadUseCase が担う）
 - 通知用環境変数をコンテナに渡す
 """
 
@@ -65,19 +65,19 @@ _PROJECT_ROOT = _find_project_root()
 
 
 @dataclass
-class RemoteSubmitResult:
-    """リモートジョブ送信の結果。"""
+class CloudSubmitResult:
+    """クラウドジョブ送信の結果。"""
 
     job_id: str
     timestamp: str
     commit_hash: str
-    remote_job_name: str
+    cloud_job_name: str
     manifest_path: str
     console_url: str
 
 
-class RemoteSubmitUseCase:
-    """リモート環境にジョブを非同期送信し、manifest を保存して即座に終了する。
+class CloudSubmitUseCase:
+    """クラウド環境にジョブを非同期送信し、manifest を保存して即座に終了する。
 
     Args:
         cfg: Hydra DictConfig。以下のキーを使用する:
@@ -104,7 +104,7 @@ class RemoteSubmitUseCase:
         self._training_job = training_job
         self._git_repo = git_repo
 
-    def execute(self) -> RemoteSubmitResult:
+    def execute(self) -> CloudSubmitResult:
         """ジョブを非同期送信し、manifest を保存して結果を返す。
 
         時間計算量: O(U) — U: アップロードファイル数
@@ -180,12 +180,11 @@ class RemoteSubmitUseCase:
             env_vars=env_vars,
             service_account=str(cloud_cfg.service_account),
         )
-        remote_job_name = result.resource_name
+        cloud_job_name = result.resource_name
 
-        # 7. job_manifest.yaml を remote_jobs_history/ に保存
+        # 7. job_manifest.yaml を cloud_jobs_history/ に保存
         #    models/ はモデル成果物専用。ジョブ管理情報は分離する。
-        #    タイムスタンプ付きディレクトリで上書き問題を防ぐ。
-        history_base = str(cfg.get("remote_jobs_history_dir", "remote_jobs_history"))
+        history_base = str(cfg.get("cloud_jobs_history_dir", "cloud_jobs_history"))
         if not Path(history_base).is_absolute():
             history_base = str(_PROJECT_ROOT / history_base)
         history_dir = Path(history_base) / competition / job_id / timestamp
@@ -196,7 +195,7 @@ class RemoteSubmitUseCase:
             timestamp=timestamp,
             commit_hash=commit_hash,
             status="SUBMITTED",
-            remote_job_name=remote_job_name,
+            cloud_job_name=cloud_job_name,
             gcs_code_uri=gcs_code_uri,
             gcs_data_uri=gcs_data_uri,
             gcs_model_uri=gcs_model_uri,
@@ -207,8 +206,6 @@ class RemoteSubmitUseCase:
         logger.info(f"Job manifest saved: {manifest_path}")
 
         # 8. per-directory .gitignore + .gitkeep を配置
-        #    .gitignore: manifest（機密情報含む）を除外
-        #    .gitkeep: ディレクトリ構造を git に残し試行回数を確認可能にする
         gitignore_path = history_dir / ".gitignore"
         if not gitignore_path.exists():
             gitignore_path.write_text(_HISTORY_DIR_GITIGNORE)
@@ -217,20 +214,20 @@ class RemoteSubmitUseCase:
             gitkeep_path.touch()
 
         # Console URL を TrainingJobRepository 経由で生成
-        console_url = self._training_job.build_console_url(remote_job_name)
+        console_url = self._training_job.build_console_url(cloud_job_name)
 
         logger.info(
-            f"Remote job submitted: {remote_job_name}\n"
+            f"Cloud job submitted: {cloud_job_name}\n"
             f"  Console: {console_url}\n"
             f"  manifest: {manifest_path}\n"
-            f"  Download: uv run python -m src usecase=remote_download"
+            f"  Download: uv run python -m src usecase=cloud_download"
         )
 
-        return RemoteSubmitResult(
+        return CloudSubmitResult(
             job_id=job_id,
             timestamp=timestamp,
             commit_hash=commit_hash,
-            remote_job_name=remote_job_name,
+            cloud_job_name=cloud_job_name,
             manifest_path=str(manifest_path),
             console_url=console_url,
         )

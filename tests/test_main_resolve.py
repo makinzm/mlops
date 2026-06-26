@@ -1,11 +1,11 @@
 """
-_resolve_manifest_path と _run_vertex_download の統合テスト。
+_resolve_manifest_path と run_cloud_download の統合テスト。
 
 なぜこのテストが必要か:
   - _resolve_manifest_path は manifest_path 未指定時に competition + job_id + latest から
     自動解決する。pipeline 経由では recipe が pipeline recipe になるため、
     trainer config から job_id を取得するフォールバックが必要。
-  - _run_vertex_download は output_dir も trainer config から取得する必要がある。
+  - run_cloud_download は output_dir も trainer config から取得する必要がある。
   - これらのロジックは main.py の presentation 層にあるが、
     パターンが複数あるためテストで全パターンをカバーする。
 """
@@ -22,8 +22,8 @@ from src.presentation.cloud_config import resolve_manifest_path as _resolve_mani
 
 @pytest.fixture()
 def history_tree(tmp_path: Path) -> Path:
-    """remote_jobs_history のテスト用ディレクトリツリーを作成する。"""
-    job_dir = tmp_path / "remote_jobs_history" / "titanic" / "titanic_lgbm" / "20260326T010000"
+    """cloud_jobs_history のテスト用ディレクトリツリーを作成する。"""
+    job_dir = tmp_path / "cloud_jobs_history" / "titanic" / "titanic_lgbm" / "20260326T010000"
     job_dir.mkdir(parents=True)
     manifest = job_dir / "job_manifest.yaml"
     manifest.write_text("status: SUBMITTED\njob_id: titanic_lgbm\n")
@@ -37,7 +37,7 @@ def _base_cfg(tmp_path: Path, **overrides: object) -> DictConfig:
         "job_id": None,
         "recipe": None,
         "manifest_path": None,
-        "remote_jobs_history_dir": str(tmp_path / "remote_jobs_history"),
+        "cloud_jobs_history_dir": str(tmp_path / "cloud_jobs_history"),
     }
     for key, value in overrides.items():
         base[key] = value
@@ -82,15 +82,15 @@ class TestResolveManifestPathAutoResolve:
         """recipe が pipeline recipe でも trainer config から正しく解決すること。"""
         cfg = _base_cfg(
             history_tree,
-            job_id="titanic_vertex_download_and_push",
-            recipe="vertex_download_and_push",
+            job_id="titanic_cloud_download_and_push",
+            recipe="cloud_download_and_push",
         )
         result = _resolve_manifest_path(cfg)
         assert "titanic_lgbm" in str(result)
 
     def test_resolves_latest_timestamp(self, tmp_path: Path) -> None:
         """複数タイムスタンプがある場合、最新が選ばれること。"""
-        base = tmp_path / "remote_jobs_history" / "titanic" / "titanic_lgbm"
+        base = tmp_path / "cloud_jobs_history" / "titanic" / "titanic_lgbm"
         for ts in ["20260325T100000", "20260326T100000"]:
             d = base / ts
             d.mkdir(parents=True)

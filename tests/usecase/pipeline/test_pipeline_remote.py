@@ -1,8 +1,8 @@
 """
-PipelineUseCase の remote_train / update_source_dataset / push_notebook 対応テスト。
+PipelineUseCase の cloud_train / update_source_dataset / push_notebook 対応テスト。
 
 なぜこのテストが必要か:
-  - Pipeline が remote_train / update_source_dataset / push_notebook ステップを
+  - Pipeline が cloud_train / update_source_dataset / push_notebook ステップを
     正しく実行できることを保証する。
   - 既存の preprocess / train / inference ステップと共存することを確認する。
 """
@@ -19,37 +19,37 @@ def _make_pipeline_cfg(steps: list[dict[str, object]]) -> DictConfig:
     return OmegaConf.create(
         {
             "usecase": "pipeline",
-            "job_id": "test_remote_pipeline",
+            "job_id": "test_cloud_pipeline",
             "steps": steps,
         }
     )
 
 
-class TestPipelineRemoteTrainStep:
-    def test_remote_train_step_is_executed(self) -> None:
-        """remote_train ステップが実行されること。"""
+class TestPipelineCloudTrainStep:
+    def test_cloud_train_step_is_executed(self) -> None:
+        """cloud_train ステップが実行されること。"""
         call_log: list[str] = []
 
-        cfg = _make_pipeline_cfg([{"usecase": "remote_train", "recipe": "lgbm"}])
+        cfg = _make_pipeline_cfg([{"usecase": "cloud_train", "recipe": "lgbm"}])
         usecase = PipelineUseCase(
             run_preprocess=lambda c: call_log.append("preprocess"),
             run_train=lambda c: call_log.append("train"),
             run_inference=lambda c: call_log.append("inference"),
-            run_remote_train=lambda c: call_log.append("remote_train"),
+            run_cloud_train=lambda c: call_log.append("cloud_train"),
             run_update_source_dataset=lambda c: call_log.append("update_source_dataset"),
             run_push_notebook=lambda c: call_log.append("push_notebook"),
         )
         usecase.run(cfg)
-        assert call_log == ["remote_train"]
+        assert call_log == ["cloud_train"]
 
-    def test_full_remote_to_submission_pipeline(self) -> None:
+    def test_full_cloud_to_submission_pipeline(self) -> None:
         """full pipeline の全ステップが順に実行されること。"""
         call_log: list[str] = []
 
         cfg = _make_pipeline_cfg(
             [
                 {"usecase": "preprocess", "recipe": "base"},
-                {"usecase": "remote_train", "recipe": "lgbm"},
+                {"usecase": "cloud_train", "recipe": "lgbm"},
                 {"usecase": "inference", "recipe": "titanic_ensemble"},
                 {"usecase": "update_source_dataset"},
                 {"usecase": "push_notebook", "notebook": "titanic"},
@@ -59,14 +59,14 @@ class TestPipelineRemoteTrainStep:
             run_preprocess=lambda c: call_log.append("preprocess"),
             run_train=lambda c: call_log.append("train"),
             run_inference=lambda c: call_log.append("inference"),
-            run_remote_train=lambda c: call_log.append("remote_train"),
+            run_cloud_train=lambda c: call_log.append("cloud_train"),
             run_update_source_dataset=lambda c: call_log.append("update_source_dataset"),
             run_push_notebook=lambda c: call_log.append("push_notebook"),
         )
         usecase.run(cfg)
         assert call_log == [
             "preprocess",
-            "remote_train",
+            "cloud_train",
             "inference",
             "update_source_dataset",
             "push_notebook",
@@ -79,7 +79,7 @@ class TestPipelineRemoteTrainStep:
             run_preprocess=lambda c: None,
             run_train=lambda c: None,
             run_inference=lambda c: None,
-            run_remote_train=lambda c: None,
+            run_cloud_train=lambda c: None,
             run_update_source_dataset=lambda c: None,
             run_push_notebook=lambda c: None,
         )

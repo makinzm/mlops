@@ -1,5 +1,5 @@
 # @package _global_
-usecase: remote_train
+usecase: cloud_train
 
 defaults:
   - /cloud: vertex

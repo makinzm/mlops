@@ -9,7 +9,7 @@
 
 ## 未着手
 
-- [ ] **TASK-007** usecase 層からインフラ名（remote / vertex）を除去し mille ルールを追加
+
   - **前提**: PR #53 マージ後に新ブランチで対応
   - **mille**: `src_usecase.name_deny` に `"remote"` を追加（`"vertex"` はすでにある）
   - **リネーム対象**:
@@ -31,3 +31,4 @@
 - [x] **TASK-004** `conf/executor/gcp_vertex.yaml` / `ray_local.yaml` の「フォールバックのみ」状態を解消する。`ExecutorFactory` を NotImplementedError / ValueError に変更。commit `7d25f9d`
 - [x] **TASK-005** chezmoi: ループ検出しきい値 40→150、Stop フック後継続ルール追加。dot_claude commit `5c16848` / `c2ab994`
 - [x] **TASK-006** chezmoi: dot_claude 変更は事前確認不要のルール追加。dot_claude commit `8f9d564`
+- [x] **TASK-007** usecase 層からインフラ名（remote / vertex）を除去し mille ルールを追加。PR #54。
